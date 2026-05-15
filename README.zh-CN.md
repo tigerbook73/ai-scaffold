@@ -28,6 +28,8 @@ AI Scaffold 会根据项目情况生成项目级 AI 工程体系规范，大致�
 
 ```bash
 mkdir -p ~/.claude/commands
+rm -f ~/.claude/commands/init-ai-scaffold.md
+rm -rf ~/.claude/commands/init-ai-scaffold-templates
 cp zh-CN/init-ai-scaffold.md ~/.claude/commands/
 cp -R zh-CN/init-ai-scaffold-templates ~/.claude/
 ```

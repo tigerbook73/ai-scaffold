@@ -28,6 +28,8 @@ Using Claude Code as an example:
 
 ```bash
 mkdir -p ~/.claude/commands
+rm -f ~/.claude/commands/init-ai-scaffold.md
+rm -rf ~/.claude/commands/init-ai-scaffold-templates
 cp en/init-ai-scaffold.md ~/.claude/commands/
 cp -R en/init-ai-scaffold-templates ~/.claude/
 ```
