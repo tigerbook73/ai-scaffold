@@ -16,12 +16,12 @@ When full template content must be output or written, use these files as the sou
 
 | Scenario | Template file |
 | -------- | ------------- |
-| New single-package project info form | `init-ai-scaffold-templates/project-info.single.md` |
-| New monorepo project info form | `init-ai-scaffold-templates/project-info.monorepo.md` |
-| Conflict detection prompt | `init-ai-scaffold-templates/conflict-resolution.md` |
-| `CLAUDE.md` / `AGENTS.md` / Copilot / Cursor templates | `init-ai-scaffold-templates/config-files.md` |
-| Claude Code slash command templates | `init-ai-scaffold-templates/slash-commands.md` |
-| Completion summary template | `init-ai-scaffold-templates/completion-summary.md` |
+| New single-package project info form | `../init-ai-scaffold-templates/project-info.single.md` |
+| New monorepo project info form | `../init-ai-scaffold-templates/project-info.monorepo.md` |
+| Conflict detection prompt | `../init-ai-scaffold-templates/conflict-resolution.md` |
+| `CLAUDE.md` / `AGENTS.md` / Copilot / Cursor templates | `../init-ai-scaffold-templates/config-files.md` |
+| Claude Code slash command templates | `../init-ai-scaffold-templates/slash-commands.md` |
+| Completion summary template | `../init-ai-scaffold-templates/completion-summary.md` |
 
 When changing any template, check whether the corresponding Chinese file also needs the same content update.
 
@@ -83,8 +83,8 @@ Treat as a monorepo if any of the following exist:
 
 Based on Part 2 of Step 0, output the matching template:
 
-- Single-package project: `init-ai-scaffold-templates/project-info.single.md`
-- Monorepo project: `init-ai-scaffold-templates/project-info.monorepo.md`
+- Single-package project: `../init-ai-scaffold-templates/project-info.single.md`
+- Monorepo project: `../init-ai-scaffold-templates/project-info.monorepo.md`
 
 Ask the user to fill it in and paste it back, or provide a file path.
 
@@ -121,7 +121,7 @@ docs/refactors/
 
 > `AGENTS.md`, `.cursorrules`, and `.github/copilot-instructions.md` are conditionally generated files. If the user does not select the corresponding tool, conflicts on these paths can be ignored.
 
-If any path exists, use `init-ai-scaffold-templates/conflict-resolution.md` to output the conflict list and pause until the user explicitly chooses how to proceed.
+If any path exists, use `../init-ai-scaffold-templates/conflict-resolution.md` to output the conflict list and pause until the user explicitly chooses how to proceed.
 
 ### 1B-2. Index Project
 
@@ -198,7 +198,7 @@ Generate only the matching version based on Step 0 results (single-package / mon
 | `.cursorrules` | User selected Cursor |
 | `.github/copilot-instructions.md` | User selected GitHub Copilot |
 
-Config file templates are maintained in: `init-ai-scaffold-templates/config-files.md`.
+Config file templates are maintained in: `../init-ai-scaffold-templates/config-files.md`.
 
 ### Commit Convention Format
 
@@ -314,7 +314,7 @@ Existing projects: if `docs/adr/` already contains files, continue from the high
 
 ## Step 6: Generate Claude Code Slash Commands
 
-Claude Code slash command templates are maintained in: `init-ai-scaffold-templates/slash-commands.md`.
+Claude Code slash command templates are maintained in: `../init-ai-scaffold-templates/slash-commands.md`.
 
 Generate these files:
 
@@ -328,7 +328,7 @@ Generate these files:
 
 Based on Step 0 results, output only the matching "Next Steps" version.
 
-Completion summary template: `init-ai-scaffold-templates/completion-summary.md`.
+Completion summary template: `../init-ai-scaffold-templates/completion-summary.md`.
 
 ---
 

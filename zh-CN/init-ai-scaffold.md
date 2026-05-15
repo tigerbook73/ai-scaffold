@@ -17,12 +17,12 @@
 
 | 场景 | 模板文件 |
 | ---- | -------- |
-| 新项目信息收集表 | `init-ai-scaffold-templates/project-info.single.md` |
-| 新 Monorepo 信息收集表 | `init-ai-scaffold-templates/project-info.monorepo.md` |
-| 冲突检测提示 | `init-ai-scaffold-templates/conflict-resolution.md` |
-| `CLAUDE.md` / `AGENTS.md` / Copilot / Cursor 模板 | `init-ai-scaffold-templates/config-files.md` |
-| Claude Code Slash 命令模板 | `init-ai-scaffold-templates/slash-commands.md` |
-| 完成摘要模板 | `init-ai-scaffold-templates/completion-summary.md` |
+| 新项目信息收集表 | `../init-ai-scaffold-templates/project-info.single.md` |
+| 新 Monorepo 信息收集表 | `../init-ai-scaffold-templates/project-info.monorepo.md` |
+| 冲突检测提示 | `../init-ai-scaffold-templates/conflict-resolution.md` |
+| `CLAUDE.md` / `AGENTS.md` / Copilot / Cursor 模板 | `../init-ai-scaffold-templates/config-files.md` |
+| Claude Code Slash 命令模板 | `../init-ai-scaffold-templates/slash-commands.md` |
+| 完成摘要模板 | `../init-ai-scaffold-templates/completion-summary.md` |
 
 修改任一模板时，同时检查英文对应文件是否需要同步更新。
 
@@ -84,8 +84,8 @@ Monorepo 项目使用两层规范体系：
 
 根据步骤 0 第二步的判断，输出对应模板：
 
-- 单包项目：`init-ai-scaffold-templates/project-info.single.md`
-- Monorepo 项目：`init-ai-scaffold-templates/project-info.monorepo.md`
+- 单包项目：`../init-ai-scaffold-templates/project-info.single.md`
+- Monorepo 项目：`../init-ai-scaffold-templates/project-info.monorepo.md`
 
 要求用户填写后直接粘贴回来，或提供文件路径。
 
@@ -122,7 +122,7 @@ docs/refactors/
 
 > `AGENTS.md`、`.cursorrules`、`.github/copilot-instructions.md` 为条件生成文件，仅在用户选择对应工具时生成。若用户最终未选择对应工具，这些路径的冲突可忽略。
 
-若存在任何路径，使用 `init-ai-scaffold-templates/conflict-resolution.md` 输出冲突清单并暂停，等待用户明确选择后再继续。
+若存在任何路径，使用 `../init-ai-scaffold-templates/conflict-resolution.md` 输出冲突清单并暂停，等待用户明确选择后再继续。
 
 ### 1B-2. 索引项目
 
@@ -199,7 +199,7 @@ docs/refactors/
 | `.cursorrules` | 用户选择了 Cursor |
 | `.github/copilot-instructions.md` | 用户选择了 GitHub Copilot |
 
-配置文件模板统一见：`init-ai-scaffold-templates/config-files.md`。
+配置文件模板统一见：`../init-ai-scaffold-templates/config-files.md`。
 
 ### 提交规范格式说明
 
@@ -315,7 +315,7 @@ Monorepo 包级决策示例：`docs/adr/0002-web-use-nextjs-app-router.md`。
 
 ## 步骤 6：生成 Claude Code slash 命令
 
-Claude Code slash 命令模板统一见：`init-ai-scaffold-templates/slash-commands.md`。
+Claude Code slash 命令模板统一见：`../init-ai-scaffold-templates/slash-commands.md`。
 
 生成以下文件：
 
@@ -329,7 +329,7 @@ Claude Code slash 命令模板统一见：`init-ai-scaffold-templates/slash-comm
 
 根据步骤 0 的判断结果，只输出匹配的「下一步」版本。
 
-完成摘要模板见：`init-ai-scaffold-templates/completion-summary.md`。
+完成摘要模板见：`../init-ai-scaffold-templates/completion-summary.md`。
 
 ---
 

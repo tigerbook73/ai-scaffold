@@ -28,7 +28,8 @@ Using Claude Code as an example:
 
 ```bash
 mkdir -p ~/.claude/commands
-cp -R en/* ~/.claude/commands/
+cp en/init-ai-scaffold.md ~/.claude/commands/
+cp -R en/init-ai-scaffold-templates ~/.claude/
 ```
 
 3. Open Claude Code in your project directory:

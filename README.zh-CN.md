@@ -28,7 +28,8 @@ AI Scaffold 会根据项目情况生成项目级 AI 工程体系规范，大致�
 
 ```bash
 mkdir -p ~/.claude/commands
-cp -R zh-CN/* ~/.claude/commands/
+cp zh-CN/init-ai-scaffold.md ~/.claude/commands/
+cp -R zh-CN/init-ai-scaffold-templates ~/.claude/
 ```
 
 3. 进入你的项目目录并启动 Claude Code：
