@@ -7,7 +7,7 @@
 
 ## 当前阶段
 
-**▶ 阶段 2：核心 Skill**（refresh-arch · audit）
+**▶ 阶段 3：Feature 生命周期 Skill**（plan-feature ✅ · close-work ✅）
 
 ---
 
@@ -133,8 +133,8 @@ Skill 格式约定：描述 + 约束 + 步骤（+ 可选输出格式节）。
 
 | 决策 | 影响阶段 | 说明 |
 |------|---------|------|
-| `close-work` 提取策略 | 阶段 3、5 | 哪些内容写入 architecture.md 人工维护区 |
-| refactor 是否需要单独模式 | 阶段 3 | 见 plan-skill.md |
+| `close-work` 提取策略 | — | ✅ 已定：不提取，直接删除，architecture.md 更新走 refresh-arch |
+| refactor 模式 | — | ✅ 已定：plan-feature --refactor，两文档（DESIGN + PROGRESS） |
 
 ---
 
@@ -143,7 +143,7 @@ Skill 格式约定：描述 + 约束 + 步骤（+ 可选输出格式节）。
 - [x] 阶段 0：设计规范
 - [x] 阶段 1：architecture.md 模板
 - [x] 阶段 2：核心 Skill（refresh-arch ✅ · audit ✅）
-- [ ] 阶段 3：Feature 生命周期 Skill
+- [x] 阶段 3：Feature 生命周期 Skill（plan-feature ✅ · close-work ✅）
 - [ ] 阶段 4：配置 Skill
 - [ ] 阶段 5：Bootstrap
 - [ ] 阶段 6：验证
