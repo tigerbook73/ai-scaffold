@@ -23,7 +23,7 @@
 **输出格式**
   审核范围：最近 1 次提交（abc1234）
 
-  [rules/coding.md] src/utils.ts:12 — 使用了 any 类型（规则：禁止使用 any）
-  [context/architecture.md] src/api/v2/ — 新增路径未在架构文档中记录
+  [context/architecture.md § 架构约束] src/utils.ts:12 — 使用了 any 类型（规则：禁止使用 any）
+  [context/architecture.md § 目录结构] src/api/v2/ — 新增路径未在架构文档中记录
 
   无偏差：✅ 审核范围内代码与规则一致

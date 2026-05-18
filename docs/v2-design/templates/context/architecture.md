@@ -1,5 +1,4 @@
 ---
-priority: high
 last_updated: YYYY-MM-DD
 ---
 
