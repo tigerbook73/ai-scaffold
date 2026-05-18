@@ -7,7 +7,7 @@
 
 ## 当前阶段
 
-**▶ 阶段 5：Bootstrap ✅**
+**▶ 阶段 6：验证（Bootstrap 已验证，其余跳过）**
 
 ---
 
@@ -146,4 +146,4 @@ Skill 格式约定：描述 + 约束 + 步骤（+ 可选输出格式节）。
 - [x] 阶段 3：Feature 生命周期 Skill（plan-feature ✅ · close-work ✅）
 - [x] 阶段 4：配置 Skill（setup-hooks ✅ · setup-permissions ✅）
 - [x] 阶段 5：Bootstrap ✅（选项 A：从 scaffold 仓库复制 skill 文件）
-- [ ] 阶段 6：验证
+- [ ] 阶段 6：验证（Bootstrap 流程已手动走通，plan-feature / audit / refresh-arch 待真实场景验证）
