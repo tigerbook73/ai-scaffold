@@ -7,7 +7,7 @@
 
 ## 当前阶段
 
-**▶ 阶段 3：Feature 生命周期 Skill**（plan-feature ✅ · close-work ✅）
+**▶ 阶段 4：配置 Skill**（setup-hooks ✅ · setup-permissions ✅）
 
 ---
 
@@ -144,6 +144,6 @@ Skill 格式约定：描述 + 约束 + 步骤（+ 可选输出格式节）。
 - [x] 阶段 1：architecture.md 模板
 - [x] 阶段 2：核心 Skill（refresh-arch ✅ · audit ✅）
 - [x] 阶段 3：Feature 生命周期 Skill（plan-feature ✅ · close-work ✅）
-- [ ] 阶段 4：配置 Skill
+- [x] 阶段 4：配置 Skill（setup-hooks ✅ · setup-permissions ✅）
 - [ ] 阶段 5：Bootstrap
 - [ ] 阶段 6：验证
