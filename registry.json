@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "skills": [
+    {
+      "name": "refresh-arch",
+      "set": "arch",
+      "path": "skills/arch/"
+    },
+    {
+      "name": "check-arch",
+      "set": "arch",
+      "path": "skills/arch/"
+    },
+    {
+      "name": "setup-hooks",
+      "path": "skills/setup-hooks/"
+    },
+    {
+      "name": "setup-permissions",
+      "path": "skills/setup-permissions/"
+    },
+    {
+      "name": "prepare-task",
+      "set": "task",
+      "path": "skills/task/"
+    },
+    {
+      "name": "close-task",
+      "set": "task",
+      "path": "skills/task/"
+    },
+    {
+      "name": "sync-rules",
+      "set": "task",
+      "path": "skills/task/"
+    }
+  ],
+  "sets": [
+    {
+      "name": "arch",
+      "path": "skills/arch/"
+    },
+    {
+      "name": "task",
+      "path": "skills/task/"
+    }
+  ]
+}
