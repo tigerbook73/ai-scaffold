@@ -14,9 +14,8 @@
 1. 创建并切换到 feature/{name} 或 refactor/{name} branch
 2. 创建 docs/tasks/{name}/REQUIREMENTS.md（frontmatter: status: draft，内容按模式填写）
 3. 创建 docs/tasks/{name}/PROGRESS.md（当前阶段: requirements-drafting）
-4. 若 .ai-rules/path-rules/task-planning.md 不存在，从模板创建并调用 sync-rules
-5. 提交初始文档
-6. 输出已创建文件列表，提示填写 REQUIREMENTS.md
+4. 提交初始文档
+5. 输出已创建文件列表，提示填写 REQUIREMENTS.md
 
 **REQUIREMENTS.md 模板差异**
 

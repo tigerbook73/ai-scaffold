@@ -38,7 +38,6 @@ scripts/
   build-registry.js   # 自动扫描 skills/ 生成 registry.json
 skills/               # 各 skill / skill-set 实现
   skills/             # /aisk/skills 命令（skill 管理器）
-  comm/               # 公共资源（install/uninstall 默认指令）
 docs/                 # 设计文档
 ```
 

@@ -14,7 +14,7 @@
 
 ## list
 
-1. 读取 `.claude/settings.json`，获取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
+1. 读取 `.ai-skills/config.json`，获取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
 2. fetch `{AISK_REGISTRY}/registry.json`
 3. 输出格式：
    ```
@@ -43,7 +43,7 @@
 
 ## install `<name>`
 
-1. 读取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
+1. 读取 `.ai-skills/config.json`，获取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
 2. 若 `.ai-skills/skills/{name}/` 已存在，提示"已安装 {name}，是否重新安装？[y/N]"，用户未确认则终止
 3. fetch `{AISK_REGISTRY}/registry.json`，查找 `name`（先查 sets，再查 skills）；未找到则报错终止
 4. fetch `{AISK_REGISTRY}/{path}/config.json`，读取元数据
@@ -54,24 +54,20 @@
 7. 保存 config.json 到 `.ai-skills/skills/{name}/config.json`
 8. 执行安装指令：
    a. fetch `{AISK_REGISTRY}/{path}/resource/install.md`
-   b. 若 404，fetch `{AISK_REGISTRY}/skills/comm/resource/install.md`
-   c. 若仍 404，跳过
-   d. 若成功获取，按文件中的指令操作（指令为 AI 可读 Markdown，shell 操作由 AI 执行）
+   b. 若 404，跳过
+   c. 若成功获取，按文件中的指令操作（指令为 AI 可读 Markdown，shell 操作由 AI 执行）
 9. 输出安装摘要：已写入的文件列表
 
 ---
 
 ## remove `<name>`
 
-1. 读取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
+1. 读取 `.ai-skills/config.json`，获取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
 2. 检查 `.ai-skills/skills/{name}/config.json` 是否存在；不存在则提示"未找到已安装的 {name}"并终止
 3. 读取 config.json：
    - 若 `internal: true`，提示"{name} 是内部工具，不支持单独删除"并终止
    - 若 `name === "skills"`，执行管理器清除流程（见下方）
-4. 执行清理指令：
-   a. 读取 `.ai-skills/skills/{name}/resource/uninstall.md`（若存在）
-   b. 若不存在，fetch `{AISK_REGISTRY}/skills/comm/resource/uninstall.md`
-   c. 若获取成功，按文件中的指令操作
+4. 若 `.ai-skills/skills/{name}/resource/uninstall.md` 存在，按文件中的指令操作
 5. 删除 `.claude/commands/aisk/` 中该 skill-set / skill 对应的 .md 文件
 6. 删除 `.ai-skills/skills/{name}/`
 7. 输出删除摘要
