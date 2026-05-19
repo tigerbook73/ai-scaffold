@@ -7,7 +7,7 @@
 在任意项目中触发 bootstrap（使用 raw URL 或粘贴内容）：
 
 ```
-请执行 https://raw.githubusercontent.com/{owner}/{repo}/main/bootstrap.md
+请执行 https://raw.githubusercontent.com/tigerbook73/ai-scaffold/main/bootstrap.md
 ```
 
 bootstrap 完成后，通过 `/skill` 命令管理 skill：
@@ -22,12 +22,12 @@ bootstrap 完成后，通过 `/skill` 命令管理 skill：
 
 ## 可用 Skill
 
-| Skill / Set | 说明 |
-| --- | --- |
-| `arch` | 架构决策管理：`refresh-arch`（生成 architecture.md）、`check-arch`（检查代码对齐） |
-| `task` | 任务规划：`prepare-task`（启动 feature/refactor）、`close-task`（完成并清理） |
-| `setup-hooks` | 为 Node.js 项目安装 commitlint（可选 lint-staged）|
-| `setup-permissions` | 生成/更新 `.claude/settings.json` 权限白名单 |
+| Skill / Set         | 说明                                                                               |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `arch`              | 架构决策管理：`refresh-arch`（生成 architecture.md）、`check-arch`（检查代码对齐） |
+| `task`              | 任务规划：`prepare-task`（启动 feature/refactor）、`close-task`（完成并清理）      |
+| `setup-hooks`       | 为 Node.js 项目安装 commitlint（可选 lint-staged）                                 |
+| `setup-permissions` | 生成/更新 `.claude/settings.json` 权限白名单                                       |
 
 ## 仓库结构
 
