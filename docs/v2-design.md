@@ -130,14 +130,14 @@ remote-repo/
 
 ### 管理器命令
 
-通过 Bootstrap 安装到 `.claude/commands/aisk/skill.md`，提交到 git 后团队共享。
+通过 Bootstrap 安装到 `.claude/commands/aisk/skills.md`，提交到 git 后团队共享。
 
 | 命令                    | 说明                                            |
 | ----------------------- | ----------------------------------------------- |
-| `/aisk:skill list`           | 列出远程仓库所有可用 skill 和 skill-set         |
-| `/aisk:skill installed`      | 列出本地已安装的 skill                          |
-| `/aisk:skill install <name>` | 安装 skill 或 skill-set；已安装时提示确认后重装 |
-| `/aisk:skill remove <name>`  | 删除 skill 或 skill-set                         |
+| `/aisk/skills list`           | 列出远程仓库所有可用 skill 和 skill-set         |
+| `/aisk/skills installed`      | 列出本地已安装的 skill                          |
+| `/aisk/skills install <name>` | 安装 skill 或 skill-set；已安装时提示确认后重装 |
+| `/aisk/skills remove <name>`  | 删除 skill 或 skill-set                         |
 
 > 无 update 命令——重新执行 `/skill install` 即为更新，始终取远程最新版本。
 
@@ -179,14 +179,14 @@ remote-repo/
 
 1. fetch `registry.json`，确认仓库格式有效
 2. 创建目录 `.claude/commands/aisk/` 和 `.ai-skills/skills/`
-3. 下载 `skill.md` 到 `.claude/commands/aisk/skill.md`
-4. 将 raw base URL 写入 `settings.json`（`AISC_REGISTRY`）
-5. 初始化完成，后续通过 `/aisk:skill` 命令管理
+3. 下载 `skills/skills/skills.md` 到 `.claude/commands/aisk/skills.md`
+4. 将 raw base URL 写入 `settings.json`（`AISK_REGISTRY`）
+5. 初始化完成，后续通过 `/aisk/skills` 命令管理
 
 **安装单个 skill / skill-set：**
 
 1. 若已安装，提示用户确认（"已安装 {name}，是否重新安装？"），取消则终止
-2. 从 `AISC_REGISTRY` fetch `registry.json`，查找目标
+2. 从 `AISK_REGISTRY` fetch `registry.json`，查找目标
 3. 下载 `.md` 文件到 `.claude/commands/aisk/{skill-name}.md`（skill-set 内 skill 平铺）
 4. 下载 `config.json` 和 `resource/`（若存在）到 `.ai-skills/skills/{name}/`
 5. 执行安装指令（按优先级查找）：
@@ -226,13 +226,13 @@ remote-repo/
 │       └── task-planning.md       # 任务工作流（prepare-task 生成）
 │
 ├── .claude/
-│   ├── settings.json              # 远程仓库配置（AISC_REGISTRY）+ 权限配置
+│   ├── settings.json              # 远程仓库配置（AISK_REGISTRY）+ 权限配置
 │   ├── rules/
 │   │   ├── {skill}-*.md           # 从 resource/rules/ 同步（skill 安装时写入）
 │   │   └── aisk-*.md              # 从 .ai-rules/path-rules/ 同步（sync-rules 写入）
 │   └── commands/
 │       └── aisk/                  # 全部 skill（skill 管理器 + 已安装 skill）
-│           ├── skill.md           # skill 管理器（/aisk:skill list/install/remove...）
+│           ├── skills.md          # skill 管理器（/aisk/skills list/install/remove...）
 │           └── ...               # 已安装 skill（/aisk:refresh-arch 等）
 │
 ├── docs/
@@ -249,7 +249,7 @@ remote-repo/
 ```json
 {
   "env": {
-    "AISC_REGISTRY": "https://raw.githubusercontent.com/{owner}/{repo}/main"
+    "AISK_REGISTRY": "https://raw.githubusercontent.com/{owner}/{repo}/main"
   }
 }
 ```

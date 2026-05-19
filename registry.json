@@ -2,6 +2,10 @@
   "version": "1.0",
   "skills": [
     {
+      "name": "skills",
+      "path": "skills/skills/"
+    },
+    {
       "name": "refresh-arch",
       "set": "arch",
       "path": "skills/arch/"
@@ -31,8 +35,7 @@
     },
     {
       "name": "sync-rules",
-      "set": "task",
-      "path": "skills/task/"
+      "path": "skills/sync-rules/"
     }
   ],
   "sets": [

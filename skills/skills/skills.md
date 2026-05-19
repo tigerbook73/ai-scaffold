@@ -2,7 +2,7 @@
 
 管理 AI Scaffold skill：列出、安装、删除。
 
-**调用方式**：`/aisk:skill <subcommand>`
+**调用方式**：`/aisk/skills <subcommand>`
 
 **子命令**（`$ARGUMENTS`）
 - `list` → 列出远程所有可用 skill 和 skill-set
@@ -14,8 +14,8 @@
 
 ## list
 
-1. 读取 `.claude/settings.json`，获取 `AISC_REGISTRY`；不存在则提示先运行 bootstrap 并终止
-2. fetch `{AISC_REGISTRY}/registry.json`
+1. 读取 `.claude/settings.json`，获取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
+2. fetch `{AISK_REGISTRY}/registry.json`
 3. 输出格式：
    ```
    skill-sets:
@@ -39,18 +39,18 @@
 
 ## install `<name>`
 
-1. 读取 `AISC_REGISTRY`；不存在则提示先运行 bootstrap 并终止
+1. 读取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
 2. 若 `.ai-skills/skills/{name}/` 已存在，提示"已安装 {name}，是否重新安装？[y/N]"，用户未确认则终止
-3. fetch `{AISC_REGISTRY}/registry.json`，查找 `name`（先查 sets，再查 skills）；未找到则报错终止
-4. fetch `{AISC_REGISTRY}/{path}/config.json`，读取元数据
+3. fetch `{AISK_REGISTRY}/registry.json`，查找 `name`（先查 sets，再查 skills）；未找到则报错终止
+4. fetch `{AISK_REGISTRY}/{path}/config.json`，读取元数据
 5. 确定 skill 文件列表：
    - skill-set：config.json 的 `skills` 字段
    - 单 skill：仅 `[name]`
-6. 对每个 skill，下载 `{AISC_REGISTRY}/{path}/{skill-name}.md` 到 `.claude/commands/aisk/{skill-name}.md`
+6. 对每个 skill，下载 `{AISK_REGISTRY}/{path}/{skill-name}.md` 到 `.claude/commands/aisk/{skill-name}.md`
 7. 保存 config.json 到 `.ai-skills/skills/{name}/config.json`
 8. 执行安装指令：
-   a. fetch `{AISC_REGISTRY}/{path}/resource/install.md`
-   b. 若 404，fetch `{AISC_REGISTRY}/comm/install.md`
+   a. fetch `{AISK_REGISTRY}/{path}/resource/install.md`
+   b. 若 404，fetch `{AISK_REGISTRY}/comm/install.md`
    c. 若仍 404，跳过
    d. 若成功获取，按文件中的指令操作（指令为 AI 可读 Markdown，shell 操作由 AI 执行）
 9. 输出安装摘要：已写入的文件列表
@@ -59,12 +59,12 @@
 
 ## remove `<name>`
 
-1. 读取 `AISC_REGISTRY`；不存在则提示先运行 bootstrap 并终止
+1. 读取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
 2. 检查 `.ai-skills/skills/{name}/config.json` 是否存在；不存在则提示"未找到已安装的 {name}"并终止
 3. 读取 config.json，确定 skill 文件列表（同 install 步骤5）
 4. 执行清理指令：
    a. 读取 `.ai-skills/skills/{name}/resource/uninstall.md`（若存在）
-   b. 若不存在，fetch `{AISC_REGISTRY}/comm/uninstall.md`
+   b. 若不存在，fetch `{AISK_REGISTRY}/comm/uninstall.md`
    c. 若获取成功，按文件中的指令操作
 5. 删除 `.claude/commands/aisk/` 中该 skill-set / skill 对应的 .md 文件
 6. 删除 `.ai-skills/skills/{name}/`
