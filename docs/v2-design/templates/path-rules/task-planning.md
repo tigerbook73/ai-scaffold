@@ -1,26 +1,32 @@
 ---
 priority: high
-paths: ["docs/features/**"]
+paths: ["docs/tasks/**"]
 last_updated: YYYY-MM-DD
 ---
 
-# Feature 三文档工作流
+# 任务工作流
 
 ## 分支约束
-- 所有改动必须在 feature branch 上（命名：feature/{name}）
+- 所有改动必须在 feature/refactor branch 上（命名：feature/{name} 或 refactor/{name}）
 - 禁止将此 branch 合并到主干
 - 本规则文件在合并前必须删除
 
 ## 文档创建顺序
-- plan-feature 执行时只创建 REQUIREMENTS.md 和 PROGRESS.md
+- prepare-task 执行时只创建 REQUIREMENTS.md 和 PROGRESS.md
 - DESIGN.md 在用户明确指令后生成
 
 ## 必填标题
 
-### REQUIREMENTS.md
+### REQUIREMENTS.md（feature 模式）
 - `status`（frontmatter，draft | confirmed）
 - 问题描述
 - 用例 / 验收标准
+
+### REQUIREMENTS.md（refactor 模式）
+- `status`（frontmatter，draft | confirmed）
+- 重构目标
+- 范围与约束
+- 完成标准
 
 ### DESIGN.md
 - 方案概述
