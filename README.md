@@ -10,14 +10,14 @@
 请执行 https://raw.githubusercontent.com/tigerbook73/ai-scaffold/main/bootstrap.md
 ```
 
-bootstrap 完成后，通过 `/skill` 命令管理 skill：
+bootstrap 完成后，通过 `/aisk:skill` 命令管理 skill：
 
 ```
-/skill list                    # 查看可用 skill
-/skill install arch            # 安装架构决策工具集
-/skill install task            # 安装任务规划工具集
-/skill install setup-hooks     # 安装 git hooks
-/skill install setup-permissions  # 配置 Claude 权限
+/aisk:skill list                    # 查看可用 skill
+/aisk:skill install arch            # 安装架构决策工具集
+/aisk:skill install task            # 安装任务规划工具集
+/aisk:skill install setup-hooks     # 安装 git hooks
+/aisk:skill install setup-permissions  # 配置 Claude 权限
 ```
 
 ## 可用 Skill
@@ -33,7 +33,7 @@ bootstrap 完成后，通过 `/skill` 命令管理 skill：
 
 ```
 bootstrap.md          # 入口：初始化 skill 管理器
-skill.md              # /skill 命令实现
+skill.md              # /aisk:skill 命令实现
 registry.json         # skill 注册表（由 build-registry.js 生成）
 scripts/
   build-registry.js   # 自动扫描 skills/ 生成 registry.json

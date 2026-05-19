@@ -2,6 +2,8 @@
 
 管理 AI Scaffold skill：列出、安装、删除。
 
+**调用方式**：`/aisk:skill <subcommand>`
+
 **子命令**（`$ARGUMENTS`）
 - `list` → 列出远程所有可用 skill 和 skill-set
 - `installed` → 列出本地已安装 skill

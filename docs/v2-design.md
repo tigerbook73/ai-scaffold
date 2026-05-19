@@ -130,14 +130,14 @@ remote-repo/
 
 ### 管理器命令
 
-通过 Bootstrap 安装到 `.claude/commands/skill.md`，提交到 git 后团队共享。
+通过 Bootstrap 安装到 `.claude/commands/aisk/skill.md`，提交到 git 后团队共享。
 
 | 命令                    | 说明                                            |
 | ----------------------- | ----------------------------------------------- |
-| `/skill list`           | 列出远程仓库所有可用 skill 和 skill-set         |
-| `/skill installed`      | 列出本地已安装的 skill                          |
-| `/skill install <name>` | 安装 skill 或 skill-set；已安装时提示确认后重装 |
-| `/skill remove <name>`  | 删除 skill 或 skill-set                         |
+| `/aisk:skill list`           | 列出远程仓库所有可用 skill 和 skill-set         |
+| `/aisk:skill installed`      | 列出本地已安装的 skill                          |
+| `/aisk:skill install <name>` | 安装 skill 或 skill-set；已安装时提示确认后重装 |
+| `/aisk:skill remove <name>`  | 删除 skill 或 skill-set                         |
 
 > 无 update 命令——重新执行 `/skill install` 即为更新，始终取远程最新版本。
 
@@ -178,9 +178,10 @@ remote-repo/
 两种方式均执行相同步骤：
 
 1. fetch `registry.json`，确认仓库格式有效
-2. 下载 `skill.md` 到 `.claude/commands/skill.md`
-3. 将 raw base URL 写入 `settings.json`（`AISC_REGISTRY`）
-4. 初始化完成，后续通过 `/skill` 命令管理
+2. 创建目录 `.claude/commands/aisk/` 和 `.ai-skills/skills/`
+3. 下载 `skill.md` 到 `.claude/commands/aisk/skill.md`
+4. 将 raw base URL 写入 `settings.json`（`AISC_REGISTRY`）
+5. 初始化完成，后续通过 `/aisk:skill` 命令管理
 
 **安装单个 skill / skill-set：**
 
@@ -228,10 +229,11 @@ remote-repo/
 │   ├── settings.json              # 远程仓库配置（AISC_REGISTRY）+ 权限配置
 │   ├── rules/
 │   │   ├── {skill}-*.md           # 从 resource/rules/ 同步（skill 安装时写入）
-│   │   └── aisc-*.md              # 从 .ai-rules/path-rules/ 同步（sync-rules 写入）
+│   │   └── aisk-*.md              # 从 .ai-rules/path-rules/ 同步（sync-rules 写入）
 │   └── commands/
-│       ├── skill.md               # skill 管理器（/skill list/install/remove...）
-│       └── aisk/                  # 已安装 skill（/aisk:refresh-arch 等）
+│       └── aisk/                  # 全部 skill（skill 管理器 + 已安装 skill）
+│           ├── skill.md           # skill 管理器（/aisk:skill list/install/remove...）
+│           └── ...               # 已安装 skill（/aisk:refresh-arch 等）
 │
 ├── docs/
 │   └── tasks/                     # prepare-task 过程文档（feature/refactor branch，merge 前清理）
