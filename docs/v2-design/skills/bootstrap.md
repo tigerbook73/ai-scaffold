@@ -14,13 +14,10 @@
 - `{path}` → 在指定目录初始化
 
 **步骤**
-1. 确认目标目录，检测存量项目（CLAUDE.md / .ai-rules/ 是否已存在）
+1. 确认目标目录，检测存量项目（CLAUDE.md / architecture.md / .ai-rules/ 是否已存在）
    - 存在冲突文件：列出并询问用户是否覆盖，不自动覆盖
-2. 扫描目标项目代码，生成 .ai-rules/context/architecture.md
-   - AI 维护区（项目概览 / 目录结构 / 典型模式）：自动填充
-   - 人工维护区（架构约束 / 例外 / 遗留问题）：留空，附提示注释
-3. 追加 CLAUDE.md 引用块（aisc:start/end 标记，已存在则跳过）
-4. 从 scaffold 仓库的 docs/v2-design/skills/ 复制所有 skill 到目标项目的 .claude/commands/aisc/
-5. 调用 setup-permissions
-6. 询问是否安装 git hooks，是则调用 setup-hooks
-7. 输出初始化摘要，提示用户下一步：填写 architecture.md 人工维护区的架构约束
+2. 调用 `refresh-arch` 扫描代码库，生成 `./architecture.md`
+3. 从 scaffold 仓库的 `docs/v2-design/skills/` 复制所有 skill 到目标项目的 `.claude/commands/aisc/`
+4. 调用 `setup-permissions`
+5. 询问是否安装 git hooks，是则调用 `setup-hooks`
+6. 输出初始化摘要：已生成文件列表，提示可用 `/aisc:audit` 检查代码与架构决策的对齐情况

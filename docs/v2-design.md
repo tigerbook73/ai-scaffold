@@ -1,6 +1,7 @@
 # AI Scaffold V2 设计方案
 
 > 开发流程操作手册见 [v2-workflows.md](./v2-workflows.md)。
+> Skill 仓库详细规范见 [refactor.md](./refactor.md)。
 
 ---
 
@@ -8,84 +9,78 @@
 
 AI 编码时的规则遵守来自上下文，而非系统级强制。
 
-核心机制：将项目特有的架构约束和典型模式加入 AI 上下文（via CLAUDE.md），由 AI 在编码时主动遵守；通过 `audit` 定期检查偏离；`refresh-arch` 保持上下文与代码同步。
+**两类文档，两种加载策略：**
 
-### 两类内容，两种策略
+| 文档 | 内容 | 维护者 | 加载方式 |
+| --- | --- | --- | --- |
+| `CLAUDE.md` | 项目知识（技术栈、目录结构、常用命令、典型模式）| `/init` 和更新指令自动维护 | 始终加载 |
+| `architecture.md` | 架构决策（违反后无即时信号、需跨文件理解原因的设计约束）| `refresh-arch` 生成，AI 维护 | 按需显式加载 |
 
-| 内容                                                              | 维护者             | 作用                                |
-| ----------------------------------------------------------------- | ------------------ | ----------------------------------- |
-| 架构约束（如 Server Component → Service → DB；API 必须 Zod 校验） | 人工，写一次极少改 | AI 编码时严格遵守，`audit` 重点检查 |
-| 典型模式（目录结构、技术栈、代码中重复出现的结构）                | AI 自动提取刷新    | AI 编码时作为参考，按项目惯例来     |
+**Skill 交付模型（类 npm）：**
 
-### 与 `/init` 的关系
-
-`refresh-arch` 与 Claude Code 内置 `/init` 本质相同（扫描代码 → 生成文档），区别在于：
-
-- `/init` 生成通用 CLAUDE.md
-- `refresh-arch` 按 architecture.md 的结构定向刷新，保护人工维护区不被覆盖
+所有功能以 skill 为单位，从远程 GitHub 仓库按需安装到本地项目。skill-set 是相关 skill 的集合，统一安装和删除。详见 [refactor.md](./refactor.md)。
 
 ---
 
 ## 二、核心文件：architecture.md
 
-单一来源，分两个区，由 `---` 分隔。
+记录代码库中已经做出的架构决策，供 `check-arch` 和 `close-feature` 按需加载。
 
-**AI 维护区**（`refresh-arch` 自动更新，用户无需手工维护）
+**每条记录必须同时满足：**
 
-- `## 项目概览`：简介、技术栈、常用命令
-- `## 目录结构`：顶层目录树 + 职责
-- `## 典型模式`：从代码中提取的重复结构和通用做法
+1. 是一个可以被违反的选择——有明确的"不该做什么"
+2. 违反后没有即时信号——工具不报告，行为看似正常；影响可能在其他模块才显现、延迟暴露，或作为质量隐患悄悄积累
+3. 需要阅读多个文件才能理解"为什么这样设计"
 
-**人工维护区**（AI 永远不覆盖）
+**不收录：**
+- 技术栈的标准用法
+- 没有明确反例的描述性内容（"系统使用 X"不算决策）
 
-- `## 架构约束`：必须遵守的规则，违反会导致功能或安全问题
-- `## 例外与特殊情况`：偏离框架默认或通用模式的有意决策
-- `## 遗留问题`：已决策但未实施的方向，或待讨论的架构问题
-
-两区之间以注释明确分界：
+**每条格式：**
 
 ```markdown
-<!-- AI 维护区：由 refresh-arch 自动更新 -->
-
-## 项目概览
-
-...
-
-## 目录结构
-
-...
-
-## 典型模式
-
-...
-
----
-
-<!-- 人工维护区：AI 不覆盖此线以下内容 -->
-
-## 架构约束
-
-...
+**[决策标题]**
+反例：不该做什么（一句话）
+Rationale：为什么这样设计
+Consequence：违反后会发生什么
 ```
+
+**刷新原则（`refresh-arch` 执行时）：**
+- 已有条目覆盖的决策不重复；视角不同但覆盖相同决策时，以已有条目为准
+- 新条目必须明确通过以上三条；存疑时不加，宁少勿滥
+- 已有条目若不再满足标准或对应设计已变更，删除
 
 ---
 
 ## 三、Skill 列表
 
-Bootstrap 安装到 `.claude/commands/aisc/`，提交到 git 后团队共享。
+通过 Bootstrap 安装到 `.claude/commands/`，提交到 git 后团队共享。
 
-| Skill                     | 作用                                                           | 触发场景                             |
-| ------------------------- | -------------------------------------------------------------- | ------------------------------------ |
-| `/aisc:refresh-arch`      | 扫描代码，刷新 AI 维护区，保留人工维护区                       | 代码有较大变更后，或感觉上下文过时时 |
-| `/aisc:audit`             | 检查代码变更是否偏离架构约束                                   | 定期检查，或 feature 完成前          |
-| `/aisc:plan-feature`      | 创建 feature 三文档，生成 feature-3doc path-rule               | 启动需要跨会话的复杂 feature         |
-| `/aisc:close-work`        | 完成 feature，提取结论到 architecture.md，清理文档和 path-rule | PR 合并前                            |
-| `/aisc:setup-hooks`       | 安装 git hooks                                                 | 初始化或更新 hooks 时                |
-| `/aisc:setup-permissions` | 配置 `.claude/settings.json`                                   | 初始化或更新权限时                   |
+**Skill 管理器（顶层）：**
+
+| 命令 | 说明 |
+| --- | --- |
+| `/skill list` | 列出远程仓库所有可用 skill 和 skill-set |
+| `/skill installed` | 列出本地已安装的 skill |
+| `/skill install <name>` | 安装 skill 或 skill-set；已安装时提示确认后重装 |
+| `/skill remove <name>` | 删除 skill 或 skill-set |
+
+**已安装 Skill（`/aisk:` 命名空间）：**
+
+| Skill | Set | 作用 | 触发场景 |
+| --- | --- | --- | --- |
+| `/aisk:refresh-arch` | `arch` | 扫描代码，生成或刷新 `architecture.md` | 初始化项目，或架构有较大变更后 |
+| `/aisk:check-arch` | `arch` | 加载 `architecture.md`，检查代码变更是否偏离架构决策 | 定期检查，或 feature 完成前 |
+| `/aisk:prepare-feature` | `feature` | 创建 feature 三文档，生成 feature-3doc path-rule | 启动需要跨会话的复杂 feature |
+| `/aisk:close-feature` | `feature` | 完成 feature，清理文档；可选触发 `refresh-arch` | PR 合并前 |
+| `/aisk:prepare-refactor` | `refactor` | 创建 refactor 两文档 | 启动需要跨会话的重构 |
+| `/aisk:close-refactor` | `refactor` | 完成 refactor，清理文档 | PR 合并前 |
+| `/aisk:setup-hooks` | — | 安装 git hooks | 初始化或更新 hooks 时 |
+| `/aisk:setup-permissions` | — | 配置 `.claude/settings.json` | 初始化或更新权限时 |
 
 内部工具（不直接调用）：
 
-- `sync-rules`：由 `plan-feature` / `close-work` 内部调用，同步 path-rules 到 `.claude/rules/`
+- `sync-rules`：由 `prepare-feature` / `close-feature` 内部调用，同步 path-rules 到 `.claude/rules/`
 
 ---
 
@@ -101,66 +96,72 @@ Bootstrap 安装到 `.claude/commands/aisc/`，提交到 git 后团队共享。
 
 ```
 项目根目录/
+├── .ai-skills/
+│   └── skills/
+│       ├── {skill-name}/
+│       │   ├── config.json        # skill 元数据（bootstrap 时下载）
+│       │   ├── resource/          # 从远程下载的资源（模板、rules 等）
+│       │   └── state.md           # 可选：运行时状态（本地生成）
+│       └── {skill-set-name}/
+│           ├── config.json
+│           ├── resource/
+│           └── state.md
+│
 ├── .ai-rules/
-│   ├── context/
-│   │   └── architecture.md        # 单一来源（AI + 人工混合维护）
 │   └── path-rules/
-│       └── feature-3doc.md        # Feature 三文档工作流（plan-feature 生成）
+│       └── feature-3doc.md        # Feature 三文档工作流（prepare-feature 生成）
 │
 ├── .claude/
-│   ├── settings.json              # 权限配置
+│   ├── settings.json              # 远程仓库配置（AISC_REGISTRY）+ 权限配置
 │   ├── rules/
-│   │   └── aisc-*.md              # sync-rules 从 path-rules/ 生成，勿直接修改
+│   │   └── {skill}-*.md           # 从 resource/rules/ 同步（skill 安装时写入）
 │   └── commands/
-│       └── aisc/                  # Bootstrap 安装的 Skill
+│       ├── skill.md               # skill 管理器（/skill list/install/remove...）
+│       └── aisk/                  # 已安装 skill（/aisk:refresh-arch 等）
 │
 ├── docs/
-│   └── features/                  # plan-feature 过程文档（feature branch，merge 前清理）
+│   └── features/                  # prepare-feature 过程文档（feature branch，merge 前清理）
 │
-├── CLAUDE.md                      # @ 引用 .ai-rules/context/architecture.md
-└── CLAUDE.local.md                # 个人偏好（gitignore）
+├── architecture.md                # 架构决策（按需加载，不 @ 引入 CLAUDE.md）
+└── CLAUDE.md                      # 项目知识（始终加载，/init 自动维护）
 ```
 
-**CLAUDE.md 引用块**（Bootstrap 追加，`aisc:start/end` 标记，幂等）：
+`architecture.md` 不在 CLAUDE.md 中 @-引用，由 `check-arch` 和 `close-feature` 在需要时显式读取。
 
-```markdown
-<!-- aisc:start -->
+**settings.json 中的仓库配置：**
 
-@.ai-rules/context/architecture.md
-
-<!-- aisc:end -->
+```json
+{
+  "env": {
+    "AISC_REGISTRY": "https://raw.githubusercontent.com/{owner}/{repo}/main"
+  }
+}
 ```
 
 ---
 
 ## 六、架构文档拆分（Monorepo / 大型项目）
 
-单一 `architecture.md` 适合单包项目。对于 monorepo 或有明显模块边界的大型项目，可按路径拆分子架构文档，通过 path-rules 按需加载，减少上下文占用。
+单一 `architecture.md` 适合单包项目。对于 monorepo 或有明显模块边界的大型项目，可按路径拆分子架构文档，通过 path-rules 按需加载。
 
 ```
 .ai-rules/
-├── context/
-│   └── architecture.md          # 根级：整体结构 + 跨包约束（始终加载）
 └── path-rules/
-    ├── web-arch.md              # paths: apps/web/**
+    ├── web-arch.md              # paths: apps/web/**（包级架构决策）
     ├── api-arch.md              # paths: apps/api/**
     └── feature-3doc.md          # paths: docs/features/**
 ```
 
-**加载效果**：在 `apps/web/` 工作时，只加载根文档 + `web-arch.md`，不加载其他包的文档。
+根级 `architecture.md` 记录跨包约束；子文档记录包级决策，格式与根文档相同。
 
-**内容边界**：
-- 根文档：monorepo 整体结构、包间接口约定、跨包强制约束
-- 子文档：包内典型模式、包级架构约束、包内例外；结构与根文档相同（AI 维护区 + 人工维护区）
-
-**`refresh-arch` 适配**：按输入路径决定更新哪个文档。
-- `refresh-arch` → 更新根 architecture.md
-- `refresh-arch apps/web/` → 更新 `path-rules/web-arch.md`
+**`refresh-arch` 适配**：
+- `refresh-arch` → 更新根 `architecture.md`
+- `refresh-arch apps/web/` → 更新 `.ai-rules/path-rules/web-arch.md`
 
 ---
 
 ## 七、遗留问题
 
-- [ ] `close-work` 提取策略：哪些内容提取到 architecture.md 人工维护区，哪些直接丢弃
-- [ ] Feature 三文档模式细节：refactor 是否需要单独模式；见 [plan-skill.md](./plan-skill.md)
+- [ ] Feature 三文档模式细节：见 [plan-skill.md](./plan-skill.md)
+- [x] `close-feature` 触发 `refresh-arch` 的时机：询问用户是否引入架构变更，由用户确认后触发
 - [ ] 架构文档拆分：子架构文档模板待设计（Monorepo 场景启用时）
