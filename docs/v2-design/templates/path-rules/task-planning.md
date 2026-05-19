@@ -8,8 +8,7 @@ last_updated: YYYY-MM-DD
 
 ## 分支约束
 - 所有改动必须在 feature/refactor branch 上（命名：feature/{name} 或 refactor/{name}）
-- 禁止将此 branch 合并到主干
-- 本规则文件在合并前必须删除
+- docs/tasks/{name}/ 在合并前必须清理（由 close-task 执行）
 
 ## 文档创建顺序
 - prepare-task 执行时只创建 REQUIREMENTS.md 和 PROGRESS.md

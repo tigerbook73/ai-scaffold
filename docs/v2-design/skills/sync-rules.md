@@ -17,6 +17,6 @@
 
 **输出格式**
   同步完成：
-  ✅ 写入 .claude/rules/aisc-feature-3doc.md（paths: docs/features/**）
+  ✅ 写入 .claude/rules/aisc-task-planning.md（paths: docs/tasks/**）
   ⚠️ 跳过 example.md — 缺少 paths 字段
   🗑 删除 .claude/rules/aisc-old-rule.md — 源文件已移除

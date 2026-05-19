@@ -1,23 +1,25 @@
 # bootstrap
 
-初始化项目的 AI scaffold，生成 architecture.md，安装所有 skill。
+初始化 AI Scaffold skill 管理器，完成后即可通过 `/skill` 命令按需安装各 skill。
+
+**触发方式**
+
+方式 A：提供 raw URL（AI 自行 fetch）
+> 请执行 https://raw.githubusercontent.com/{owner}/{repo}/main/bootstrap.md
+- 必须使用 raw URL，blob URL 返回 HTML 无法读取
+
+方式 B：直接粘贴文件内容
+> 以下是 bootstrap.md 的内容，请按指令执行：[粘贴内容]
 
 **约束**
-- [写操作] 在目标项目上操作，不修改 scaffold 仓库本身
-- 存量项目检测到冲突时，列出冲突文件并询问用户，不静默覆盖
-
-**配置**（首次运行时询问，记住后无需重复）
-- scaffold 仓库路径（用于复制 skill 文件，默认：~/.claude/ai-scaffold）
-
-**输入**（`$ARGUMENTS`，可选）
-- 无参数 → 在当前目录初始化
-- `{path}` → 在指定目录初始化
+- [写操作] 只写 `.claude/commands/skill.md` 和 `.claude/settings.json`
+- `settings.json` 合并写入，不覆盖已有字段
 
 **步骤**
-1. 确认目标目录，检测存量项目（CLAUDE.md / architecture.md / .ai-rules/ 是否已存在）
-   - 存在冲突文件：列出并询问用户是否覆盖，不自动覆盖
-2. 调用 `refresh-arch` 扫描代码库，生成 `./architecture.md`
-3. 从 scaffold 仓库的 `docs/v2-design/skills/` 复制所有 skill 到目标项目的 `.claude/commands/aisc/`
-4. 调用 `setup-permissions`
-5. 询问是否安装 git hooks，是则调用 `setup-hooks`
-6. 输出初始化摘要：已生成文件列表，提示可用 `/aisc:audit` 检查代码与架构决策的对齐情况
+1. 确定 `AISC_REGISTRY`：
+   - 方式 A：从 fetch URL 中去掉 `/bootstrap.md` 得到 raw base URL
+   - 方式 B：询问用户仓库的 raw base URL
+2. 从 `{AISC_REGISTRY}/registry.json` fetch 注册表，验证须含 `version`、`skills`、`sets` 字段；失败则终止并报告 URL 和错误信息
+3. 下载 `{AISC_REGISTRY}/skill.md` 到 `.claude/commands/skill.md`
+4. 读取 `.claude/settings.json`（不存在则创建空对象），在 `env` 中写入 `AISC_REGISTRY`
+5. 输出初始化摘要：已写入的文件、`AISC_REGISTRY` 值，提示通过 `/skill list` 查看可用 skill

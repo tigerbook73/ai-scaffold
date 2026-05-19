@@ -21,7 +21,7 @@ AI 编码时的规则遵守来自上下文，而非系统级强制。
 
 ## 二、核心文件：architecture.md
 
-记录代码库中已经做出的架构决策，供 `check-arch` 和 `close-task` 按需加载。
+记录代码库中已经做出的架构决策，供 `check-arch` 按需加载。
 
 **每条记录必须同时满足：**
 
@@ -147,7 +147,7 @@ remote-repo/
 | ------------------------- | ------ | --------------------------------------------------------- | ------------------------------------ |
 | `/aisk:refresh-arch`      | `arch` | 扫描代码，生成或刷新 `architecture.md`                    | 初始化项目，或架构有较大变更后       |
 | `/aisk:check-arch`        | `arch` | 加载 `architecture.md`，检查代码变更是否偏离架构决策      | 定期检查，或 feature 完成前          |
-| `/aisk:prepare-task`      | `task` | 创建 feature 三文档或 refactor 两文档，按需生成 path-rule | 启动需要跨会话的 feature 或 refactor |
+| `/aisk:prepare-task`      | `task` | 创建 feature 或 refactor 三文档，按需生成 path-rule       | 启动需要跨会话的 feature 或 refactor |
 | `/aisk:close-task`        | `task` | 完成工作，清理文档                                        | PR 合并前                            |
 | `/aisk:setup-hooks`       | —      | 安装 git hooks                                            | 初始化或更新 hooks 时                |
 | `/aisk:setup-permissions` | —      | 配置 `.claude/settings.json`                              | 初始化或更新权限时                   |
@@ -240,7 +240,7 @@ remote-repo/
 └── CLAUDE.md                      # 项目知识（始终加载，/init 自动维护）
 ```
 
-`architecture.md` 不在 CLAUDE.md 中 @-引用，由 `check-arch` 和 `close-task` 在需要时显式读取。
+`architecture.md` 不在 CLAUDE.md 中 @-引用，由 `check-arch` 在需要时显式读取。
 
 **settings.json 中的仓库配置：**
 
