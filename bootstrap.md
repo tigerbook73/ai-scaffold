@@ -12,7 +12,9 @@
 > 以下是 bootstrap.md 的内容，请按指令执行：[粘贴内容]
 
 **约束**
-- [写操作] 只写 `.claude/commands/aisk/skills.md`（skill 管理器）和 `.ai-skills/config.json`
+- [写操作] 必须同时完成以下两项，缺一不可：
+  - `.claude/commands/aisk/skills.md` — skill 管理器命令文件
+  - `.ai-skills/config.json` — 注册表地址（后续所有 skill 操作依赖此文件）
 
 **步骤**
 1. 确定 `AISK_REGISTRY`：
@@ -23,5 +25,5 @@
    - `.claude/commands/aisk/`
    - `.ai-skills/skills/`
 4. 下载 `{AISK_REGISTRY}/skills/skills/skills.md` 到 `.claude/commands/aisk/skills.md`
-5. 将 `AISK_REGISTRY` 写入 `.ai-skills/config.json`（`{"AISK_REGISTRY": "<url>"}` 格式，已存在则合并更新）
-6. 输出初始化摘要：已创建的目录和文件、`AISK_REGISTRY` 值，提示通过 `/aisk/skills list` 查看可用 skill
+5. **[必须执行]** 将 `AISK_REGISTRY` 写入 `.ai-skills/config.json`（`{"AISK_REGISTRY": "<url>"}` 格式，已存在则合并更新）
+6. 输出初始化摘要：已创建的目录和文件、`AISK_REGISTRY` 值，确认两处均已写入，提示通过 `/aisk/skills list` 查看可用 skill

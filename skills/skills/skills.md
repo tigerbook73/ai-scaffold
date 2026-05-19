@@ -43,6 +43,10 @@
 
 ## install `<name>`
 
+> **[写操作约束]** 每次安装必须同时写入两处，缺一不可：
+> - `.claude/commands/aisk/{skill-name}.md` — Claude Code 可执行的命令文件
+> - `.ai-skills/skills/{name}/config.json` — 安装记录（供 `installed` 和外部工具读取）
+
 1. 读取 `.ai-skills/config.json`，获取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
 2. 若 `.ai-skills/skills/{name}/` 已存在，提示"已安装 {name}，是否重新安装？[y/N]"，用户未确认则终止
 3. fetch `{AISK_REGISTRY}/registry.json`，查找 `name`（先查 sets，再查 skills）；未找到则报错终止
@@ -51,12 +55,13 @@
    - skill-set：config.json 的 `skills` 字段
    - 单 skill：仅 `[name]`
 6. 对每个 skill，下载 `{AISK_REGISTRY}/{path}/{skill-name}.md` 到 `.claude/commands/aisk/{skill-name}.md`
-7. 保存 config.json 到 `.ai-skills/skills/{name}/config.json`
+7. **[必须执行]** 写入安装记录：
+   - 将 config.json 保存到 `.ai-skills/skills/{name}/config.json`（目录不存在则创建）
 8. 执行安装指令：
    a. fetch `{AISK_REGISTRY}/{path}/resource/install.md`
    b. 若 404，跳过
    c. 若成功获取，按文件中的指令操作（指令为 AI 可读 Markdown，shell 操作由 AI 执行）
-9. 输出安装摘要：已写入的文件列表
+9. 输出安装摘要：列出已写入的全部文件（含 `.ai-skills/` 路径），确认两处均已写入
 
 ---
 
