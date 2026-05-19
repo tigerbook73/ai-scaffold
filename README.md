@@ -33,12 +33,12 @@ bootstrap 完成后，通过 `/aisk/skills` 命令管理 skills：
 
 ```
 bootstrap.md          # 入口：初始化 skill 管理器
-skills/skills/        # /aisk/skills 命令实现（skill 管理器）
 registry.json         # skill 注册表（由 build-registry.js 生成）
 scripts/
   build-registry.js   # 自动扫描 skills/ 生成 registry.json
-comm/                 # 公共资源（install/uninstall 默认指令）
 skills/               # 各 skill / skill-set 实现
+  skills/             # /aisk/skills 命令（skill 管理器）
+  comm/               # 公共资源（install/uninstall 默认指令）
 docs/                 # 设计文档
 ```
 

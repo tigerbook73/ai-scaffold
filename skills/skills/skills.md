@@ -25,6 +25,10 @@
    standalone:
      setup-hooks
      setup-permissions
+     sync-rules    [内部工具，不可单独删除]
+
+   manager:
+     skills        [删除将清除所有已安装 skill]
    ```
 
 ---
@@ -50,7 +54,7 @@
 7. 保存 config.json 到 `.ai-skills/skills/{name}/config.json`
 8. 执行安装指令：
    a. fetch `{AISK_REGISTRY}/{path}/resource/install.md`
-   b. 若 404，fetch `{AISK_REGISTRY}/comm/install.md`
+   b. 若 404，fetch `{AISK_REGISTRY}/skills/comm/resource/install.md`
    c. 若仍 404，跳过
    d. 若成功获取，按文件中的指令操作（指令为 AI 可读 Markdown，shell 操作由 AI 执行）
 9. 输出安装摘要：已写入的文件列表
@@ -61,11 +65,20 @@
 
 1. 读取 `AISK_REGISTRY`；不存在则提示先运行 bootstrap 并终止
 2. 检查 `.ai-skills/skills/{name}/config.json` 是否存在；不存在则提示"未找到已安装的 {name}"并终止
-3. 读取 config.json，确定 skill 文件列表（同 install 步骤5）
+3. 读取 config.json：
+   - 若 `internal: true`，提示"{name} 是内部工具，不支持单独删除"并终止
+   - 若 `name === "skills"`，执行管理器清除流程（见下方）
 4. 执行清理指令：
    a. 读取 `.ai-skills/skills/{name}/resource/uninstall.md`（若存在）
-   b. 若不存在，fetch `{AISK_REGISTRY}/comm/uninstall.md`
+   b. 若不存在，fetch `{AISK_REGISTRY}/skills/comm/resource/uninstall.md`
    c. 若获取成功，按文件中的指令操作
 5. 删除 `.claude/commands/aisk/` 中该 skill-set / skill 对应的 .md 文件
 6. 删除 `.ai-skills/skills/{name}/`
 7. 输出删除摘要
+
+**管理器清除流程（`remove skills`）：**
+
+提示："这将删除 skill 管理器及所有已安装的 skill，确认？[y/N]"，用户未确认则终止。确认后：
+1. 删除 `.claude/commands/aisk/` 目录及其所有内容
+2. 删除 `.ai-skills/skills/` 目录及其所有内容
+3. 输出清除摘要

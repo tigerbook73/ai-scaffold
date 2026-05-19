@@ -2,10 +2,6 @@
   "version": "1.0",
   "skills": [
     {
-      "name": "skills",
-      "path": "skills/skills/"
-    },
-    {
       "name": "refresh-arch",
       "set": "arch",
       "path": "skills/arch/"
@@ -24,6 +20,14 @@
       "path": "skills/setup-permissions/"
     },
     {
+      "name": "skills",
+      "path": "skills/skills/"
+    },
+    {
+      "name": "sync-rules",
+      "path": "skills/sync-rules/"
+    },
+    {
       "name": "prepare-task",
       "set": "task",
       "path": "skills/task/"
@@ -32,10 +36,6 @@
       "name": "close-task",
       "set": "task",
       "path": "skills/task/"
-    },
-    {
-      "name": "sync-rules",
-      "path": "skills/sync-rules/"
     }
   ],
   "sets": [

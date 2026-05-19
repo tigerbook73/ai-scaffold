@@ -1,0 +1,5 @@
+{
+  "name": "sync-rules",
+  "description": "将 .ai-rules/path-rules/ 同步到 .claude/rules/",
+  "internal": true
+}

@@ -1,5 +1,5 @@
 {
   "name": "task",
   "description": "任务规划工具集（feature / refactor 三文档模式）",
-  "skills": ["prepare-task", "close-task", "sync-rules"]
+  "skills": ["prepare-task", "close-task"]
 }
