@@ -14,11 +14,17 @@ const dryRun = !!(options.dryRun ?? options['dry-run'])
 
 const configFile = join(homedir(), '.ai-skills', 'config.json')
 if (!existsSync(configFile)) {
-  console.error('错误：~/.ai-skills/config.json 不存在，请先运行 npm run setup')
+  console.error('错误：~/.ai-skills/config.json 不存在，请先运行 npm run register')
   process.exit(1)
 }
 
 const { repo } = JSON.parse(readFileSync(configFile, 'utf-8')) as { repo: string }
+
+if (resolve(targetDir) === resolve(repo)) {
+  console.error('错误：目标项目不能是技能库本身，请在其他项目中运行 /aisk/sync')
+  process.exit(1)
+}
+
 const settingFile = join(repo, 'claude', 'setting.json')
 
 if (!existsSync(settingFile)) {

@@ -17,17 +17,22 @@ const [file] = args
 
 if (!file) {
   cli.outputHelp()
-  process.exit(1)
+  process.exit(0)
 }
 
 const configFile = join(homedir(), '.ai-skills', 'config.json')
 if (!existsSync(configFile)) {
-  console.error('错误：~/.ai-skills/config.json 不存在，请先运行 npm run setup')
+  console.error('错误：~/.ai-skills/config.json 不存在，请先运行 npm run register')
   process.exit(1)
 }
 
 const { repo } = JSON.parse(readFileSync(configFile, 'utf-8')) as { repo: string }
 const srcPath = resolve(file)
+
+if (srcPath.startsWith(join(repo, 'skills'))) {
+  console.error('错误：源文件已在技能库中，无需重复添加')
+  process.exit(1)
+}
 
 if (!existsSync(srcPath)) {
   console.error(`错误：源文件不存在：${srcPath}`)

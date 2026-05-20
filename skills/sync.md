@@ -12,7 +12,7 @@
    ```bash
    cat ~/.ai-skills/config.json
    ```
-   若不存在，提示用户先在 ai-skills 仓库目录下运行 `npm run setup`，然后终止。
+   若不存在，提示用户先在 ai-skills 仓库目录下运行 `npm run register`，然后终止。
 
 2. 从配置读取 `repo` 路径，获取当前项目目录，运行同步脚本：
    ```bash

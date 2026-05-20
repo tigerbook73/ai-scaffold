@@ -23,7 +23,7 @@
    ```bash
    cat ~/.ai-skills/config.json
    ```
-   若不存在，提示先运行 `npm run setup` 并终止。
+   若不存在，提示先运行 `npm run register` 并终止。
 
 ### 模式一：文件路径
 

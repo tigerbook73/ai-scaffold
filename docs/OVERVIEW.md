@@ -15,7 +15,7 @@ AI Skills 是一个**本地技能库**，以 Claude Code 命令（`.md` 文件�
 ├── skills/              ← 技能源文件
 └── claude/setting.json  ← 同步配置
 
-  ↓ npm run setup（新机器，一次性）
+  ↓ npm run register（新机器，一次性）
 
 ~/.ai-skills/config.json          ← 记录仓库路径
 ~/.claude/commands/aisk/          ← 全局元命令（/aisk/sync、/aisk/create-skill）
@@ -105,7 +105,7 @@ project/
 
 | 命令 | 实现 | 用途 |
 |------|------|------|
-| `npm run setup` | `scripts/setup.ts` | 全局初始化（新机器一次性运行） |
+| `npm run register` | `scripts/setup.ts` | 全局初始化（新机器一次性运行） |
 | `npm run sync` | `scripts/sync.ts` | 将技能同步到目标项目（通常由 `/aisk/sync` 调用） |
 | `npm run build` | `scripts/build.ts` | 扫描 `skills/` 重新生成 `claude/setting.json` |
 | `npm run create-skill` | `scripts/create-skill.ts` | 将技能文件写入 `skills/` 并更新 `setting.json`（通常由 `/aisk/create-skill` 调用） |
@@ -128,7 +128,7 @@ project/
 **调用：**
 
 ```bash
-npm run setup
+npm run register
 ```
 
 ---
@@ -322,7 +322,7 @@ npm run build
 
 ```
 git clone .../ai-skills ~/code/ai-skills
-cd ~/code/ai-skills && npm install && npm run setup
+cd ~/code/ai-skills && npm install && npm run register
 ```
 
 **在新项目中启用技能：**
