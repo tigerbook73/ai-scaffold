@@ -1,12 +1,12 @@
 # refresh-arch
 
-扫描代码库，生成或刷新 `./architecture.md`。
+扫描代码库，生成或刷新 `.ai-skills/architecture.md`。
 
 记录代码库中已经做出的架构决策，帮助开发者在修改代码时识别哪些设计意图不该被打破。
 
 **约束**
 
-- [写操作] 只写 `./architecture.md`，不修改其他文件
+- [写操作] 只写 `.ai-skills/architecture.md`，不修改其他文件
 - 写入前展示 diff，用户确认后才落盘
 
 **输入**（`$ARGUMENTS`，可选）
@@ -18,7 +18,7 @@
 
 **步骤**
 
-1. 读取当前 `./architecture.md`（若存在）
+1. 读取当前 `.ai-skills/architecture.md`（若存在）
 2. 扫描代码库，按以下标准提取或刷新架构决策条目：
 
    每条记录必须同时满足：
@@ -47,4 +47,4 @@
    - 已有条目若不再满足标准或对应设计已变更，删除
 
 3. 展示 diff，等待用户确认
-4. 用户确认后写入
+4. 用户确认后写入 `.ai-skills/architecture.md`（目录不存在则创建）

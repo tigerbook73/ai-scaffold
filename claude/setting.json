@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "files": [
+    {
+      "src": "arch/check-arch.md",
+      "dst": ".claude/commands/aisk/check-arch.md",
+      "description": "检查代码是否符合架构决策",
+      "category": "arch",
+      "en": null
+    },
+    {
+      "src": "arch/refresh-arch.md",
+      "dst": ".claude/commands/aisk/refresh-arch.md",
+      "description": "生成或刷新架构决策文档",
+      "category": "arch",
+      "en": null
+    },
+    {
+      "src": "create-skill.md",
+      "dst": ".claude/commands/aisk/create-skill.md",
+      "description": "将本地技能提升到全局仓库",
+      "category": "meta",
+      "en": null
+    },
+    {
+      "src": "sync.md",
+      "dst": ".claude/commands/aisk/sync.md",
+      "description": "同步全局技能到当前项目",
+      "category": "meta",
+      "en": null
+    },
+    {
+      "src": "task/close-task.md",
+      "dst": ".claude/commands/aisk/close-task.md",
+      "description": "验证任务完成并清理规划文档",
+      "category": "task",
+      "en": null
+    },
+    {
+      "src": "task/prepare-task.md",
+      "dst": ".claude/commands/aisk/prepare-task.md",
+      "description": "创建 feature/refactor 任务分支和规划文档",
+      "category": "task",
+      "en": null
+    },
+    {
+      "src": "task/resource/task-planning.md",
+      "dst": ".ai-skills/skills/task/resource/task-planning.md",
+      "description": "任务工作流",
+      "category": "task",
+      "en": null
+    }
+  ]
+}
