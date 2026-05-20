@@ -1,4 +1,0 @@
-{
-  "name": "setup-hooks",
-  "description": "为 Node.js 项目安装 commitlint（可选 lint-staged）"
-}

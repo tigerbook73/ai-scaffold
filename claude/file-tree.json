@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "files": [
+    {
+      "path": "commands/sync.md",
+      "description": "同步全局技能到当前项目",
+      "category": "meta",
+      "en": null
+    },
+    {
+      "path": "commands/create-skill.md",
+      "description": "将本地技能添加到全局仓库",
+      "category": "meta",
+      "en": null
+    },
+    {
+      "path": "commands/refresh-arch.md",
+      "description": "生成或刷新架构决策文档",
+      "category": "arch",
+      "en": null
+    },
+    {
+      "path": "commands/check-arch.md",
+      "description": "检查代码是否符合架构决策",
+      "category": "arch",
+      "en": null
+    },
+    {
+      "path": "commands/prepare-task.md",
+      "description": "创建 feature/refactor 任务分支和规划文档",
+      "category": "task",
+      "en": null
+    },
+    {
+      "path": "commands/close-task.md",
+      "description": "验证任务完成并清理规划文档",
+      "category": "task",
+      "en": null
+    }
+  ]
+}

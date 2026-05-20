@@ -1,15 +1,15 @@
 {
-  "name": "ai-scaffold",
-  "version": "1.0.0",
-  "description": "AI workflow skill registry — install skills into any project via bootstrap",
+  "name": "ai-skills",
+  "version": "3.0.0",
+  "description": "本地 AI 技能库，通过 /sync 将技能分发到任意项目",
   "scripts": {
-    "build": "node scripts/build-registry.js"
+    "setup": "node scripts/setup.js",
+    "sync": "node scripts/sync.js"
   },
   "keywords": [
     "ai",
     "claude",
-    "scaffold",
-    "skill"
+    "skills"
   ],
   "license": "MIT",
   "packageManager": "pnpm@10.33.3+sha512.a19744364a7e248b92657a4ca5973f9354d21caf982579674b1c539f32c7420c47138ad8b1254df07aba9bc782d9b3029e3db34d5dbff974326eb74dac8ff489"

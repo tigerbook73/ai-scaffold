@@ -1,5 +1,0 @@
-{
-  "name": "arch",
-  "description": "架构决策管理工具集",
-  "skills": ["refresh-arch", "check-arch"]
-}

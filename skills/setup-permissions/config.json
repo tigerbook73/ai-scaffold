@@ -1,4 +1,0 @@
-{
-  "name": "setup-permissions",
-  "description": "生成或更新 .claude/settings.json 权限白名单"
-}

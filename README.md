@@ -1,44 +1,63 @@
-# AI Scaffold
+# AI Skills
 
-类 npm 的 AI 工作流 skill 仓库，按需安装到项目。
+本地 AI 技能库，通过 `/sync` 将技能分发到任意项目。
 
-## 快速开始
+## 初始化（一次性）
 
-在任意项目中触发 bootstrap（使用 raw URL 或粘贴内容）：
+克隆本仓库到本地，然后运行：
 
-```
-请执行 https://raw.githubusercontent.com/tigerbook73/ai-scaffold/main/bootstrap.md
-```
-
-bootstrap 完成后，通过 `/aisk/skills` 命令管理 skills：
-
-```
-/aisk/skills list                    # 查看可用 skill
-/aisk/skills install arch            # 安装架构决策工具集
-/aisk/skills install task            # 安装任务规划工具集
-/aisk/skills install setup-hooks     # 安装 git hooks
-/aisk/skills install setup-permissions  # 配置 Claude 权限
+```bash
+node scripts/setup.js
 ```
 
-## 可用 Skill
+完成后：
+- `~/.ai-skills/config.json` 记录本仓库路径
+- `~/.claude/commands/` 中安装了全局元命令（`/sync`、`/create-skill`）
 
-| Skill / Set         | 说明                                                                               |
-| ------------------- | ---------------------------------------------------------------------------------- |
-| `arch`              | 架构决策管理：`refresh-arch`（生成 architecture.md）、`check-arch`（检查代码对齐） |
-| `task`              | 任务规划：`prepare-task`（启动 feature/refactor）、`close-task`（完成并清理）      |
-| `setup-hooks`       | 为 Node.js 项目安装 commitlint（可选 lint-staged）                                 |
-| `setup-permissions` | 生成/更新 `.claude/settings.json` 权限白名单                                       |
+## 在项目中使用
+
+在任意项目的 Claude Code 会话中运行：
+
+```
+/sync
+```
+
+将所有技能同步到当前项目的 `.claude/commands/`。
+
+## 技能列表
+
+| 技能 | 说明 |
+|------|------|
+| `refresh-arch` | 扫描代码库，生成或刷新 `./architecture.md` |
+| `check-arch` | 检查代码变更是否符合架构决策 |
+| `prepare-task` | 创建 feature/refactor 任务分支和规划文档 |
+| `close-task` | 验证任务完成，清理规划文档 |
+
+## 添加新技能
+
+将本地技能文件添加到全局仓库：
+
+```
+/create-skill path/to/my-skill.md
+```
+
+或由 Claude 根据描述生成：
+
+```
+/create-skill my-skill
+```
+
+添加后运行 `git commit` 持久化，再用 `/sync` 分发到项目。
 
 ## 仓库结构
 
 ```
-bootstrap.md          # 入口：初始化 skill 管理器
-registry.json         # skill 注册表（由 build-registry.js 生成）
+claude/
+  commands/       # 技能命令（同步到项目 .claude/commands/）
+  file-tree.json  # 文件索引（sync.js 读取）
+resources/        # 不同步的资源文件（模板等）
 scripts/
-  build-registry.js   # 自动扫描 skills/ 生成 registry.json
-skills/               # 各 skill / skill-set 实现
-  skills/             # /aisk/skills 命令（skill 管理器）
-docs/                 # 设计文档
+  setup.js        # 全局初始化
+  sync.js         # 同步实现
+docs/             # 设计文档
 ```
-
-详细设计见 [docs/v2-design.md](./docs/v2-design.md)。
