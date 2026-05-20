@@ -6,7 +6,8 @@
     "setup": "tsx scripts/setup.ts",
     "sync": "tsx scripts/sync.ts",
     "build": "tsx scripts/build.ts",
-    "create-skill": "tsx scripts/create-skill.ts"
+    "create-skill": "tsx scripts/create-skill.ts",
+    "lint": "eslint scripts/"
   },
   "keywords": [
     "ai",
@@ -18,5 +19,10 @@
   "dependencies": {
     "cac": "^7.0.0",
     "tsx": "^4.22.3"
+  },
+  "devDependencies": {
+    "eslint": "^10.4.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4"
   }
 }
