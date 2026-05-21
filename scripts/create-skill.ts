@@ -39,8 +39,8 @@ class SkillCreator {
     this.repo = repo
 
     const srcPath = resolve(file)
-    if (srcPath.startsWith(join(repo, 'skills'))) {
-      console.error('Error: Source file is already in the skill repository; no need to add it again.')
+    if (srcPath.startsWith(join(repo, 'skills')) && !options.force) {
+      console.error('Error: Source file is already in the skill repository. Use --force to overwrite.')
       process.exit(1)
     }
 
