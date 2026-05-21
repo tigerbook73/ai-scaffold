@@ -1,4 +1,4 @@
-# /learn-phase — Phase Code Walkthrough
+# learn-phase
 
 Walk through the code implemented in the current Phase, grouped by layer, to help understand design decisions and implementation details.
 

@@ -1,24 +1,25 @@
 # refresh-arch
 
-Scan the codebase and generate or refresh `.ai-skills/architecture.md`.
+Scan the codebase and generate or refresh `.ai-skills/architecture.md`, recording architecture decisions that should not be broken during code changes.
 
-Records architecture decisions already made in the codebase, helping developers recognize which design intentions should not be broken when modifying code.
+---
 
-**Constraints**
-
+## Constraints
 - [Write operation] Only writes to `.ai-skills/architecture.md`; no other files are modified
 - Shows a diff before writing; writes only after user confirmation
 
-**Input** (`$ARGUMENTS`, optional)
+## Input
 
+`$ARGUMENTS` (optional):
 - No argument → most recent commit (`git diff HEAD~1`)
 - Path (e.g. `src/`) → current files under that directory
 - Commit hash → changes in that commit (`git diff <hash>~1 <hash>`)
 - Number (e.g. `3`) → changes across the last N commits (`git diff HEAD~N`)
 
-**Steps**
+## Steps
 
 1. Read the current `.ai-skills/architecture.md` (if it exists)
+
 2. Scan the codebase and extract or refresh architecture decision entries according to the following criteria:
 
    Each entry must simultaneously satisfy:
@@ -29,7 +30,6 @@ Records architecture decisions already made in the codebase, helping developers 
    3. Understanding "why it was designed this way" requires reading multiple files
 
    Format for each entry:
-
    ```
    **[Decision title]**
    Counter-example: what not to do (one sentence)
@@ -47,4 +47,5 @@ Records architecture decisions already made in the codebase, helping developers 
    - Remove existing entries that no longer meet the criteria or whose corresponding design has changed
 
 3. Show the diff; wait for user confirmation
+
 4. After user confirmation, write to `.ai-skills/architecture.md` (create the directory if it does not exist)

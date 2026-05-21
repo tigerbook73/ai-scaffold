@@ -2,14 +2,19 @@
 
 Verify that the feature or refactor is complete and committed, clean up the planning documents, and prompt that a PR can be opened.
 
-**Constraints**
+---
+
+## Constraints
 - [Write operation] Deletes the planning document directory
 
-**Input** (`$ARGUMENTS`, optional)
+## Input
+
+`$ARGUMENTS` (optional):
 - No argument → inferred from the current branch name (`feature/{name}` or `refactor/{name}`)
 - `{name}` → manually specified
 
-**Steps**
+## Steps
+
 1. Parse the mode and name from the branch name or input
 2. Check `git status`: working tree must be clean; otherwise stop and prompt the user to commit first
 3. Check `PROGRESS.md`: current stage must be `completed`; otherwise list the incomplete steps and stop

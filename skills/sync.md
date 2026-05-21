@@ -1,4 +1,4 @@
-# Sync Skills
+# sync
 
 Sync all skills from the global skill repository to the current project's `.claude/commands/aisk/`.
 
