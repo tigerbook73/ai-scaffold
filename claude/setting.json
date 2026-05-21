@@ -23,6 +23,13 @@
       "en": null
     },
     {
+      "src": "set-claude-permission.md",
+      "dst": ".claude/commands/aisk/set-claude-permission.md",
+      "description": "set-claude-permission",
+      "category": "meta",
+      "en": null
+    },
+    {
       "src": "smart-review.md",
       "dst": ".claude/commands/aisk/smart-review.md",
       "description": "smart-review",

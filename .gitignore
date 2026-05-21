@@ -1,1 +1,18 @@
+# Dependencies
 node_modules/
+
+# Claude
+.claude
+
+# TypeScript build artifacts (if tsc is run manually without outDir)
+scripts/**/*.js
+scripts/**/*.d.ts
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
