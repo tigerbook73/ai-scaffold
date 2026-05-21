@@ -38,7 +38,7 @@ class Builder {
   }
 
   private inferDst(relPath: string): string {
-    if (relPath.includes('/resource/')) {
+    if (relPath.split('/').includes('resource')) {
       return `.ai-skills/${relPath}`
     }
     return `.claude/commands/aisk/${basename(relPath)}`

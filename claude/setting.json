@@ -26,6 +26,12 @@
       "category": "meta"
     },
     {
+      "src": "resource/skill-format.md",
+      "dst": ".ai-skills/resource/skill-format.md",
+      "description": "Skill Format Specification",
+      "category": "meta"
+    },
+    {
       "src": "set-claude-permission.md",
       "dst": ".claude/commands/aisk/set-claude-permission.md",
       "description": "Organize the Claude permission configuration for the current project",

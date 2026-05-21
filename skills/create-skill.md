@@ -1,4 +1,4 @@
-# Create Global Skill
+# create-skill
 
 Promote a skill to the global repository so it can be distributed to any project via `/aisk/sync`.
 
@@ -19,7 +19,13 @@ Promote a skill to the global repository so it can be distributed to any project
 
 ### Common prerequisite
 
-1. Read the global config to get the repo path:
+1. Read the format specification:
+   ```bash
+   cat .ai-skills/resource/skill-format.md
+   ```
+   If it does not exist, skip format compliance (spec not yet synced to this project).
+
+2. Read the global config to get the repo path:
    ```bash
    cat ~/.ai-skills/config.json
    ```
@@ -27,18 +33,36 @@ Promote a skill to the global repository so it can be distributed to any project
 
 ### Mode 1: File path
 
-2. Run:
+3. Read the source file content.
+
+4. Check and fix format compliance against the spec (skip to step 8 if no changes needed):
+   - Assess complexity → choose Compact or Structured tier
+   - Fix H1 (if missing or wrong format)
+   - Normalize Arguments section and step heading levels
+   - Check language: if content is not in English, suggest translating (non-blocking — user may override)
+
+5. Show the fixed content to the user as a diff, wait for confirmation.
+
+6. After confirmation, write the fixed content to a temp file: `/tmp/{name}.md`
+
+7. Run:
    ```bash
-   npm --prefix {repo} run create-skill -- {file} [--name {name}] [--force]
+   npm --prefix {repo} run create-skill -- /tmp/{name}.md --name {name} [--force]
    ```
-   Where `{file}` is an absolute path (relative paths are resolved from the current working directory).
+
+8. Delete the temp file.
 
 ### Mode 2: Skill name
 
-2. Confirm the name format (lowercase letters + hyphens, e.g. `my-skill`)
-3. Generate the skill content based on the conversation context, following the format of existing skills in the repository
-4. Write the content directly to `{repo}/skills/{name}.md`
-5. Run:
+3. Confirm the name format (lowercase letters + hyphens, e.g. `my-skill`)
+
+4. Assess complexity based on the conversation context → choose Compact or Structured tier from the spec
+
+5. Generate the skill content in English following the chosen template
+
+6. Write the content directly to `{repo}/skills/{name}.md`
+
+7. Run:
    ```bash
    npm --prefix {repo} run build
    ```
