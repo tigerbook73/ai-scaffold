@@ -11,6 +11,7 @@ class SkillCreator {
   private dstPath: string
   private repo: string
   private options: Record<string, unknown>
+  private srcInRepo: boolean
 
   constructor() {
     const cli = cac('create-skill')
@@ -39,10 +40,7 @@ class SkillCreator {
     this.repo = repo
 
     const srcPath = resolve(file)
-    if (srcPath.startsWith(join(repo, 'skills')) && !options.force) {
-      console.error('Error: Source file is already in the skill repository. Use --force to overwrite.')
-      process.exit(1)
-    }
+    this.srcInRepo = srcPath.startsWith(join(repo, 'skills'))
 
     if (!existsSync(srcPath)) {
       console.error(`Error: Source file not found: ${srcPath}`)
@@ -55,6 +53,18 @@ class SkillCreator {
   }
 
   async run(): Promise<void> {
+    if (this.srcInRepo && !this.options.force) {
+      const rl = createInterface({ input: process.stdin, output: process.stdout })
+      const answer = await new Promise<string>(res =>
+        rl.question(`Source file is already in the repository. Update ${this.name}? (y/N) `, res)
+      )
+      rl.close()
+      if (answer.toLowerCase() !== 'y') {
+        console.log('Cancelled')
+        process.exit(0)
+      }
+    }
+
     if (existsSync(this.dstPath) && !this.options.force) {
       const rl = createInterface({ input: process.stdin, output: process.stdout })
       const answer = await new Promise<string>(res =>
