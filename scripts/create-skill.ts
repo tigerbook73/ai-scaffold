@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 import { join, basename, resolve, dirname } from 'path'
 import { homedir } from 'os'
 import { execSync } from 'child_process'
@@ -18,6 +18,7 @@ class SkillCreator {
     cli.usage('<file> [options]')
     cli.option('--name <name>', 'Skill name (target filename without .md)')
     cli.option('--description <desc>', 'Skill description (overrides the first-line heading)')
+    cli.option('--cleanup', 'Delete the source file after copying (use when source is a temp file)')
     cli.option('--force', 'Skip all confirmation prompts (source-in-repo and overwrite)')
     cli.help()
 
@@ -79,6 +80,7 @@ class SkillCreator {
 
     mkdirSync(dirname(this.dstPath), { recursive: true })
     copyFileSync(this.file, this.dstPath)
+    if (this.options.cleanup) unlinkSync(this.file)
     console.log(`Skill written to: ${this.dstPath}`)
 
     execSync('npm run build', { cwd: this.repo, stdio: 'inherit' })

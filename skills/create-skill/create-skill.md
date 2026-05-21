@@ -44,16 +44,16 @@ Promote a skill to the global repository so it can be distributed to any project
 
 5. Show the fixed content to the user as a diff, wait for confirmation.
 
-6. After confirmation, write the fixed content to a temp file: `/tmp/{name}.md`
+6. After confirmation, write the fixed content to a unique temp path:
+   `/tmp/aisk-{8-char-random-hex}/{name}.md`
 
 7. Run:
    ```bash
-   npm --prefix {repo} run create-skill -- /tmp/{name}.md --name {name} [--force]
+   npm --prefix {repo} run create-skill -- <path> --name {name} [--cleanup] [--force]
    ```
-   (Use the original source path instead of `/tmp/{name}.md` if step 6 was skipped.)  
-   `--force` skips all confirmation prompts (source-in-repo and overwrite).
-
-8. Delete the temp file (skip if step 6 was skipped).
+   - `<path>`: the temp file path if step 6 was executed; original source path if step 6 was skipped
+   - Include `--cleanup` only when a temp file was created (step 6 was executed) — the script deletes it after copying
+   - `--force` skips all confirmation prompts (source-in-repo and overwrite)
 
 ### Mode 2: Skill name
 
