@@ -21,7 +21,7 @@ Check the alignment between code changes in the specified scope and architecture
 1. Read `.ai-skills/architecture.md` (if it does not exist, prompt the user to run `refresh-arch` first, then stop)
 2. Parse the input and determine the review scope
 3. Retrieve the files or diff content within the scope
-4. Compare against the decisions in `.ai-skills/architecture.md` and identify deviations
+4. For each decision in `.ai-skills/architecture.md`, check whether the code exhibits the anti-pattern described in its Counter-example; if so, record it as a deviation
 5. Output results
 
 **Output format**
