@@ -25,14 +25,14 @@
     {
       "src": "set-claude-permission.md",
       "dst": ".claude/commands/aisk/set-claude-permission.md",
-      "description": "set-claude-permission",
+      "description": "整理当前项目的 Claude 权限配置",
       "category": "meta",
       "en": null
     },
     {
       "src": "smart-review.md",
       "dst": ".claude/commands/aisk/smart-review.md",
-      "description": "smart-review",
+      "description": "迭代检查指令",
       "category": "meta",
       "en": null
     },
@@ -59,7 +59,7 @@
     },
     {
       "src": "task/resource/task-planning.md",
-      "dst": ".ai-skills/skills/task/resource/task-planning.md",
+      "dst": ".ai-skills/task/resource/task-planning.md",
       "description": "任务工作流",
       "category": "task",
       "en": null

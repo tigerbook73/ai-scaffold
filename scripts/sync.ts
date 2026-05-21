@@ -1,6 +1,7 @@
-import { readFileSync, copyFileSync, existsSync, mkdirSync } from 'fs'
+import { readFileSync, copyFileSync, existsSync, mkdirSync, appendFileSync } from 'fs'
 import { join, dirname, resolve } from 'path'
 import { homedir } from 'os'
+import { createInterface } from 'readline'
 import { cac } from 'cac'
 
 const cli = cac('sync')
@@ -35,6 +36,9 @@ if (!existsSync(settingFile)) {
 interface FileEntry { src: string; dst: string }
 const { files } = JSON.parse(readFileSync(settingFile, 'utf-8')) as { files: FileEntry[] }
 
+const aiSkillsDir = join(targetDir, '.ai-skills')
+const isFirstSync = !existsSync(aiSkillsDir)
+
 let newCount = 0
 let overwriteCount = 0
 
@@ -62,5 +66,21 @@ for (const { src, dst } of files) {
 if (dryRun) {
   console.log(`\n[dry-run] 新增 ${newCount}，覆盖 ${overwriteCount}（未实际写入）`)
 } else {
+  if (isFirstSync) {
+    const gitignorePath = join(targetDir, '.gitignore')
+    if (process.stdin.isTTY) {
+      const rl = createInterface({ input: process.stdin, output: process.stdout })
+      const answer = await new Promise<string>(resolve =>
+        rl.question('\n将 .ai-skills/ 加入 .gitignore？[y/N] ', resolve)
+      )
+      rl.close()
+      if (answer.toLowerCase() === 'y') {
+        appendFileSync(gitignorePath, '\n.ai-skills/\n')
+        console.log('.gitignore 已更新')
+      }
+    } else {
+      console.log('\n提示：建议将 .ai-skills/ 加入 .gitignore')
+    }
+  }
   console.log(`同步完成：新增 ${newCount}，覆盖 ${overwriteCount}`)
 }

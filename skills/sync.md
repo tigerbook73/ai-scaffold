@@ -27,5 +27,5 @@
 ## 说明
 
 - 同步范围由 `{repo}/claude/setting.json` 决定，包含所有技能命令和资源文件
-- 命令文件同步到 `.claude/commands/aisk/`，资源文件同步到 `.ai-skills/skills/*/resource/`
+- 命令文件同步到 `.claude/commands/aisk/`，资源文件同步到 `.ai-skills/*/resource/`
 - 已存在的文件直接覆盖（取最新版本）

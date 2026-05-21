@@ -143,7 +143,7 @@ npm run register
 1. 读取 `~/.ai-skills/config.json` → 获取仓库路径
 2. 读取 `{repo}/claude/setting.json` → 获取文件列表，每条记录包含 `src` 和 `dst`
 3. 将 `{repo}/skills/{src}` 复制到 `{target}/{dst}`，直接覆盖已有文件（目录不存在则创建）
-4. 提示是否将目标目录加入 `.gitignore`（是/否）
+4. 如果`{target}/.ai-skills/` 目录不存在，则提示是否将该目录加入 `.gitignore`（是/否）
 5. 输出同步摘要（新增 / 覆盖各多少个）
 
 **选项：**

@@ -33,7 +33,7 @@ function inferCategory(relPath: string): string {
 
 function inferDst(relPath: string): string {
   if (relPath.includes('/resource/')) {
-    return `.ai-skills/skills/${relPath}`
+    return `.ai-skills/${relPath}`
   }
   return `.claude/commands/aisk/${basename(relPath)}`
 }
