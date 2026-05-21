@@ -13,17 +13,23 @@ Scan the codebase and generate or refresh `.ai-skills/architecture.md`, recordin
 
 `$ARGUMENTS` (optional):
 
-- No argument → most recent commit (`git diff HEAD~1`)
-- Path (e.g. `src/`) → current files under that directory
-- Commit hash → changes in that commit (`git diff <hash>~1 <hash>`)
-- Number (e.g. `3`) → changes across the last N commits (`git diff HEAD~N`)
-- ALL → full project (intelligently ignores auto-generated code)
+- No argument → auto-detect: if working tree has changes (staged/unstaged/untracked) → same as `changes`; otherwise → same as `commit 1`
+- `help` → list all available modes, then stop
+- `ALL` → full project file tree (intelligently ignores auto-generated code)
+- `changes` → all working tree changes: `git diff` (unstaged) + `git diff --cached` (staged) + untracked new files (`git ls-files --others --exclude-standard`)
+- `commit [N|hash]` → files changed between that point and current worktree:
+  - `commit` or `commit 1` → HEAD~1 to current (`git diff HEAD~1`)
+  - `commit N` → HEAD~N to current (`git diff HEAD~N`)
+  - `commit <hash>` → `<hash>` to current (`git diff <hash>`)
+- `<path>` → current content of files under that directory/file
 
 ## Steps
 
 1. Read the current `.ai-skills/architecture.md` (if it exists)
 
-2. Scan the codebase and extract or refresh architecture decision entries according to the following criteria:
+2. Parse `$ARGUMENTS` and determine the review scope; retrieve the corresponding files or diff content
+
+3. Scan the retrieved content and extract or refresh architecture decision entries according to the following criteria:
 
    Each entry must simultaneously satisfy:
    1. It is a violable choice — there is a clear "what not to do"
@@ -50,8 +56,16 @@ Scan the codebase and generate or refresh `.ai-skills/architecture.md`, recordin
    - New entries must clearly satisfy all three criteria above; when in doubt, do not add — err on the side of fewer
    - Remove existing entries that no longer meet the criteria or whose corresponding design has changed
 
-3. Show the diff; wait for user confirmation
+4. Show the diff; wait for user confirmation
 
-4. After user confirmation, write to `.ai-skills/architecture.md` (create the directory if it does not exist)
+5. After user confirmation, write to `.ai-skills/architecture.md` (create the directory if it does not exist)
 
    If `.ai-skills/` was just created for the first time, remind the user to add `.ai-skills/` to `.gitignore`.
+
+   Output a one-line scope summary, for example:
+
+   ```
+   Scope: changes (2 modified, 1 staged, 1 untracked) | Entries added: 2, updated: 1, removed: 0
+   Scope: commit HEAD~1 (abc1234), 3 files | Entries added: 0, updated: 1, removed: 0
+   Scope: ALL, 12 files | Entries added: 4, updated: 0, removed: 0
+   ```
