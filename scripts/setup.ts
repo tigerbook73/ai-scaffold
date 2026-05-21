@@ -2,24 +2,38 @@ import { mkdirSync, copyFileSync, writeFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { homedir } from 'os'
 
-const repoPath = resolve(__dirname, '..')
-const configDir = join(homedir(), '.ai-skills')
-const configFile = join(configDir, 'config.json')
-const globalCmdsDir = join(homedir(), '.claude', 'commands', 'aisk')
-const META_SKILLS = ['sync.md', 'create-skill.md']
+class Setup {
+  private repoPath: string
+  private configDir: string
+  private configFile: string
+  private globalCmdsDir: string
+  private metaSkills: string[]
 
-mkdirSync(configDir, { recursive: true })
-mkdirSync(globalCmdsDir, { recursive: true })
-writeFileSync(configFile, JSON.stringify({ repo: repoPath }, null, 2) + '\n')
+  constructor() {
+    this.repoPath = resolve(__dirname, '..')
+    this.configDir = join(homedir(), '.ai-skills')
+    this.configFile = join(this.configDir, 'config.json')
+    this.globalCmdsDir = join(homedir(), '.claude', 'commands', 'aisk')
+    this.metaSkills = ['sync.md', 'create-skill.md']
+  }
 
-for (const skill of META_SKILLS) {
-  copyFileSync(join(repoPath, 'skills', skill), join(globalCmdsDir, skill))
+  run(): void {
+    mkdirSync(this.configDir, { recursive: true })
+    mkdirSync(this.globalCmdsDir, { recursive: true })
+    writeFileSync(this.configFile, JSON.stringify({ repo: this.repoPath }, null, 2) + '\n')
+
+    for (const skill of this.metaSkills) {
+      copyFileSync(join(this.repoPath, 'skills', skill), join(this.globalCmdsDir, skill))
+    }
+
+    console.log('Initialization complete:')
+    console.log(`  Config: ${this.configFile}`)
+    console.log(`  Repository: ${this.repoPath}`)
+    console.log('  Installed global commands:')
+    for (const skill of this.metaSkills) {
+      console.log(`    ~/.claude/commands/aisk/${skill}`)
+    }
+  }
 }
 
-console.log('Initialization complete:')
-console.log(`  Config: ${configFile}`)
-console.log(`  Repository: ${repoPath}`)
-console.log('  Installed global commands:')
-for (const skill of META_SKILLS) {
-  console.log(`    ~/.claude/commands/aisk/${skill}`)
-}
+new Setup().run()
