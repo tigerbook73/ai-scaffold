@@ -18,7 +18,7 @@ class SkillCreator {
     cli.usage('<file> [options]')
     cli.option('--name <name>', 'Skill name (target filename without .md)')
     cli.option('--description <desc>', 'Skill description (overrides the first-line heading)')
-    cli.option('--force', 'Skip conflict confirmation for duplicate names')
+    cli.option('--force', 'Skip all confirmation prompts (source-in-repo and overwrite)')
     cli.help()
 
     const { args, options } = cli.parse()

@@ -35,11 +35,12 @@ Promote a skill to the global repository so it can be distributed to any project
 
 3. Read the source file content.
 
-4. Check and fix format compliance against the spec (skip to step 8 if no changes needed):
+4. Check and fix format compliance against the spec:
    - Assess complexity → choose Compact or Structured tier
    - Fix H1 (if missing or wrong format)
    - Normalize Arguments section and step heading levels
    - Check language: if content is not in English, suggest translating (non-blocking — user may override)
+   - **If no changes needed**, skip steps 5–6 and run step 7 with the original source path (no temp file).
 
 5. Show the fixed content to the user as a diff, wait for confirmation.
 
@@ -49,9 +50,10 @@ Promote a skill to the global repository so it can be distributed to any project
    ```bash
    npm --prefix {repo} run create-skill -- /tmp/{name}.md --name {name} [--force]
    ```
+   (Use the original source path instead of `/tmp/{name}.md` if step 6 was skipped.)  
    `--force` skips all confirmation prompts (source-in-repo and overwrite).
 
-8. Delete the temp file.
+8. Delete the temp file (skip if step 6 was skipped).
 
 ### Mode 2: Skill name
 
