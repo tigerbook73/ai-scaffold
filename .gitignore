@@ -16,3 +16,6 @@ scripts/**/*.d.ts
 # OS
 .DS_Store
 Thumbs.db
+
+# ai-skills
+.ai-skills

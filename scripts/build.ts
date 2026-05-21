@@ -65,7 +65,7 @@ class Builder {
     const srcs = this.scan(this.skillsDir)
     let added = 0, updated = 0, removed = 0
 
-    const files: FileEntry[] = srcs.map(src => {
+    const files: FileEntry[] = srcs.filter(src => !src.split('/').includes('resource')).map(src => {
       const ex = existing.get(src)
       if (ex) {
         updated++

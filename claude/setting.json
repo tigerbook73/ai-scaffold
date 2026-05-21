@@ -20,10 +20,10 @@
       "category": "create-skill"
     },
     {
-      "src": "create-skill/resource/skill-format.md",
-      "dst": ".ai-skills/create-skill/resource/skill-format.md",
-      "description": "Skill Format Specification",
-      "category": "create-skill"
+      "src": "init-project/init-project.md",
+      "dst": ".claude/commands/aisk/init-project.md",
+      "description": "init-project",
+      "category": "init-project"
     },
     {
       "src": "learn-phase/learn-phase.md",
@@ -44,12 +44,6 @@
       "category": "smart-review"
     },
     {
-      "src": "sync/sync.md",
-      "dst": ".claude/commands/aisk/sync.md",
-      "description": "sync",
-      "category": "sync"
-    },
-    {
       "src": "task/close-task.md",
       "dst": ".claude/commands/aisk/close-task.md",
       "description": "Verify task completion and clean up planning documents",
@@ -59,12 +53,6 @@
       "src": "task/prepare-task.md",
       "dst": ".claude/commands/aisk/prepare-task.md",
       "description": "Create a feature/refactor task branch and planning documents",
-      "category": "task"
-    },
-    {
-      "src": "task/resource/task-planning.md",
-      "dst": ".ai-skills/task/resource/task-planning.md",
-      "description": "Task workflow",
       "category": "task"
     }
   ]

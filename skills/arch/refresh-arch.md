@@ -49,3 +49,5 @@ Scan the codebase and generate or refresh `.ai-skills/architecture.md`, recordin
 3. Show the diff; wait for user confirmation
 
 4. After user confirmation, write to `.ai-skills/architecture.md` (create the directory if it does not exist)
+
+   If `.ai-skills/` was just created for the first time, remind the user to add `.ai-skills/` to `.gitignore`.

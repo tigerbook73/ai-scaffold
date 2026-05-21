@@ -1,10 +1,9 @@
 {
   "name": "ai-skills",
   "version": "3.0.0",
-  "description": "Local AI skill library — distribute skills to any project via /aisk/sync",
+  "description": "Local AI skill library — install all skills globally with npm run register",
   "scripts": {
     "register": "tsx scripts/setup.ts",
-    "sync": "tsx scripts/sync.ts",
     "build": "tsx scripts/build.ts",
     "create-skill": "tsx scripts/create-skill.ts",
     "lint": "eslint scripts/"

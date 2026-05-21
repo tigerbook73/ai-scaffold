@@ -19,17 +19,10 @@ Promote a skill to the global repository so it can be distributed to any project
 
 ### Common prerequisite
 
-1. Read the format specification:
-   ```bash
-   cat .ai-skills/create-skill/resource/skill-format.md
-   ```
-   If it does not exist, skip format compliance (spec not yet synced to this project).
-
-2. Read the global config to get the repo path:
-   ```bash
-   cat ~/.ai-skills/config.json
-   ```
+1. Read `~/.ai-skills/config.json` to get the `{repo}` path.
    If it does not exist, prompt the user to run `npm run register` first, then stop.
+   Then read `{repo}/skills/create-skill/resource/skill-format.md` for the format specification.
+   If the spec file does not exist, skip format compliance.
 
 ### Mode 1: File path
 
