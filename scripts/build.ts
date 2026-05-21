@@ -31,10 +31,7 @@ class Builder {
   }
 
   private inferCategory(relPath: string): string {
-    const firstDir = relPath.split('/')[0]
-    if (firstDir === 'arch') return 'arch'
-    if (firstDir === 'task') return 'task'
-    return 'meta'
+    return relPath.split('/')[0]
   }
 
   private inferDst(relPath: string): string {

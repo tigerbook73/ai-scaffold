@@ -14,40 +14,40 @@
       "category": "arch"
     },
     {
-      "src": "create-skill.md",
+      "src": "create-skill/create-skill.md",
       "dst": ".claude/commands/aisk/create-skill.md",
-      "description": "Promote a local skill to the global repository",
-      "category": "meta"
+      "description": "create-skill",
+      "category": "create-skill"
     },
     {
-      "src": "learn-phase.md",
-      "dst": ".claude/commands/aisk/learn-phase.md",
-      "description": "/learn-phase — Phase Code Walkthrough",
-      "category": "meta"
-    },
-    {
-      "src": "resource/skill-format.md",
-      "dst": ".ai-skills/resource/skill-format.md",
+      "src": "create-skill/resource/skill-format.md",
+      "dst": ".ai-skills/create-skill/resource/skill-format.md",
       "description": "Skill Format Specification",
-      "category": "meta"
+      "category": "create-skill"
     },
     {
-      "src": "set-claude-permission.md",
+      "src": "learn-phase/learn-phase.md",
+      "dst": ".claude/commands/aisk/learn-phase.md",
+      "description": "learn-phase",
+      "category": "learn-phase"
+    },
+    {
+      "src": "set-claude-permission/set-claude-permission.md",
       "dst": ".claude/commands/aisk/set-claude-permission.md",
-      "description": "Organize the Claude permission configuration for the current project",
-      "category": "meta"
+      "description": "set-claude-permission",
+      "category": "set-claude-permission"
     },
     {
-      "src": "smart-review.md",
+      "src": "smart-review/smart-review.md",
       "dst": ".claude/commands/aisk/smart-review.md",
-      "description": "Iterative review instruction",
-      "category": "meta"
+      "description": "smart-review",
+      "category": "smart-review"
     },
     {
-      "src": "sync.md",
+      "src": "sync/sync.md",
       "dst": ".claude/commands/aisk/sync.md",
-      "description": "Sync global skills to the current project",
-      "category": "meta"
+      "description": "sync",
+      "category": "sync"
     },
     {
       "src": "task/close-task.md",

@@ -21,7 +21,7 @@ Promote a skill to the global repository so it can be distributed to any project
 
 1. Read the format specification:
    ```bash
-   cat .ai-skills/resource/skill-format.md
+   cat .ai-skills/create-skill/resource/skill-format.md
    ```
    If it does not exist, skip format compliance (spec not yet synced to this project).
 
@@ -60,7 +60,7 @@ Promote a skill to the global repository so it can be distributed to any project
 
 5. Generate the skill content in English following the chosen template
 
-6. Write the content directly to `{repo}/skills/{name}.md`
+6. Write the content directly to `{repo}/skills/{name}/{name}.md` (create the `{name}/` directory first if it does not exist)
 
 7. Run:
    ```bash

@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'fs'
-import { join, basename, resolve } from 'path'
+import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync } from 'fs'
+import { join, basename, resolve, dirname } from 'path'
 import { homedir } from 'os'
 import { execSync } from 'child_process'
 import { createInterface } from 'readline'
@@ -51,7 +51,7 @@ class SkillCreator {
 
     this.file = srcPath
     this.name = (options.name as string | undefined) ?? basename(srcPath, '.md')
-    this.dstPath = join(repo, 'skills', `${this.name}.md`)
+    this.dstPath = join(repo, 'skills', this.name, `${this.name}.md`)
   }
 
   async run(): Promise<void> {
@@ -67,6 +67,7 @@ class SkillCreator {
       }
     }
 
+    mkdirSync(dirname(this.dstPath), { recursive: true })
     copyFileSync(this.file, this.dstPath)
     console.log(`Skill written to: ${this.dstPath}`)
 
@@ -75,7 +76,7 @@ class SkillCreator {
     if (this.options.description) {
       const settingFile = join(this.repo, 'claude', 'setting.json')
       const setting = JSON.parse(readFileSync(settingFile, 'utf-8'))
-      const entry = setting.files.find((f: { src: string }) => f.src === `${this.name}.md`)
+      const entry = setting.files.find((f: { src: string }) => f.src === `${this.name}/${this.name}.md`)
       if (entry) {
         entry.description = this.options.description as string
         writeFileSync(settingFile, JSON.stringify(setting, null, 2) + '\n')
