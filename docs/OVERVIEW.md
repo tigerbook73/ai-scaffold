@@ -11,9 +11,10 @@ AI Skills 是一个**本地技能库**，以 Claude Code 命令（`.md` 文件�
 ## 整体架构
 
 ```
-本地仓库 ai-skills/
+本地技能仓库/
 ├── skills/              ← 技能源文件
-└── claude/setting.json  ← 同步配置
+├── claude/setting.json  ← 同步配置
+└── ...
 
   ↓ npm run register（新机器，一次性）
 
@@ -28,21 +29,22 @@ AI Skills 是一个**本地技能库**，以 Claude Code 命令（`.md` 文件�
 
 **三个层次：**
 
-| 层次   | 位置                                        | 说明                 |
-| ------ | ------------------------------------------- | -------------------- |
-| 仓库层 | `ai-skills/skills/`                         | 技能源文件，集中维护 |
-| 全局层 | `~/.ai-skills/`、`~/.claude/commands/aisk/` | 配置 + 元命令        |
-| 项目层 | `.claude/commands/aisk/`                    | 同步后的技能副本     |
+| 层次   | 位置                                        | 说明                   |
+| ------ | ------------------------------------------- | ---------------------- |
+| 仓库层 | `{repo}/`                                   | 技能源文件，集中维护   |
+| 全局层 | `~/.ai-skills/`、`~/.claude/commands/aisk/` | 配置 + 元命令          |
+| 项目层 | `.claude/commands/aisk/`、`.ai-skills/`     | 同步后的技能副本及资源 |
 
 ---
 
 ## 仓库目录结构
 
 ```
-ai-skills/
+{repo}/
 ├── skills/                        ← 所有技能文件（命令 + 资源），按分组组织
 │   ├── sync.md
 │   ├── create-skill.md
+│   ├── ...                          ← 其他元命令
 │   ├── arch/
 │   │   ├── refresh-arch.md
 │   │   ├── check-arch.md
@@ -83,13 +85,12 @@ project/
 │           ├── refresh-arch.md
 │           ├── check-arch.md
 │           ├── prepare-task.md
-│           └── close-task.md
+│           ├── close-task.md
+│           └── ...
 └── .ai-skills/
-    ├── architecture.md                ← refresh-arch 运行时生成（详见 arch/README.md）
-    └── skills/
-        └── task/
-            └── resource/
-                └── task-planning.md  ← sync 从仓库复制（task 工作流规则）
+    └── task/
+        └── resource/
+            └── task-planning.md  ← sync 从仓库复制（task 工作流规则）
 ```
 
 同步后，技能通过 `/aisk/refresh-arch`、`/aisk/prepare-task` 等命令调用。
@@ -103,11 +104,11 @@ project/
 
 ## npm scripts 汇总
 
-| 命令 | 实现 | 用途 |
-|------|------|------|
-| `npm run register` | `scripts/setup.ts` | 全局初始化（新机器一次性运行） |
-| `npm run sync` | `scripts/sync.ts` | 将技能同步到目标项目（通常由 `/aisk/sync` 调用） |
-| `npm run build` | `scripts/build.ts` | 扫描 `skills/` 重新生成 `claude/setting.json` |
+| 命令                   | 实现                      | 用途                                                                               |
+| ---------------------- | ------------------------- | ---------------------------------------------------------------------------------- |
+| `npm run register`     | `scripts/setup.ts`        | 全局初始化（新机器一次性运行）                                                     |
+| `npm run sync`         | `scripts/sync.ts`         | 将技能同步到目标项目（通常由 `/aisk/sync` 调用）                                   |
+| `npm run build`        | `scripts/build.ts`        | 扫描 `skills/` 重新生成 `claude/setting.json`                                      |
 | `npm run create-skill` | `scripts/create-skill.ts` | 将技能文件写入 `skills/` 并更新 `setting.json`（通常由 `/aisk/create-skill` 调用） |
 
 > **运行时依赖**：所有脚本通过 `tsx` 执行 TypeScript，CLI 参数解析使用 CAC。
@@ -142,7 +143,8 @@ npm run register
 1. 读取 `~/.ai-skills/config.json` → 获取仓库路径
 2. 读取 `{repo}/claude/setting.json` → 获取文件列表，每条记录包含 `src` 和 `dst`
 3. 将 `{repo}/skills/{src}` 复制到 `{target}/{dst}`，直接覆盖已有文件（目录不存在则创建）
-4. 输出同步摘要（新增 / 覆盖各多少个）
+4. 提示是否将目标目录加入 `.gitignore`（是/否）
+5. 输出同步摘要（新增 / 覆盖各多少个）
 
 **选项：**
 
@@ -166,12 +168,12 @@ npm run sync -- --dry-run            # 预览变更，不实际写入
 npm run create-skill -- <file> [--name <n>] [--description <desc>] [--force]
 ```
 
-| 参数 | 说明 | 默认值 |
-|------|------|--------|
-| `<file>` | 源文件路径（必填） | — |
-| `--name` | 技能名（目标文件名，不含 `.md`） | 取源文件名 |
-| `--description` | 技能描述 | 取文件首行 `#` 标题 |
-| `--force` | 跳过同名冲突确认 | false |
+| 参数            | 说明                             | 默认值              |
+| --------------- | -------------------------------- | ------------------- |
+| `<file>`        | 源文件路径（必填）               | —                   |
+| `--name`        | 技能名（目标文件名，不含 `.md`） | 取源文件名          |
+| `--description` | 技能描述                         | 取文件首行 `#` 标题 |
+| `--force`       | 跳过同名冲突确认                 | false               |
 
 **逻辑：**
 
@@ -195,7 +197,7 @@ npm run create-skill -- <file> [--name <n>] [--description <desc>] [--force]
 1. 递归枚举 `skills/` 下所有 `.md` 文件
 2. 跳过 `README.md`
 3. 对每个文件，按路径约定推断 `dst`：
-   - `*/resource/**` → `.ai-skills/skills/*/resource/`（资源文件）
+   - `*/resource/**` → `.ai-skills/*/resource/`（资源文件）
    - 其余 `.md` → `.claude/commands/aisk/`（技能命令）
 4. `description`：取文件首行 `#` 标题；`category`：按目录推断（`arch/` → `arch`，`task/` → `task`，根目录 → `meta`）
 5. 若 `setting.json` 中已有该条目，保留其现有的 `description`、`en`（不覆盖手动改动）；`category` 始终按路径重新推断
@@ -239,10 +241,10 @@ npm run build
 
 **两种输入模式：**
 
-| 模式 | 参数形式 | 行为 |
-|------|----------|------|
-| 文件路径 | 现有 `.md` 文件的路径 | 直接传给 `create-skill.ts` 处理 |
-| 技能名 | 纯名称（如 `my-skill`） | Claude 根据对话上下文生成内容，直接写入 `{repo}/skills/{name}.md`，再调用 `npm run build` |
+| 模式     | 参数形式                | 行为                                                                                      |
+| -------- | ----------------------- | ----------------------------------------------------------------------------------------- |
+| 文件路径 | 现有 `.md` 文件的路径   | 直接传给 `create-skill.ts` 处理                                                           |
+| 技能名   | 纯名称（如 `my-skill`） | Claude 根据对话上下文生成内容，直接写入 `{repo}/skills/{name}.md`，再调用 `npm run build` |
 
 **流程（文件路径模式）：**
 
@@ -272,7 +274,8 @@ npm run build
 同步配置文件，`sync.ts` 的数据来源，描述哪些文件参与同步及各自的目标路径。
 
 > 此文件通过 `npm run build` 自动生成，无需手动维护。生成规则：
-> - `*/resource/**` → `.ai-skills/skills/*/resource/`（资源文件）
+>
+> - `*/resource/**` → `.ai-skills/*/resource/`（资源文件）
 > - `README.md` → 排除（设计文档，不同步）
 > - 其余 `.md` → `.claude/commands/aisk/`（技能命令）
 
@@ -298,7 +301,7 @@ npm run build
     },
     {
       "src": "task/resource/task-planning.md",
-      "dst": ".ai-skills/skills/task/resource/task-planning.md",
+      "dst": ".ai-skills/task/resource/task-planning.md",
       "description": "task 工作流规则",
       "category": "task",
       "en": null
