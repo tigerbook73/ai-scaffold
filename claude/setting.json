@@ -20,6 +20,12 @@
       "category": "meta"
     },
     {
+      "src": "learn-phase.md",
+      "dst": ".claude/commands/aisk/learn-phase.md",
+      "description": "/learn-phase — Phase Code Walkthrough",
+      "category": "meta"
+    },
+    {
       "src": "set-claude-permission.md",
       "dst": ".claude/commands/aisk/set-claude-permission.md",
       "description": "Organize the Claude permission configuration for the current project",
