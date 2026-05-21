@@ -49,9 +49,7 @@ Promote a skill to the global repository so it can be distributed to any project
    ```bash
    npm --prefix {repo} run create-skill -- /tmp/{name}.md --name {name} [--force]
    ```
-   Pass `--force` when:
-   - The source file is already inside the repository (e.g. testing an existing skill), **or**
-   - Skipping the overwrite confirmation for a skill name that already exists
+   `--force` skips all confirmation prompts (source-in-repo and overwrite).
 
 8. Delete the temp file.
 
