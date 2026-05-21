@@ -1,31 +1,31 @@
-# 同步技能
+# Sync Skills
 
-将全局技能库中的所有技能同步到当前项目的 `.claude/commands/aisk/`。
+Sync all skills from the global skill repository to the current project's `.claude/commands/aisk/`.
 
-**调用方式**：`/aisk/sync`（无参数）
+**Usage**: `/aisk/sync` (no arguments)
 
 ---
 
-## 步骤
+## Steps
 
-1. 检查 `~/.ai-skills/config.json` 是否存在：
+1. Check if `~/.ai-skills/config.json` exists:
    ```bash
    cat ~/.ai-skills/config.json
    ```
-   若不存在，提示用户先在 ai-skills 仓库目录下运行 `npm run register`，然后终止。
+   If it does not exist, prompt the user to run `npm run register` in the ai-skills repository directory first, then stop.
 
-2. 从配置读取 `repo` 路径，获取当前项目目录，运行同步脚本：
+2. Read the `repo` path from the config, get the current project directory, and run the sync script:
    ```bash
    npm --prefix {repo} run sync -- --target {cwd}
    ```
-   其中 `{repo}` 替换为配置中的实际路径，`{cwd}` 替换为当前工作目录的绝对路径。
+   Where `{repo}` is replaced with the actual path from the config, and `{cwd}` with the absolute path of the current working directory.
 
-3. 输出同步结果（由 sync.ts 打印）。
+3. Print the sync results (output by sync.ts).
 
 ---
 
-## 说明
+## Notes
 
-- 同步范围由 `{repo}/claude/setting.json` 决定，包含所有技能命令和资源文件
-- 命令文件同步到 `.claude/commands/aisk/`，资源文件同步到 `.ai-skills/*/resource/`
-- 已存在的文件直接覆盖（取最新版本）
+- The sync scope is determined by `{repo}/claude/setting.json`, which includes all skill commands and resource files
+- Command files are synced to `.claude/commands/aisk/`, resource files to `.ai-skills/*/resource/`
+- Existing files are overwritten directly (latest version wins)

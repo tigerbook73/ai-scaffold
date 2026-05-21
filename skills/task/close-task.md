@@ -1,18 +1,18 @@
 # close-task
 
-验证 feature 或 refactor 已完成并提交，清理规划文档，提示可以 PR。
+Verify that the feature or refactor is complete and committed, clean up the planning documents, and prompt that a PR can be opened.
 
-**约束**
-- [写操作] 删除规划文档目录
+**Constraints**
+- [Write operation] Deletes the planning document directory
 
-**输入**（`$ARGUMENTS`，可选）
-- 无参数 → 从当前 branch 名推断（feature/{name} 或 refactor/{name}）
-- `{name}` → 手动指定
+**Input** (`$ARGUMENTS`, optional)
+- No argument → inferred from the current branch name (`feature/{name}` or `refactor/{name}`)
+- `{name}` → manually specified
 
-**步骤**
-1. 从 branch 名或输入解析模式和名称
-2. 检查 git status：工作树必须干净，否则终止并提示先提交
-3. 检查 PROGRESS.md：当前阶段必须为 completed，否则列出未完成步骤并终止
-4. 删除 docs/tasks/{name}/
-5. 提交删除
-6. 输出：✅ 清理完成，可以开 PR 了
+**Steps**
+1. Parse the mode and name from the branch name or input
+2. Check `git status`: working tree must be clean; otherwise stop and prompt the user to commit first
+3. Check `PROGRESS.md`: current stage must be `completed`; otherwise list the incomplete steps and stop
+4. Delete `docs/tasks/{name}/`
+5. Commit the deletion
+6. Output: ✅ Cleanup complete. Ready to open a PR.

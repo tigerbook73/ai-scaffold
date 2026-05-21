@@ -1,7 +1,7 @@
 {
   "name": "ai-skills",
   "version": "3.0.0",
-  "description": "本地 AI 技能库，通过 /aisk/sync 将技能分发到任意项目",
+  "description": "Local AI skill library — distribute skills to any project via /aisk/sync",
   "scripts": {
     "register": "tsx scripts/setup.ts",
     "sync": "tsx scripts/sync.ts",

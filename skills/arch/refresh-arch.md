@@ -1,50 +1,50 @@
 # refresh-arch
 
-扫描代码库，生成或刷新 `.ai-skills/architecture.md`。
+Scan the codebase and generate or refresh `.ai-skills/architecture.md`.
 
-记录代码库中已经做出的架构决策，帮助开发者在修改代码时识别哪些设计意图不该被打破。
+Records architecture decisions already made in the codebase, helping developers recognize which design intentions should not be broken when modifying code.
 
-**约束**
+**Constraints**
 
-- [写操作] 只写 `.ai-skills/architecture.md`，不修改其他文件
-- 写入前展示 diff，用户确认后才落盘
+- [Write operation] Only writes to `.ai-skills/architecture.md`; no other files are modified
+- Shows a diff before writing; writes only after user confirmation
 
-**输入**（`$ARGUMENTS`，可选）
+**Input** (`$ARGUMENTS`, optional)
 
-- 无参数 → 最近一次提交（`git diff HEAD~1`）
-- 路径（如 `src/`） → 该目录下的当前文件
-- commit hash → 该提交的变更（`git diff <hash>~1 <hash>`）
-- 数字（如 `3`） → 最近 N 次提交的变更（`git diff HEAD~N`）
+- No argument → most recent commit (`git diff HEAD~1`)
+- Path (e.g. `src/`) → current files under that directory
+- Commit hash → changes in that commit (`git diff <hash>~1 <hash>`)
+- Number (e.g. `3`) → changes across the last N commits (`git diff HEAD~N`)
 
-**步骤**
+**Steps**
 
-1. 读取当前 `.ai-skills/architecture.md`（若存在）
-2. 扫描代码库，按以下标准提取或刷新架构决策条目：
+1. Read the current `.ai-skills/architecture.md` (if it exists)
+2. Scan the codebase and extract or refresh architecture decision entries according to the following criteria:
 
-   每条记录必须同时满足：
-   1. 是一个可以被违反的选择——有明确的"不该做什么"
-   2. 违反后没有即时信号——工具不报告，行为看似正常；
-      影响可能在其他模块才显现、延迟暴露，
-      或作为质量隐患悄悄积累
-   3. 需要阅读多个文件才能理解"为什么这样设计"
+   Each entry must simultaneously satisfy:
+   1. It is a violable choice — there is a clear "what not to do"
+   2. There is no immediate signal when violated — tools do not report it, behavior appears normal;
+      impact may only surface in other modules, be exposed with a delay,
+      or silently accumulate as a quality hazard
+   3. Understanding "why it was designed this way" requires reading multiple files
 
-   每条格式：
+   Format for each entry:
 
    ```
-   **[决策标题]**
-   反例：不该做什么（一句话）
-   Rationale：为什么这样设计
-   Consequence：违反后会发生什么
+   **[Decision title]**
+   Counter-example: what not to do (one sentence)
+   Rationale: why it was designed this way
+   Consequence: what happens if violated
    ```
 
-   不收录：
-   - 技术栈的标准用法
-   - 没有明确反例的描述性内容（"系统使用 X"不算决策）
+   Do not include:
+   - Standard usage of the tech stack
+   - Descriptive content without a clear counter-example ("the system uses X" is not a decision)
 
-   刷新时：
-   - 已有条目覆盖的决策不重复；视角不同但覆盖相同决策时，以已有条目为准
-   - 新条目必须明确通过以上三条；存疑时不加，宁少勿滥
-   - 已有条目若不再满足标准或对应设计已变更，删除
+   When refreshing:
+   - Do not duplicate decisions already covered by existing entries; when two entries cover the same decision from different angles, keep the existing one
+   - New entries must clearly satisfy all three criteria above; when in doubt, do not add — err on the side of fewer
+   - Remove existing entries that no longer meet the criteria or whose corresponding design has changed
 
-3. 展示 diff，等待用户确认
-4. 用户确认后写入 `.ai-skills/architecture.md`（目录不存在则创建）
+3. Show the diff; wait for user confirmation
+4. After user confirmation, write to `.ai-skills/architecture.md` (create the directory if it does not exist)

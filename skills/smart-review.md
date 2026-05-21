@@ -1,31 +1,31 @@
-迭代检查指令。检查目标：$ARGUMENTS
+Iterative review instruction. Review target: $ARGUMENTS
 
-若 $ARGUMENTS 为空，提示用户给出检查目标后终止。
+If $ARGUMENTS is empty, prompt the user to specify a review target and stop.
 
-$ARGUMENTS 格式：`<目标路径> [自然语言说明]`
-- 目标路径：文件、模块或目录
-- 自然语言说明（可选）：指定检查重点，如"关注类型一致性"、"只看安全问题"
-- 若无说明，由模型根据目标文件类型自行判断检查重点
+$ARGUMENTS format: `<target-path> [natural language description]`
+- Target path: a file, module, or directory
+- Natural language description (optional): specify the review focus, e.g. "focus on type consistency", "security issues only"
+- If no description is given, the model determines the review focus based on the target file type
 
-本 skill 豁免全局 Plan Gate，无需在修改前进入 Plan Mode。
+This skill is exempt from the global Plan Gate — no need to enter Plan Mode before making changes.
 
-执行流程：
+Execution flow:
 
-**第一步 — 检查**
-扫描目标对象，按自然语言说明（或文件类型）确定检查维度，识别所有问题。
-- 可读取目标范围外的文件以理解上下文，但不得修改范围外文件
+**Step 1 — Review**
+Scan the target, determine review dimensions based on the natural language description (or file type), and identify all issues.
+- Files outside the target scope may be read for context, but must not be modified
 
-**第二步 — 分类处理**
-- 有确定答案（逻辑错误、类型错误、格式问题、明显遗漏等）→ 直接修复（仅限目标范围内）
-- 需要决策（多种合理方案、影响接口设计、涉及业务取舍）→ 暂停，交互式询问，等待确认后继续
-- 不确定（依赖上下文、需要更多信息）→ 记录，留到最后
-- 修复需要改动目标范围外的文件 → 询问用户是否授权，等待确认后继续
+**Step 2 — Classify and handle**
+- Clear answer (logic errors, type errors, formatting issues, obvious omissions, etc.) → fix immediately (within the target scope only)
+- Requires a decision (multiple valid approaches, interface design impact, business trade-offs) → pause, ask interactively, wait for confirmation before continuing
+- Uncertain (context-dependent, needs more information) → record, defer to the end
+- Fix requires modifying files outside the target scope → ask the user for authorization, wait for confirmation before continuing
 
-**第三步 — 循环**
-每轮修复后重新检查，重复第一、二步，满足以下任一条件时退出：
-- 本轮新发现问题数量 = 0
-- 已完成第 3 轮
+**Step 3 — Loop**
+After each round of fixes, re-review. Repeat Steps 1 and 2. Exit when either condition is met:
+- New issues found in this round = 0
+- Round 3 has been completed
 
-**第四步 — 收尾**
-- 汇总本次所有修改：列出每处改动的文件、位置和变更内容
-- 统一列出所有遗留问题，注明每项的原因（需决策 / 信息不足 / 超出当前范围）
+**Step 4 — Wrap up**
+- Summarize all changes made: list the file, location, and content of each change
+- List all remaining issues together, noting the reason for each (needs decision / insufficient information / out of scope)

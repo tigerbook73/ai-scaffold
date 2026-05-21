@@ -2,7 +2,7 @@
 node_modules/
 
 # Claude
-.claude
+.claude/
 
 # TypeScript build artifacts (if tsc is run manually without outDir)
 scripts/**/*.js

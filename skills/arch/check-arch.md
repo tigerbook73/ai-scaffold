@@ -1,36 +1,36 @@
 # check-arch
 
-检查指定范围内的代码变更与架构决策的对齐情况。
+Check the alignment between code changes in the specified scope and architecture decisions.
 
-**约束**
+**Constraints**
 
-- [只读] 只读取指定范围内的代码，不修改任何文件
-- 不自动更新规则，只输出偏差和建议方向
-- 每条输出必须指向 `.ai-skills/architecture.md` 中的具体决策，不输出泛化的代码质量建议
+- [Read-only] Only reads code within the specified scope; does not modify any files
+- Does not auto-update rules; only outputs deviations and suggested directions
+- Each output item must point to a specific decision in `.ai-skills/architecture.md`; generic code quality suggestions are not output
 
-**输入**（`$ARGUMENTS`，不传则默认最近一次提交）
+**Input** (`$ARGUMENTS`, defaults to the most recent commit if not provided)
 
-- 无参数 → 最近一次提交（`git diff HEAD~1`）
-- 路径（如 `src/`） → 该目录下的当前文件
-- commit hash → 该提交的变更（`git diff <hash>~1 <hash>`）
-- 数字（如 `3`） → 最近 N 次提交的变更（`git diff HEAD~N`）
-- ALL → 完整项目（智能忽略非自动生成的代码）
+- No argument → most recent commit (`git diff HEAD~1`)
+- Path (e.g. `src/`) → current files under that directory
+- Commit hash → changes in that commit (`git diff <hash>~1 <hash>`)
+- Number (e.g. `3`) → changes across the last N commits (`git diff HEAD~N`)
+- ALL → full project (intelligently ignores auto-generated code)
 
-**步骤**
+**Steps**
 
-1. 读取 `.ai-skills/architecture.md`（不存在则提示先运行 `refresh-arch`，终止）
-2. 解析输入，确定审核范围
-3. 获取范围内的文件或 diff 内容
-4. 对比 `.ai-skills/architecture.md` 中的决策，识别偏差
-5. 输出结果
+1. Read `.ai-skills/architecture.md` (if it does not exist, prompt the user to run `refresh-arch` first, then stop)
+2. Parse the input and determine the review scope
+3. Retrieve the files or diff content within the scope
+4. Compare against the decisions in `.ai-skills/architecture.md` and identify deviations
+5. Output results
 
-**输出格式**
+**Output format**
 
 ```
-审核范围：最近 1 次提交（abc1234）
+Review scope: most recent 1 commit (abc1234)
 
-[architecture.md · Auth Pattern] src/app/admin/page.tsx:8 — 直接查询 DB，应通过 server/data/ 层
-[architecture.md · Embedding Router] src/lib/ingest/pipeline.ts:42 — 直接引用 bge.ts，应从 router.ts 引入
+[architecture.md · Auth Pattern] src/app/admin/page.tsx:8 — queries DB directly, should go through the server/data/ layer
+[architecture.md · Embedding Router] src/lib/ingest/pipeline.ts:42 — references bge.ts directly, should import from router.ts
 
-无偏差：✅ 审核范围内代码与架构决策一致
+No deviations: ✅ Code in review scope is consistent with architecture decisions
 ```

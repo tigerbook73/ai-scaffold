@@ -5,8 +5,8 @@ import { createInterface } from 'readline'
 import { cac } from 'cac'
 
 const cli = cac('sync')
-cli.option('--target <dir>', '目标项目目录（默认当前目录）')
-cli.option('--dry-run', '预览变更，不实际写入')
+cli.option('--target <dir>', 'Target project directory (defaults to current directory)')
+cli.option('--dry-run', 'Preview changes without writing')
 cli.help()
 
 const { options } = cli.parse()
@@ -15,21 +15,21 @@ const dryRun = !!(options.dryRun ?? options['dry-run'])
 
 const configFile = join(homedir(), '.ai-skills', 'config.json')
 if (!existsSync(configFile)) {
-  console.error('错误：~/.ai-skills/config.json 不存在，请先运行 npm run register')
+  console.error('Error: ~/.ai-skills/config.json not found. Run npm run register first.')
   process.exit(1)
 }
 
 const { repo } = JSON.parse(readFileSync(configFile, 'utf-8')) as { repo: string }
 
 if (resolve(targetDir) === resolve(repo)) {
-  console.error('错误：目标项目不能是技能库本身，请在其他项目中运行 /aisk/sync')
+  console.error('Error: Target project cannot be the skill repository itself. Run /aisk/sync from a different project.')
   process.exit(1)
 }
 
 const settingFile = join(repo, 'claude', 'setting.json')
 
 if (!existsSync(settingFile)) {
-  console.error(`错误：${settingFile} 不存在，请先在仓库中运行 npm run build`)
+  console.error(`Error: ${settingFile} not found. Run npm run build in the repository first.`)
   process.exit(1)
 }
 
@@ -47,13 +47,13 @@ for (const { src, dst } of files) {
   const dstPath = join(targetDir, dst)
 
   if (!existsSync(srcPath)) {
-    console.warn(`  跳过（源不存在）：${src}`)
+    console.warn(`  Skipped (source not found): ${src}`)
     continue
   }
 
   const exists = existsSync(dstPath)
   if (dryRun) {
-    console.log(`  ${exists ? '[覆盖]' : '[新增]'} ${dst}`)
+    console.log(`  ${exists ? '[overwrite]' : '[new]'} ${dst}`)
   } else {
     mkdirSync(dirname(dstPath), { recursive: true })
     copyFileSync(srcPath, dstPath)
@@ -64,23 +64,23 @@ for (const { src, dst } of files) {
 }
 
 if (dryRun) {
-  console.log(`\n[dry-run] 新增 ${newCount}，覆盖 ${overwriteCount}（未实际写入）`)
+  console.log(`\n[dry-run] ${newCount} new, ${overwriteCount} overwrite (nothing written)`)
 } else {
   if (isFirstSync) {
     const gitignorePath = join(targetDir, '.gitignore')
     if (process.stdin.isTTY) {
       const rl = createInterface({ input: process.stdin, output: process.stdout })
       const answer = await new Promise<string>(resolve =>
-        rl.question('\n将 .ai-skills/ 加入 .gitignore？[y/N] ', resolve)
+        rl.question('\nAdd .ai-skills/ to .gitignore? [y/N] ', resolve)
       )
       rl.close()
       if (answer.toLowerCase() === 'y') {
         appendFileSync(gitignorePath, '\n.ai-skills/\n')
-        console.log('.gitignore 已更新')
+        console.log('.gitignore updated')
       }
     } else {
-      console.log('\n提示：建议将 .ai-skills/ 加入 .gitignore')
+      console.log('\nNote: consider adding .ai-skills/ to .gitignore')
     }
   }
-  console.log(`同步完成：新增 ${newCount}，覆盖 ${overwriteCount}`)
+  console.log(`Sync complete: ${newCount} new, ${overwriteCount} overwritten`)
 }

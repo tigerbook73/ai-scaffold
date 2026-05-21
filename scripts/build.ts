@@ -10,7 +10,6 @@ interface FileEntry {
   dst: string
   description: string
   category: string
-  en: string | null
 }
 
 interface Setting {
@@ -70,7 +69,6 @@ const files: FileEntry[] = srcs.map(src => {
       dst: inferDst(src),
       description: ex.description,
       category: inferCategory(src),
-      en: ex.en,
     }
   } else {
     added++
@@ -79,7 +77,6 @@ const files: FileEntry[] = srcs.map(src => {
       dst: inferDst(src),
       description: getFirstHeading(join(skillsDir, src)),
       category: inferCategory(src),
-      en: null,
     }
   }
 })
@@ -89,4 +86,4 @@ for (const src of existing.keys()) {
 }
 
 writeFileSync(settingFile, JSON.stringify({ version: '1.0', files }, null, 2) + '\n')
-console.log(`claude/setting.json 已更新：新增 ${added}，更新 ${updated}，删除 ${removed}`)
+console.log(`claude/setting.json updated: ${added} added, ${updated} updated, ${removed} removed`)

@@ -1,74 +1,74 @@
-# arch 技能组设计
+# arch Skill Group Design
 
-`arch` 技能组包含两个相互配合的技能：`refresh-arch`（生成/更新架构决策文档）和 `check-arch`（检查代码是否符合架构决策）。
-
----
-
-## 核心设计思路
-
-AI 在编码时的规则遵守来自**上下文**，而非系统级强制。这意味着：
-
-- 不依靠静态规则文件阻止某类操作
-- 而是让 AI 在每次操作前，对照已记录的架构决策主动判断
-
-`architecture.md` 是这套机制的核心载体：它记录"可以被违反、但不应该被违反"的设计选择。
-
-**收录标准**（三条同时满足）：
-1. 有明确的"不该做什么"（可被违反的选择）
-2. 违反后没有即时信号（工具不报告，影响延迟暴露）
-3. 需要阅读多个文件才能理解"为什么这样设计"
-
-不满足这三条的内容不收录——技术栈的标准用法、无反例的描述性内容不算架构决策。
+The `arch` skill group contains two complementary skills: `refresh-arch` (generate/update the architecture decision document) and `check-arch` (check whether code aligns with architecture decisions).
 
 ---
 
-## refresh-arch 设计
+## Core Design Philosophy
 
-### 为什么需要这个技能
+An AI's rule compliance during coding comes from **context**, not system-level enforcement. This means:
 
-`architecture.md` 随代码库演进会过时。新决策会出现，旧决策会失效。`refresh-arch` 将"扫描 → 提取 → 更新"这一重复性工作交给 AI，保持文档与代码库的一致性。
+- We do not rely on static rule files to block certain operations
+- Instead, the AI actively checks each action against recorded architecture decisions before proceeding
 
-### 关键设计决策
+`architecture.md` is the core carrier of this mechanism: it records design choices that "can be violated, but should not be."
 
-**写入前展示 diff，用户确认**
-架构决策的增删是高影响操作。自动写入可能引入错误判断，用户确认是必要的安全阀。
+**Inclusion criteria** (all three must be satisfied simultaneously):
+1. There is a clear "what not to do" (a violable choice)
+2. There is no immediate signal when violated (tools do not report it; impact is delayed)
+3. Understanding "why it was designed this way" requires reading multiple files
 
-**宁少勿滥**
-存疑的条目不加。过多条目会稀释文档价值，降低 `check-arch` 的检查精准度。
+Content that does not meet all three criteria is excluded — standard usage of the tech stack and purely descriptive content without a counter-example are not architecture decisions.
 
-**支持多种输入范围**
-无参数（最近提交）、路径、commit hash、最近 N 次提交——覆盖日常开发的主要场景，避免每次都要全量扫描。
+---
 
-### architecture.md 格式
+## refresh-arch Design
 
-每条决策使用固定格式：
+### Why this skill is needed
+
+`architecture.md` becomes outdated as the codebase evolves. New decisions emerge, old ones become invalid. `refresh-arch` delegates the repetitive "scan → extract → update" work to the AI, keeping the document consistent with the codebase.
+
+### Key design decisions
+
+**Show diff before writing; require user confirmation**
+Adding or removing architecture decisions is a high-impact operation. Automatic writes can introduce incorrect judgements; user confirmation is a necessary safety valve.
+
+**Err on the side of fewer entries**
+When in doubt, do not add an entry. Too many entries dilute the document's value and reduce the precision of `check-arch`.
+
+**Support multiple input scopes**
+No argument (latest commit), path, commit hash, last N commits — covering the main scenarios of daily development, avoiding full scans every time.
+
+### architecture.md format
+
+Each decision uses a fixed format:
 ```
-**[决策标题]**
-反例：不该做什么（一句话）
-Rationale：为什么这样设计
-Consequence：违反后会发生什么
+**[Decision title]**
+Counter-example: what not to do (one sentence)
+Rationale: why it was designed this way
+Consequence: what happens if violated
 ```
 
-三段结构的设计意图：反例让 AI 知道什么是错的，Rationale 提供背景，Consequence 说明代价。只有三者齐备，AI 才能在新情境下正确判断。
+The intent of the three-part structure: the counter-example tells the AI what is wrong, the Rationale provides context, and the Consequence states the cost. Only when all three are present can the AI make the correct judgement in new situations.
 
 ---
 
-## check-arch 设计
+## check-arch Design
 
-### 为什么是"只读 + 指向具体决策"
+### Why "read-only + point to a specific decision"
 
-`check-arch` 是诊断工具，不是执行工具。它的职责是发现偏差并指出来源，不自动修复。
+`check-arch` is a diagnostic tool, not an execution tool. Its responsibility is to find deviations and point them out — it does not auto-fix.
 
-输出必须指向 `architecture.md` 中的具体决策（而不是泛化的代码质量建议），原因：
-- 泛化建议容易误报，降低信噪比
-- 具体指向让用户可以追溯"为什么这是个问题"
-- 避免 check-arch 变成通用 lint 工具，模糊职责边界
+Output must point to a specific decision in `architecture.md` (rather than generic code quality suggestions), because:
+- Generic suggestions are prone to false positives, reducing signal-to-noise ratio
+- Specific pointers let the user trace "why this is a problem"
+- Prevents `check-arch` from becoming a general-purpose lint tool with blurred responsibilities
 
-### 与 refresh-arch 的分工
+### Division of labor with refresh-arch
 
-| 技能 | 职责 | 写操作 |
-|------|------|--------|
-| `refresh-arch` | 维护 `architecture.md` | 是（限 architecture.md） |
-| `check-arch` | 使用 `architecture.md` 做审查 | 否 |
+| Skill | Responsibility | Write operations |
+|-------|----------------|-----------------|
+| `refresh-arch` | Maintain `architecture.md` | Yes (limited to architecture.md) |
+| `check-arch` | Use `architecture.md` for review | No |
 
-两者互补，不互相触发：`check-arch` 发现偏差后，由用户决定是否需要 `refresh-arch` 更新文档。
+The two are complementary and do not trigger each other: after `check-arch` finds a deviation, the user decides whether `refresh-arch` needs to update the document.

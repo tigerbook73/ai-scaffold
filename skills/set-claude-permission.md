@@ -1,77 +1,77 @@
-整理当前项目的 .claude/settings.local.json 权限配置。
+Organize the `.claude/settings.local.json` permission configuration for the current project.
 
-$ARGUMENTS：Level 2 类别，空格分隔，可选值：`read` `write` `shell` `npm`
-- 若 $ARGUMENTS 为空，完成 Level 1 后列出选项，提示用户选择后继续
+$ARGUMENTS: Level 2 categories, space-separated. Valid values: `read` `write` `shell` `npm`
+- If $ARGUMENTS is empty, complete Level 1 first, then list the options and prompt the user to choose before continuing
 
-执行流程：
+Execution flow:
 
-**第一步 — 读取现状**
-1. 确定项目根目录（当前目录或最近含 .claude/ 的祖先目录）
-2. 读取 .claude/settings.local.json（若不存在则从空 `permissions.allow: []` 开始）
-3. 若 $ARGUMENTS 包含 `npm` 或为空：读取项目根目录的 package.json scripts 字段
+**Step 1 — Read current state**
+1. Determine the project root (current directory or the nearest ancestor containing `.claude/`)
+2. Read `.claude/settings.local.json` (if it does not exist, start from an empty `permissions.allow: []`)
+3. If $ARGUMENTS includes `npm` or is empty: read the `scripts` field from `package.json` in the project root
 
-**第二步 — Level 1：安全基线（自动应用，无需确认）**
-以下权限若尚未覆盖，直接添加：
+**Step 2 — Level 1: Security baseline (applied automatically, no confirmation needed)**
+Add the following permissions if not already covered:
 ```
 Bash(pwd), Bash(date), Bash(which *)
 Bash(git status), Bash(git log *), Bash(git diff *)
 ```
 
-**第三步 — Level 2：标准权限**
-若 $ARGUMENTS 为空，展示以下选项并等待用户选择：
+**Step 3 — Level 2: Standard permissions**
+If $ARGUMENTS is empty, display the following options and wait for the user to choose:
 ```
-read  — Read(<project_root>/**)         项目内读取（含 .env* 等敏感文件）
-write — Write(<project_root>/**)        项目内写入/创建文件
-shell — find/grep/cat/ls/wc            路径限定的只读 shell 工具
-npm   — npm run / pnpm run             package.json 中的安全脚本
+read  — Read(<project_root>/**)         Read within the project (including sensitive files like .env*)
+write — Write(<project_root>/**)        Write/create files within the project
+shell — find/grep/cat/ls/wc            Path-restricted read-only shell tools
+npm   — npm run / pnpm run             Safe scripts from package.json
 ```
 
-按 $ARGUMENTS 或用户所选类别逐项处理：
+Process each item per $ARGUMENTS or the user's selection:
 
 **`read`**
-添加 `Read(<project_root>/**)` 并在第六步预览时标注：该规则覆盖 .env* 等敏感文件。
+Add `Read(<project_root>/**)` and note in the Step 6 preview: this rule covers sensitive files like `.env*`.
 
 **`write`**
-添加 `Write(<project_root>/**)`。
+Add `Write(<project_root>/**)`.
 
 **`shell`**
-添加以下路径限定命令（以实际 project_root 替换占位符）：
+Add the following path-restricted commands (replace the placeholder with the actual `project_root`):
 ```
 Bash(ls <project_root>/*), Bash(find <project_root> *)
 Bash(grep * <project_root>/*), Bash(cat <project_root>/*)
 Bash(wc <project_root>/*)
 ```
-注：`grep` 格式为 `grep <pattern> <path>`，权限前缀需覆盖完整命令形式。
+Note: `grep` format is `grep <pattern> <path>`; the permission prefix must cover the full command form.
 
 **`npm`**
-安全名称集合：`lint` `build` `test` `typecheck` `type-check` `tsc` `format` `check` `validate`
-- 匹配 scripts 中名称在安全集合内的条目，添加 `Bash(npm run <name>)`
-- 若项目根目录存在 `pnpm-lock.yaml`，同时添加 `Bash(pnpm run <name>)`
-- 列出每条匹配脚本的实际命令内容（如 `lint → eslint src/`）供第六步确认
-- 不在安全集合内的脚本：跳过，在第六步汇总提示
-- 注意：仅按名称匹配，不检查脚本内容；用户需自行确认 package.json 来源可信
+Safe name set: `lint` `build` `test` `typecheck` `type-check` `tsc` `format` `check` `validate`
+- Match scripts whose names are in the safe set; add `Bash(npm run <name>)`
+- If `pnpm-lock.yaml` exists in the project root, also add `Bash(pnpm run <name>)`
+- List the actual command content of each matched script (e.g. `lint → eslint src/`) for confirmation in Step 6
+- Scripts not in the safe set: skip, summarize in Step 6
+- Note: matching is by name only, not by script content; the user is responsible for verifying that `package.json` is from a trusted source
 
-**第四步 — 整理合并现有规则**
-对 allow 列表中的现有条目进行分析：
-- 识别功能重叠的条目（如多条 `Bash(git -C /path ...)` 可统一为 `Bash(git *)`）
-- 若合并结果权限范围 ≤ 原条目总和 → 直接合并
-- 若合并会扩大权限范围（新增原来未允许的子命令）→ **暂停**，展示：
-  - 原条目列表
-  - 建议的合并结果
-  - 具体扩大的权限说明
-  - 询问用户是否接受，等待确认后继续
+**Step 4 — Consolidate existing rules**
+Analyze existing entries in the allow list:
+- Identify functionally overlapping entries (e.g. multiple `Bash(git -C /path ...)` can be unified as `Bash(git *)`)
+- If the merged result's permission scope ≤ the original entries combined → merge directly
+- If merging would expand the scope (granting sub-commands not previously allowed) → **pause**, display:
+  - Original entry list
+  - Proposed merged result
+  - Specific description of the expanded permissions
+  - Ask the user whether to accept; wait for confirmation before continuing
 
-**第五步 — 敏感路径检查**
-扫描现有规则中是否包含敏感路径（`.env*`、`*.pem`、`*secret*`、`*credential*`、`*token*`、`*.key`）：
-- 若有，逐条列出，询问用户是否保留，等待确认
+**Step 5 — Sensitive path check**
+Scan existing rules for sensitive paths (`.env*`, `*.pem`, `*secret*`, `*credential*`, `*token*`, `*.key`):
+- If found, list each one and ask the user whether to keep it; wait for confirmation
 
-**第六步 — 预览与确认**
-用 diff 格式展示最终 permissions.allow 的完整变更（标注 `+新增` / `-删除` / `保留`），同时汇总：
-- 本次匹配的 npm 安全脚本及其实际命令内容
-- 被跳过的 package.json 脚本（不在安全集合内）
-- 覆盖了敏感文件的规则（如 read 类别）
+**Step 6 — Preview and confirm**
+Show the complete diff of `permissions.allow` changes in diff format (labeled `+added` / `-removed` / `kept`), and summarize:
+- Matched npm safe scripts and their actual command content
+- Skipped `package.json` scripts (not in the safe set)
+- Rules that cover sensitive files (e.g. the `read` category)
 
-等待用户确认后进入第七步。
+Wait for user confirmation before proceeding to Step 7.
 
-**第七步 — 写入**
-用户确认后，写入 .claude/settings.local.json，保留文件中其他字段不变。
+**Step 7 — Write**
+After user confirmation, write to `.claude/settings.local.json`, leaving all other fields in the file unchanged.

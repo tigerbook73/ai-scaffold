@@ -16,10 +16,10 @@ for (const skill of META_SKILLS) {
   copyFileSync(join(repoPath, 'skills', skill), join(globalCmdsDir, skill))
 }
 
-console.log('初始化完成：')
-console.log(`  配置：${configFile}`)
-console.log(`  仓库：${repoPath}`)
-console.log('  已安装全局命令：')
+console.log('Initialization complete:')
+console.log(`  Config: ${configFile}`)
+console.log(`  Repository: ${repoPath}`)
+console.log('  Installed global commands:')
 for (const skill of META_SKILLS) {
   console.log(`    ~/.claude/commands/aisk/${skill}`)
 }

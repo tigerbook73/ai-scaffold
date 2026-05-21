@@ -7,9 +7,9 @@ import { cac } from 'cac'
 
 const cli = cac('create-skill')
 cli.usage('<file> [options]')
-cli.option('--name <name>', '技能名（目标文件名，不含 .md）')
-cli.option('--description <desc>', '技能描述（覆盖文件首行标题）')
-cli.option('--force', '跳过同名冲突确认')
+cli.option('--name <name>', 'Skill name (target filename without .md)')
+cli.option('--description <desc>', 'Skill description (overrides the first-line heading)')
+cli.option('--force', 'Skip conflict confirmation for duplicate names')
 cli.help()
 
 const { args, options } = cli.parse()
@@ -22,7 +22,7 @@ if (!file) {
 
 const configFile = join(homedir(), '.ai-skills', 'config.json')
 if (!existsSync(configFile)) {
-  console.error('错误：~/.ai-skills/config.json 不存在，请先运行 npm run register')
+  console.error('Error: ~/.ai-skills/config.json not found. Run npm run register first.')
   process.exit(1)
 }
 
@@ -30,12 +30,12 @@ const { repo } = JSON.parse(readFileSync(configFile, 'utf-8')) as { repo: string
 const srcPath = resolve(file)
 
 if (srcPath.startsWith(join(repo, 'skills'))) {
-  console.error('错误：源文件已在技能库中，无需重复添加')
+  console.error('Error: Source file is already in the skill repository; no need to add it again.')
   process.exit(1)
 }
 
 if (!existsSync(srcPath)) {
-  console.error(`错误：源文件不存在：${srcPath}`)
+  console.error(`Error: Source file not found: ${srcPath}`)
   process.exit(1)
 }
 
@@ -45,16 +45,16 @@ const dstPath = join(repo, 'skills', `${name}.md`)
 async function main() {
   if (existsSync(dstPath) && !options.force) {
     const rl = createInterface({ input: process.stdin, output: process.stdout })
-    const answer = await new Promise<string>(res => rl.question(`技能 ${name}.md 已存在，覆盖？(y/N) `, res))
+    const answer = await new Promise<string>(res => rl.question(`Skill ${name}.md already exists. Overwrite? (y/N) `, res))
     rl.close()
     if (answer.toLowerCase() !== 'y') {
-      console.log('已取消')
+      console.log('Cancelled')
       process.exit(0)
     }
   }
 
   copyFileSync(srcPath, dstPath)
-  console.log(`技能已写入：${dstPath}`)
+  console.log(`Skill written to: ${dstPath}`)
 
   execSync('npm run build', { cwd: repo, stdio: 'inherit' })
 
@@ -69,7 +69,7 @@ async function main() {
     }
   }
 
-  console.log('\n执行 git commit 持久化，再用 /aisk/sync 分发到项目。')
+  console.log('\nRun git commit to persist, then use /aisk/sync to distribute to projects.')
 }
 
 main().catch(err => {
