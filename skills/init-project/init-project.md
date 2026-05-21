@@ -23,7 +23,18 @@ Configure a new project to work with globally installed aisk skills.
 
    Use `settings.local.json` because these entries contain machine-specific absolute paths and should not be committed.
 
-4. Output a summary of what was configured.
+4. Output a summary of what was configured, then suggest the following optional next steps for first-time setup:
+
+   > **Recommended next steps** (optional, run in a new conversation):
+   >
+   > Generate a project guide for Claude:
+   > ```
+   > /init
+   > ```
+   > Generate the architecture decision document:
+   > ```
+   > /aisk/refresh-arch ALL
+   > ```
 
 ---
 

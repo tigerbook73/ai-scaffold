@@ -5,16 +5,19 @@ Scan the codebase and generate or refresh `.ai-skills/architecture.md`, recordin
 ---
 
 ## Constraints
+
 - [Write operation] Only writes to `.ai-skills/architecture.md`; no other files are modified
 - Shows a diff before writing; writes only after user confirmation
 
 ## Input
 
 `$ARGUMENTS` (optional):
+
 - No argument → most recent commit (`git diff HEAD~1`)
 - Path (e.g. `src/`) → current files under that directory
 - Commit hash → changes in that commit (`git diff <hash>~1 <hash>`)
 - Number (e.g. `3`) → changes across the last N commits (`git diff HEAD~N`)
+- ALL → full project (intelligently ignores auto-generated code)
 
 ## Steps
 
@@ -30,6 +33,7 @@ Scan the codebase and generate or refresh `.ai-skills/architecture.md`, recordin
    3. Understanding "why it was designed this way" requires reading multiple files
 
    Format for each entry:
+
    ```
    **[Decision title]**
    Counter-example: what not to do (one sentence)
