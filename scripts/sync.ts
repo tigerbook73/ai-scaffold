@@ -30,11 +30,6 @@ class Syncer {
 
     const { repo } = JSON.parse(readFileSync(configFile, 'utf-8')) as { repo: string }
 
-    if (resolve(this.targetDir) === resolve(repo)) {
-      console.error('Error: Target project cannot be the skill repository itself. Run /aisk/sync from a different project.')
-      process.exit(1)
-    }
-
     const settingFile = join(repo, 'claude', 'setting.json')
     if (!existsSync(settingFile)) {
       console.error(`Error: ${settingFile} not found. Run npm run build in the repository first.`)
