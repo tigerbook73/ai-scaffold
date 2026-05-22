@@ -9,11 +9,15 @@
 
 - `requirements.md` — 需求文档
 - `design.md` — 设计文档（含步骤划分）
-- （拆分后在此更新，拆分规则见需求文档）
+- （可按需拆分，拆分后在此更新）
 
 ## 当前阶段
 
 {阶段名}（{进行中 | 已完成}）
+
+## 当前步骤
+
+Step N | —
 
 ## 需求阶段
 
@@ -34,21 +38,18 @@
 ### Step 1: {步骤标题}
 
 - 状态: done | in_progress | pending
-- Commit: {hash} | —
+- Commit: feat(step-1): {步骤标题} | —
+- Date: 2024-01-15 14:23 | —
 - 验收:
   - [x] (auto) `npm test` 通过
   - [x] (manual) 浏览器验证 X 功能正常
+  - [ ] (superseded) 临时验收项（Step 2 完成后失效）
 
 ### Step 2: {步骤标题}
 
 - 状态: pending
 - Commit: —
+- Date: —
 - 验收:
   - [ ] (auto) `npm test` 通过
   - [ ] (manual) 功能验证
-
-## 历史记录
-
-- {date}: 任务创建
-- {date}: 需求阶段完成
-- {date}: Step 1 完成（{commit-hash}）

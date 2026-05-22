@@ -9,7 +9,7 @@
 命名规范：
 
 - Feature 类型：`feature/{task-name}`
-- Refactoring 类型：`refactor/{task-name}`
+- Refactor 类型：`refactor/{task-name}`
 
 `{task-name}` 使用 kebab-case，简洁描述任务内容，例如：`feature/product-search`、`refactor/auth-middleware`。
 
@@ -64,4 +64,36 @@ start-task 在当前 session 建立任务上下文，后续自然语言指令默
 
 **.claude/CLAUDE.md 的优势**：存储在 git 分支内，跨 session 天然有效，无需任何外部状态维护。
 
-> Skill 详细设计见 `design-task-skills.md`
+---
+
+## 三、Skill 总览
+
+| Skill | 简介 | 定义文件 |
+| ----- | ---- | -------- |
+| `create-task` | 在主干分支上创建任务分支、初始化任务文档并进入工作模式 | `design-task-skills/create-task.md` |
+| `start-task` | 在当前 session 建立任务上下文，读取任务状态和文档 | `design-task-skills/start-task.md` |
+| `resume-task` | start-task 的别名，语义上强调从中断处恢复 | 同 start-task |
+| `verify-task` | 全量验收：覆盖所有 step，auto / manual / fast / full 模式 | `design-task-skills/verify-task.md` |
+| `verify-step` | 单步验收：默认当前 step，可指定 step-N，逻辑同 verify-task | `design-task-skills/verify-step.md` |
+| `complete-task` | 完成度核查 + 用户确认后清理任务文档 + 提示创建 PR | `design-task-skills/complete-task.md` |
+
+### Commit Message 规范
+
+**Step 提交**：`{type}(step-N): {step-title}`
+
+- `scope`：`step-N` 表示"此次提交属于该步骤"，branch 名已隐含任务，无需重复 task-name
+- `type`：用最准确的类型描述本次变更性质，不限于分支类型
+
+**非 Step 提交**：标准 conventional commits 格式，不带 step scope
+
+```
+feat(step-1): add search API endpoint
+fix(step-1): handle null response from search API   ← step-1 的 bug 修复
+feat(step-2): integrate search UI
+refactor(step-1): extract token validation
+docs: update task requirements
+fix: resolve unrelated null pointer in parser        ← 与步骤无关，不带 step scope
+chore: adjust eslint config
+```
+
+判断标准：变更是否属于某个步骤的实现范围——是则带 `(step-N)`，否则用标准格式。
