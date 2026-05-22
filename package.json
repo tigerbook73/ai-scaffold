@@ -5,7 +5,7 @@
   "scripts": {
     "register": "tsx scripts/setup.ts",
     "build": "tsx scripts/build.ts",
-    "create-skill": "tsx scripts/create-skill.ts",
+    "create-skill": "tsx skills/create-skill/resource/create-skill.ts",
     "lint": "eslint scripts/"
   },
   "keywords": [
