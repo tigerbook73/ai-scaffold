@@ -90,7 +90,7 @@
 ### 1. 创建任务（create-task）
 
 - 创建新的 Git 分支
-- 在 `docs/task/` 目录下创建任务目录，并初始化三个文件：
+- 在 `docs/tasks/` 目录下创建任务目录，并初始化三个文件：
   - `REQUIREMENTS.md`（初始可为空）
   - `DESIGN.md`（初始可为空）
   - `PROGRESS.md`（初始包含一条创建记录）
@@ -104,7 +104,7 @@
 - 自动执行自动化测试步骤，确认测试通过
 - 要求用户逐项确认人工验收步骤是否完成
 - 验收全部通过后，自动删除任务目录下的所有文档（REQUIREMENTS.md / DESIGN.md / PROGRESS.md）并提交，同时清除 memory 中当前分支的任务状态
-- 若 PR review 不通过需要返工，可通过 `git checkout <删除前的 commit> -- docs/task/<任务目录>/` 从 git 历史找回文档
+- 若 PR review 不通过需要返工，可通过 `git checkout <删除前的 commit> -- docs/tasks/<任务目录>/` 从 git 历史找回文档
 
 ### 3. 开始任务（start-task）
 
