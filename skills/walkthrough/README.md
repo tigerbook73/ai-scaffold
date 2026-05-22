@@ -4,7 +4,7 @@ Skills for walking through code changes or file content in structured, resumable
 
 ## Skills
 
-**`create-walkthrough`** — Start a new walkthrough: confirm the target (uncommitted changes, a commit range, or a file/directory), generate groups, and immediately begin presenting the first group. State is saved to `.ai-skills/data/walkthrough.md` so the session can be resumed later.
+**`create-walkthrough`** — Start a new walkthrough: confirm the target (uncommitted changes, a commit range, or a file/directory), generate groups, and immediately begin presenting the first group. State is saved to `.ai-skills/data/walkthrough.json` so the session can be resumed later.
 
 **`start-walkthrough`** (`resume-walkthrough` is an alias) — Resume a walkthrough from the state file at the start of a new session. Validates that the recorded target and groups are still current, then continues from the last completed group.
 

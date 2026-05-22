@@ -52,7 +52,7 @@ Create a new walkthrough: confirm the target, generate groups, and begin the fir
 6. **Progress updates**: Each time the user confirms a group is done, run `state write --branch <branch> --state '<json>'`
    with updated `currentGroup` and `groups` before presenting the next group.
 
-7. **Completion**: When the last group is confirmed done, run `state write` with `status: completed`.
+7. **Completion**: When the last group is confirmed done, run `state write --branch <branch> --state '<json>'` with `status: completed`.
    Then prompt: "走读完成，是否删除状态记录？"
    - Yes → run `state delete --branch <branch>`.
    - No → keep the record as-is.
