@@ -15,6 +15,12 @@ Promote a skill to the global repository so it can be distributed to any project
 
 ---
 
+## Constraints
+
+- Writes to `{repo}/skills/{name}/{name}.md` (Mode 1 and Mode 2)
+- May write a temp file to `/tmp/aisk-*/` during Mode 1 processing (deleted after copy if `--cleanup` is passed)
+- Triggers `npm run build` which regenerates `{repo}/claude/setting.json`
+
 ## Steps
 
 ### Common prerequisite
@@ -26,39 +32,39 @@ Promote a skill to the global repository so it can be distributed to any project
 
 ### Mode 1: File path
 
-3. Read the source file content.
+2. Read the source file content.
 
-4. Check and fix format compliance against the spec:
+3. Check and fix format compliance against the spec:
    - Assess complexity → choose Compact or Structured tier
    - Fix H1 (if missing or wrong format)
    - Normalize Arguments section and step heading levels
    - Check language: if content is not in English, suggest translating (non-blocking — user may override)
-   - **If no changes needed**, skip steps 5–6 and run step 7 with the original source path (no temp file).
+   - **If no changes needed**, skip steps 4–5 and run step 6 with the original source path (no temp file).
 
-5. Show the fixed content to the user as a diff, wait for confirmation.
+4. Show the fixed content to the user as a diff, wait for confirmation.
 
-6. After confirmation, write the fixed content to a unique temp path:
+5. After confirmation, write the fixed content to a unique temp path:
    `/tmp/aisk-{8-char-random-hex}/{name}.md`
 
-7. Run:
+6. Run:
    ```bash
    npm --prefix {repo} run create-skill -- <path> --name {name} [--cleanup] [--force]
    ```
-   - `<path>`: the temp file path if step 6 was executed; original source path if step 6 was skipped
-   - Include `--cleanup` only when a temp file was created (step 6 was executed) — the script deletes it after copying
+   - `<path>`: the temp file path if step 5 was executed; original source path if step 5 was skipped
+   - Include `--cleanup` only when a temp file was created (step 5 was executed) — the script deletes it after copying
    - `--force` skips all confirmation prompts (source-in-repo and overwrite)
 
 ### Mode 2: Skill name
 
-3. Confirm the name format (lowercase letters + hyphens, e.g. `my-skill`)
+2. Confirm the name format (lowercase letters + hyphens, e.g. `my-skill`)
 
-4. Assess complexity based on the conversation context → choose Compact or Structured tier from the spec
+3. Assess complexity based on the conversation context → choose Compact or Structured tier from the spec
 
-5. Generate the skill content in English following the chosen template
+4. Generate the skill content in English following the chosen template
 
-6. Write the content directly to `{repo}/skills/{name}/{name}.md` (create the `{name}/` directory first if it does not exist)
+5. Write the content directly to `{repo}/skills/{name}/{name}.md` (create the `{name}/` directory first if it does not exist)
 
-7. Run:
+6. Run:
    ```bash
    npm --prefix {repo} run build
    ```
