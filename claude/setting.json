@@ -44,16 +44,22 @@
       "category": "smart-review"
     },
     {
-      "src": "task/close-task.md",
-      "dst": ".claude/commands/aisk/close-task.md",
-      "description": "Verify task completion and clean up planning documents",
-      "category": "task"
+      "src": "walkthrough/create-walkthrough.md",
+      "dst": ".claude/commands/aisk/create-walkthrough.md",
+      "description": "Start a new code walkthrough: confirm target, generate groups, present first group",
+      "category": "walkthrough"
     },
     {
-      "src": "task/prepare-task.md",
-      "dst": ".claude/commands/aisk/prepare-task.md",
-      "description": "Create a feature/refactor task branch and planning documents",
-      "category": "task"
+      "src": "walkthrough/resume-walkthrough.md",
+      "dst": ".claude/commands/aisk/resume-walkthrough.md",
+      "description": "Alias for start-walkthrough — resume a walkthrough from the state file",
+      "category": "walkthrough"
+    },
+    {
+      "src": "walkthrough/start-walkthrough.md",
+      "dst": ".claude/commands/aisk/start-walkthrough.md",
+      "description": "Resume a walkthrough from the state file across sessions",
+      "category": "walkthrough"
     }
   ]
 }
