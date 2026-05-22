@@ -19,6 +19,7 @@
 | 文件 | 说明 |
 | ---- | ---- |
 | `design-task-template/CLAUDE.md` | 任务目录 `.claude/CLAUDE.md` 模板（含占位符） |
+| `design-task-template/instructions.md` | 面向开发者的使用指南（设计缺陷处理、步骤状态管理等） |
 | `design-task-template/task-state.md` | task-state.md 完整格式模板 |
 | `design-task-template/design.md` | design.md 步骤格式模板 |
 | `design-task-template/requirements-feature.md` | Feature 任务需求文档模板 |

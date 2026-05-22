@@ -37,19 +37,25 @@ Step N | —
 
 ### Step 1: {步骤标题}
 
-- 状态: done | in_progress | pending
+- 状态: done
 - Commit: feat(step-1): {步骤标题} | —
 - Date: 2024-01-15 14:23 | —
-- 验收:
-  - [x] (auto) `npm test` 通过
-  - [x] (manual) 浏览器验证 X 功能正常
-  - [ ] (superseded) 临时验收项（Step 2 完成后失效）
+- 自动验收: 通过 | 未通过 | —
+- 人工验收: 通过 | 未通过 | —
 
 ### Step 2: {步骤标题}
+
+- 状态: in_progress
+- 备注: [仅 in_progress 时存在，由 AI 根据上下文总结，人确认；步骤完成后自动清除]
+- Commit: —
+- Date: —
+- 自动验收: —
+- 人工验收: —
+
+### Step 3: {步骤标题}
 
 - 状态: pending
 - Commit: —
 - Date: —
-- 验收:
-  - [ ] (auto) `npm test` 通过
-  - [ ] (manual) 功能验证
+- 自动验收: —
+- 人工验收: —

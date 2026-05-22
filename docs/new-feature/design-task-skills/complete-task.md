@@ -19,8 +19,8 @@ Does not run acceptance tests — use verify-task for that.
 2. For each step listed in the design documents, verify in `task-state.md`:
    - Status is `done`
    - A commit hash is recorded (not `—`)
-3. Verify that every non-superseded `(auto)` condition in `task-state.md` is checked `[x]`.
-4. Verify that every non-superseded `(manual)` condition in `task-state.md` is checked `[x]`.
+3. Verify that every step's `自动验收` field in `task-state.md` is `通过`.
+4. Verify that every step's `人工验收` field in `task-state.md` is `通过`.
 5. If any check fails, list all failing items and stop. Prompt the user to resolve them
    (e.g., run verify-task, complete the missing step, or commit pending changes).
 
