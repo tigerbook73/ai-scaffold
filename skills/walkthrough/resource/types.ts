@@ -9,7 +9,7 @@ export interface State {
   source: string
   totalGroups: number
   currentGroup: number
-  status: 'active' | 'completed'
+  status: "active" | "completed"
   groups: Group[]
 }
 

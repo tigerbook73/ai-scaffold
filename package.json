@@ -6,7 +6,8 @@
     "register": "tsx scripts/setup.ts",
     "build": "tsx scripts/build.ts",
     "create-skill": "tsx skills/create-skill/resource/create-skill.ts",
-    "lint": "eslint scripts/"
+    "lint": "eslint scripts/ skills/*/resource/ && prettier --check scripts/ skills/*/resource/",
+    "format": "prettier --write scripts/ skills/*/resource/"
   },
   "keywords": [
     "ai",
@@ -22,6 +23,8 @@
   "devDependencies": {
     "@types/node": "^25.9.1",
     "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4"
   }

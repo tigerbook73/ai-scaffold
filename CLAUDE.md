@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run register                     # One-time setup on a new machine — installs all skills globally
 npm run build                        # Scan skills/ and regenerate claude/setting.json
 npm run create-skill -- <file>       # Promote a skill file to the global repository
-npm run lint                         # ESLint + TypeScript check (scripts/ only)
+npm run lint                         # ESLint check (scripts/ and skills/*/resource/)
+npm run format                       # ESLint --fix (same scope as lint)
 ```
 
 **After modifying skill files or scripts**: run `npm run lint` before committing.  
