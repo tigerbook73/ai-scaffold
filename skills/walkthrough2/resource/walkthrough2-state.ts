@@ -6,9 +6,12 @@
  *   walkthrough2-state.ts read   --key <key>
  *   walkthrough2-state.ts update --key <key> --index '<json>'
  *   walkthrough2-state.ts list
- *   walkthrough2-state.ts find          --hash <hash>
- *   walkthrough2-state.ts advance-group --key <key>
- *   walkthrough2-state.ts delete        --key <key>
+ *   walkthrough2-state.ts find   --hash <hash>
+ *   walkthrough2-state.ts next   --key <key>
+ *   walkthrough2-state.ts prev   --key <key>
+ *   walkthrough2-state.ts goto   --key <key> --n <n>
+ *   walkthrough2-state.ts finish --key <key>
+ *   walkthrough2-state.ts delete --key <key>
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from "fs"
@@ -104,7 +107,7 @@ class WalkthroughState {
     process.exit(1)
   }
 
-  cmdAdvanceGroup(key: string): void {
+  cmdNext(key: string): void {
     const index = this.readIndex(key)
     // currentGroup is 1-based; groups[] is 0-based
     index.groups[index.currentGroup - 1].done = true
@@ -117,6 +120,49 @@ class WalkthroughState {
     }
     // Callers pipe this output directly as the next group's instruction text
     process.stdout.write(readFileSync(nextFile, "utf-8"))
+  }
+
+  cmdPrev(key: string): void {
+    const index = this.readIndex(key)
+    if (index.currentGroup <= 1) {
+      console.error("Already at first group")
+      process.exit(1)
+    }
+    index.currentGroup -= 1
+    // currentGroup is 1-based; groups[] is 0-based — reset target group to not-done
+    index.groups[index.currentGroup - 1].done = false
+    writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8")
+    const groupFile = join(this.stateDir(key), `g${index.currentGroup}.md`)
+    if (!existsSync(groupFile)) {
+      console.error(`Group file g${index.currentGroup}.md not found`)
+      process.exit(1)
+    }
+    process.stdout.write(readFileSync(groupFile, "utf-8"))
+  }
+
+  cmdGoto(key: string, n: number): void {
+    const index = this.readIndex(key)
+    if (n < 1 || n > index.totalGroups) {
+      console.error(`Group ${n} out of range (1..${index.totalGroups})`)
+      process.exit(1)
+    }
+    index.currentGroup = n
+    // Reset target group to not-done regardless of direction
+    index.groups[n - 1].done = false
+    writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8")
+    const groupFile = join(this.stateDir(key), `g${n}.md`)
+    if (!existsSync(groupFile)) {
+      console.error(`Group file g${n}.md not found`)
+      process.exit(1)
+    }
+    process.stdout.write(readFileSync(groupFile, "utf-8"))
+  }
+
+  cmdFinish(key: string): void {
+    const index = this.readIndex(key)
+    index.status = "completed"
+    writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8")
+    process.stdout.write(JSON.stringify({ status: "completed", stateKey: key }, null, 2) + "\n")
   }
 
   cmdDelete(key: string): void {
@@ -166,10 +212,32 @@ class WalkthroughState {
       })
 
     cli
-      .command("advance-group", "Mark current group done and print next group file to stdout")
+      .command("next", "Mark current group done and print next group file to stdout")
       .option("--key <key>", "State key")
       .action((options: { key: string }) => {
-        this.cmdAdvanceGroup(options.key)
+        this.cmdNext(options.key)
+      })
+
+    cli
+      .command("prev", "Go back to the previous group and print it to stdout")
+      .option("--key <key>", "State key")
+      .action((options: { key: string }) => {
+        this.cmdPrev(options.key)
+      })
+
+    cli
+      .command("goto", "Jump to group N and print it to stdout")
+      .option("--key <key>", "State key")
+      .option("--n <n>", "Target group number (1-based)")
+      .action((options: { key: string; n: string }) => {
+        this.cmdGoto(options.key, Number(options.n))
+      })
+
+    cli
+      .command("finish", "Mark walkthrough as completed (does not delete state)")
+      .option("--key <key>", "State key")
+      .action((options: { key: string }) => {
+        this.cmdFinish(options.key)
       })
 
     cli

@@ -159,22 +159,8 @@ If the user requests adjustments (merge, split, rename groups):
 3. Update `index.json` via `state update --key {stateKey} --index '<json>'`.
 4. Re-output the updated overview, then STOP and wait again.
 
-### Step 9 — Present groups
+### Step 9 — Enter walkthrough loop
 
-Read `{cwd}/.ai-skills/walkthrough2/{stateKey}/g1.md` via Read tool. Output its content. Wait for user confirmation.
-
-After each confirmation, run:
-```
-state advance-group --key {stateKey}
-```
-This atomically marks the current group done, increments `currentGroup`, writes the updated `index.json`, and prints the next group's content to stdout. Output the result verbatim. Then wait for the next confirmation.
-
-If `advance-group` exits with an error (no next group file found), the last group has been confirmed — proceed to Step 10.
-
-### Step 10 — Completion
-
-1. Set `status: "completed"` in the index: `state update --key {stateKey} --index '<json>'`.
-2. If `checkedOut = true`: remind the user to run `git checkout -`.
-3. Ask: "走读完成，是否删除状态记录？"
-   - Yes → `state delete --key {stateKey}`
-   - No → keep as-is
+Read `{repo}/skills/walkthrough2/resource/walkthrough-loop.md`.
+Follow its instructions starting from "展示当前组".
+（walkthrough-loop 本身会读取并输出 g1.md，无需在此处重复读取）

@@ -42,15 +42,8 @@ Output:
 进度：G{index.currentGroup} / {index.totalGroups}，已完成 {done count} 组
 ```
 
-### Step 4 — Continue walkthrough
+### Step 4 — Enter walkthrough loop
 
-Read `{cwd}/.ai-skills/walkthrough2/{stateKey}/g{index.currentGroup}.md` via Read tool.
-Output its content. Wait for user confirmation.
-
-After each confirmation, run:
-```
-state advance-group --key {stateKey}
-```
-Output the result verbatim. Wait for the next confirmation.
-
-If `advance-group` exits with an error (no next group file), the last group has been confirmed — then follow `create-walkthrough2` Step 10 (set status completed, remind checkout, ask to delete).
+Read `{repo}/skills/walkthrough2/resource/walkthrough-loop.md`.
+Follow its instructions starting from "展示当前组".
+（walkthrough-loop 本身会读取并输出 g{currentGroup}.md，无需在此处重复读取）
