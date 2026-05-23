@@ -80,24 +80,6 @@
       "category": "task"
     },
     {
-      "src": "walkthrough/create-walkthrough.md",
-      "dst": ".claude/commands/aisk/create-walkthrough.md",
-      "description": "Start a new code walkthrough: confirm target, generate groups, present first group",
-      "category": "walkthrough"
-    },
-    {
-      "src": "walkthrough/resume-walkthrough.md",
-      "dst": ".claude/commands/aisk/resume-walkthrough.md",
-      "description": "Alias for start-walkthrough — resume a walkthrough from the state file",
-      "category": "walkthrough"
-    },
-    {
-      "src": "walkthrough/start-walkthrough.md",
-      "dst": ".claude/commands/aisk/start-walkthrough.md",
-      "description": "Resume a walkthrough from the state file across sessions",
-      "category": "walkthrough"
-    },
-    {
       "src": "walkthrough2/create-walkthrough2.md",
       "dst": ".claude/commands/aisk/create-walkthrough2.md",
       "description": "create-walkthrough2",
