@@ -1,0 +1,56 @@
+# start-walkthrough2
+
+Resume a walkthrough from the state file. `resume-walkthrough2` is an alias with identical behavior.
+
+---
+
+## Constraints
+
+- An active state record must exist; if not found, prompt user to run `create-walkthrough2` first
+- Context is session-scoped; re-run at the start of each new session to restore walkthrough state
+- **Silent preparation**: read and validate state without narrating; output text only for warnings or the resume summary
+- **State script**: read `~/.ai-skills/config.json` to get `{repo}`. Index operations go through:
+  `{repo}/node_modules/.bin/tsx {repo}/skills/walkthrough2/resource/walkthrough2-state.ts <cmd> [--options]`
+- **Group files**: read `g{N}.md` directly via the Read tool from `{cwd}/.ai-skills/walkthrough2/{stateKey}/g{N}.md`
+
+## Steps
+
+### Step 1 — Locate state
+
+Read `~/.ai-skills/config.json` for `{repo}`.
+
+Determine state key:
+- `git branch --show-current` returns a branch name → sanitize (replace `/` with `-`) → `{stateKey}` → `state read --key {stateKey}`
+- Returns empty (detached HEAD) → `git rev-parse HEAD` → `state find --hash <hash>` → extract `stateKey` from result → `state read --key {stateKey}`
+
+If no active state found → tell the user to run `create-walkthrough2` first, stop.
+
+### Step 2 — Validate checkout position
+
+If `index.checkedOut = true`:
+1. `git rev-parse HEAD` → `{currentHash}`
+2. Compare with `index.targetHash`.
+3. Mismatch → warn and stop:
+   > 当前位置（`{currentHash}`）与走读目标（`{index.targetHash}`）不匹配。
+   > 请先运行 `git checkout {index.targetRef}`，然后重新运行 `start-walkthrough2`。
+
+### Step 3 — Resume summary
+
+Output:
+```
+走读目标：{index.target}（基线：{index.baseline}）
+进度：G{index.currentGroup} / {index.totalGroups}，已完成 {done count} 组
+```
+
+### Step 4 — Continue walkthrough
+
+Read `{cwd}/.ai-skills/walkthrough2/{stateKey}/g{index.currentGroup}.md` via Read tool.
+Output its content. Wait for user confirmation.
+
+After each confirmation, run:
+```
+state advance-group --key {stateKey}
+```
+Output the result verbatim. Wait for the next confirmation.
+
+If `advance-group` exits with an error (no next group file), the last group has been confirmed — then follow `create-walkthrough2` Step 10 (set status completed, remind checkout, ask to delete).

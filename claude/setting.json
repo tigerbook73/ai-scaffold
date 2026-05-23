@@ -96,6 +96,24 @@
       "dst": ".claude/commands/aisk/start-walkthrough.md",
       "description": "Resume a walkthrough from the state file across sessions",
       "category": "walkthrough"
+    },
+    {
+      "src": "walkthrough2/create-walkthrough2.md",
+      "dst": ".claude/commands/aisk/create-walkthrough2.md",
+      "description": "create-walkthrough2",
+      "category": "walkthrough2"
+    },
+    {
+      "src": "walkthrough2/resume-walkthrough2.md",
+      "dst": ".claude/commands/aisk/resume-walkthrough2.md",
+      "description": "resume-walkthrough2",
+      "category": "walkthrough2"
+    },
+    {
+      "src": "walkthrough2/start-walkthrough2.md",
+      "dst": ".claude/commands/aisk/start-walkthrough2.md",
+      "description": "start-walkthrough2",
+      "category": "walkthrough2"
     }
   ]
 }
