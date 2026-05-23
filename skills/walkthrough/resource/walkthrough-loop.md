@@ -1,88 +1,88 @@
 # walkthrough-loop
 
-共享交互循环 — 由 `create-walkthrough` 和 `start-walkthrough` 在进入展示阶段时读取。
+Shared interaction loop — loaded by `create-walkthrough` and `start-walkthrough` when entering the presentation phase.
 
 ---
 
-## 前置条件
+## Preconditions
 
-进入此循环时，以下变量已从调用方获得：
+When entering this loop, the following variables are already available from the caller:
 
-- `{stateKey}` — 当前走读的状态键
-- `{repo}` — 本 skill 仓库路径（来自 `~/.ai-skills/config.json`）
-- `{cwd}` — 用户项目的工作目录
+- `{stateKey}` — the current walkthrough state key
+- `{repo}` — path to the skill repository (from `~/.ai-skills/config.json`)
+- `{cwd}` — the user's project working directory
 
-如当前上下文中尚未加载 index.json，先执行：
+If index.json is not yet loaded in the current context, run:
 
 ```
 state read --key {stateKey}
 ```
 
-从中获取 `currentGroup`、`totalGroups`、`intent`、`groups[]` 等字段。
+Fetch `currentGroup`, `totalGroups`, `intent`, `groups[]`, and other fields from it.
 
 ---
 
-## 展示当前组
+## Display current group
 
-读取并输出 `{cwd}/.ai-skills/walkthrough/{stateKey}/g{currentGroup}.md`（用 Read 工具）。
+Read and output `{cwd}/.ai-skills/walkthrough/{stateKey}/g{currentGroup}.md` (using the Read tool).
 
-输出内容后，在末尾紧接前瞻提示（见下）。
+After outputting the content, immediately append the lookahead prompt (see below).
 
 ---
 
-## 前瞻提示格式
+## Lookahead prompt format
 
-每次输出组内容后，附加一行：
+After each group's content, append one line:
 
 ```
 ---
-走读中（G{N}/{totalGroups}）— `wtgroup next` 下一组 · `wtgroup G{N}` 跳转 · `wtgroup list` 列表 · `wtgroup finish` 完成
+Walkthrough (G{N}/{totalGroups}) — `wtgroup next` next · `wtgroup G{N}` goto · `wtgroup list` list · `wtgroup finish` finish
 ```
 
-**注意**：不要根据位置猜测是否到达最后一组——用户可能跳跃式阅读。
-只有当读取 index.json 后发现**所有** `groups[].done === true` 时，才主动提示进入完成流程。
-否则始终展示标准提示行。
+**Note**: Do not guess whether the last group has been reached based on position — users may read non-sequentially.
+Only proactively enter the completion flow when reading index.json shows **all** `groups[].done === true`.
+Otherwise always display the standard prompt line.
 
 ---
 
-## 命令识别模型
+## Command recognition model
 
-### 强关键词（出现即表示走读导航意图）
+### Strong keywords (signal walkthrough navigation intent)
 
 `wtgroup` · `walkthrough group` · `走读组`
 
-强关键词单独出现时，默认动作为 `next`。
+A strong keyword alone defaults to the `next` action.
 
-### 动作词
+### Action words
 
-| 动作词（中英文均可）          | 意图                 |
-| ----------------------------- | -------------------- |
-| next / 下一个 / 下一步 / 继续 | 推进到下一组         |
-| prev / 上一个 / 返回          | 回到上一组           |
-| G{N} / goto N / 第{N}组 / {N} | 跳转到第 N 组        |
-| finish / 完成 / 结束          | 完成走读             |
-| list / 列表                   | 列出所有组及完成状态 |
-| overview / 概览               | 重新展示全局概览     |
+| Action word (English and Chinese accepted) | Intent                         |
+| ------------------------------------------ | ------------------------------ |
+| next / 下一个 / 下一步 / 继续              | Advance to next group          |
+| prev / 上一个 / 返回                       | Go back to previous group      |
+| G{N} / goto N / 第{N}组 / {N}              | Jump to group N                |
+| finish / 完成 / 结束                       | Finish the walkthrough         |
+| list / 列表                                | List all groups and done state |
+| overview / 概览                            | Re-display global overview     |
 
-### 强触发（强关键词 + 动作词，顺序不限，直接执行）
+### Strong trigger (strong keyword + action word, any order — execute immediately)
 
-示例：`wtgroup next` · `next wtgroup` · `走读组 G3` · `wtgroup 完成` · `wtgroup 3`
+Examples: `wtgroup next` · `next wtgroup` · `走读组 G3` · `wtgroup finish` · `wtgroup 3`
 
-### 弱触发（无强关键词，仅有动作词）
+### Weak trigger (action word only, no strong keyword)
 
-上下文**无歧义**时执行，有歧义时不执行、先回答问题。
+Execute only when context is **unambiguous**; otherwise answer the question first.
 
-歧义判断标准：消息中包含提问、代码引用、或与走读导航无关的讨论内容 → 视为歧义，不触发命令。
+Ambiguity criteria: message contains a question, code references, or discussion unrelated to walkthrough navigation → treat as ambiguous, do not trigger.
 
-### 歧义处理
+### Ambiguity handling
 
-先正常回答用户的问题，回答末尾附加：
+Answer the user's question normally, then append at the end:
 
-> 如需导航，说 `wtgroup next` / `wtgroup G{N}` / `wtgroup finish`。
+> To navigate, say `wtgroup next` / `wtgroup G{N}` / `wtgroup finish`.
 
 ---
 
-## 命令执行
+## Command execution
 
 **next**
 
@@ -90,8 +90,8 @@ state read --key {stateKey}
 state next --key {stateKey}
 ```
 
-- 成功 → 输出命令的 stdout（即下一组内容），附加前瞻提示
-- exit 1（无下一组文件）→ 进入完成流程
+- Success → output the command's stdout (the next group's content), append lookahead prompt
+- exit 1 (no next group file) → enter completion flow
 
 **prev**
 
@@ -99,8 +99,8 @@ state next --key {stateKey}
 state prev --key {stateKey}
 ```
 
-- 成功 → 输出上一组内容，附加前瞻提示
-- exit 1（已在第一组）→ 提示"已在第一组"
+- Success → output the previous group's content, append lookahead prompt
+- exit 1 (already at first group) → inform "Already at the first group"
 
 **goto N**
 
@@ -108,43 +108,43 @@ state prev --key {stateKey}
 state goto --n {N} --key {stateKey}
 ```
 
-- 成功 → 输出目标组内容，附加前瞻提示
-- exit 1（N 越界）→ 提示有效范围 `1..{totalGroups}`
+- Success → output the target group's content, append lookahead prompt
+- exit 1 (N out of range) → report valid range `1..{totalGroups}`
 
 **list**
 
-直接读取 index.json，输出所有组的标签和 done 状态（不调用 CLI 命令）：
+Read index.json directly and output all group labels and done status (no CLI call):
 
 ```
 G1 [✓] {groups[0].label}
 G2 [ ] {groups[1].label}
 ...
-当前：G{currentGroup}
+Current: G{currentGroup}
 ```
 
 **overview**
 
-从 index.json 重建并输出全局概览：
+Reconstruct and output global overview from index.json:
 
 ```
-变更意图：{intent}
+Change intent: {intent}
 
-共 {totalGroups} 组：
-  G1 {label} — （已完成 / 进行中 / 未开始）
+{totalGroups} groups:
+  G1 {label} — (done / in progress / not started)
   G2 {label} — ...
   ...
 ```
 
 **finish**
 
-进入完成流程（见下）。
+Enter completion flow (see below).
 
 ---
 
-## 完成流程
+## Completion flow
 
-1. 执行 `state finish --key {stateKey}`（将 status 设为 completed）
-2. 若 `index.checkedOut === true`：提示用户运行 `git checkout -`
-3. 询问："走读完成，是否删除状态记录？"
-   - 是 → `state delete --key {stateKey}`
-   - 否 → 保持，告知用户可随时通过 `start-walkthrough` 恢复
+1. Run `state finish --key {stateKey}` (sets status to completed)
+2. If `index.checkedOut === true`: prompt the user to run `git checkout -`
+3. Ask: "Walkthrough complete. Delete the state record?"
+   - Yes → `state delete --key {stateKey}`
+   - No → keep it; inform the user they can resume anytime with `start-walkthrough`

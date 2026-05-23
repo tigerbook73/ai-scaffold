@@ -26,7 +26,7 @@ Determine state key:
 If no state found (exit 1) → tell the user to run `create-walkthrough` first, stop.
 
 If state found and `index.status === "completed"` → warn:
-> 该走读已完成（`{index.target}`）。如需重新走读，请运行 `create-walkthrough`。
+> This walkthrough is already completed (`{index.target}`). Run `create-walkthrough` to start a new one.
 Stop.
 
 ### Step 2 — Validate checkout position
@@ -35,19 +35,19 @@ If `index.checkedOut = true`:
 1. `git rev-parse HEAD` → `{currentHash}`
 2. Compare with `index.targetHash`.
 3. Mismatch → warn and stop:
-   > 当前位置（`{currentHash}`）与走读目标（`{index.targetHash}`）不匹配。
-   > 请先运行 `git checkout {index.targetRef}`，然后重新运行 `start-walkthrough`。
+   > Current position (`{currentHash}`) does not match the walkthrough target (`{index.targetHash}`).
+   > Run `git checkout {index.targetRef}` first, then re-run `start-walkthrough`.
 
 ### Step 3 — Resume summary
 
 Output:
 ```
-走读目标：{index.target}（基线：{index.baseline}）
-进度：G{index.currentGroup} / {index.totalGroups}，已完成 {done count} 组
+Walkthrough target: {index.target} (baseline: {index.baseline})
+Progress: G{index.currentGroup} / {index.totalGroups}, {done count} group(s) done
 ```
 
 ### Step 4 — Enter walkthrough loop
 
 Read `{repo}/skills/walkthrough/resource/walkthrough-loop.md`.
-Follow its instructions starting from "展示当前组".
-（walkthrough-loop 本身会读取并输出 g{currentGroup}.md，无需在此处重复读取）
+Follow its instructions starting from "Display current group".
+(walkthrough-loop reads and outputs g{currentGroup}.md itself — no need to repeat it here)

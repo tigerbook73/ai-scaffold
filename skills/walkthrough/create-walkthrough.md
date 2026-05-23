@@ -41,7 +41,7 @@ Check for existing state: `state read --key {stateKey}`.
 - State found and `status === "active"` → ask: resume or overwrite?
   - Resume → stop (tell user to run `start-walkthrough`)
   - Overwrite → `state delete --key {stateKey}`, continue
-- State found and `status === "completed"` → inform: "该走读已完成。" Ask: start fresh?
+- State found and `status === "completed"` → inform: "This walkthrough is already completed." Ask: start fresh?
   - Yes → `state delete --key {stateKey}`, continue
   - No → stop
 
@@ -49,18 +49,18 @@ Check for existing state: `state read --key {stateKey}`.
 
 **No argument**:
 Run `git status --porcelain`.
-- Output non-empty → suggest: "走读所有未提交变更（target=当前工作树，baseline=HEAD）"
-- Empty (clean) → suggest: "走读最近一次提交（target=HEAD，baseline=HEAD~1）"
+- Output non-empty → suggest: "Walk through all uncommitted changes (target=working tree, baseline=HEAD)"
+- Empty (clean) → suggest: "Walk through the latest commit (target=HEAD, baseline=HEAD~1)"
 Present suggestion; wait for confirmation. Allow free-text override.
 
 **Single ref `C1`** (no `..`):
-Confirm: "走读 C1 引入的变更（baseline=C1~1）？" then wait.
+Confirm: "Walk through changes introduced by C1 (baseline=C1~1)?" then wait.
 
 **`C1..`**:
-Confirm: "走读从 C1 到当前工作树的所有变更？" then wait.
+Confirm: "Walk through all changes from C1 to the current working tree?" then wait.
 
 **`C1..C5`**:
-Confirm: "走读从 C1 到 C5 的累积变更？" then wait.
+Confirm: "Walk through cumulative changes from C1 to C5?" then wait.
 
 ### Step 3 — Checkout (if needed)
 
@@ -70,7 +70,7 @@ Skip this step when target = current worktree.
 2. Record `originalBranch` = current branch name (from `git branch --show-current`).
 3. `git checkout {targetRef} && git rev-parse HEAD` → record the printed hash as `{targetHash}`.
 4. If `{targetRef}` is a commit hash (not a branch name): warn the user:
-   > 已切换到 `{targetRef}`（detached HEAD）。走读结束后运行 `git checkout -` 返回原分支。
+   > Switched to `{targetRef}` (detached HEAD). Run `git checkout -` to return to the original branch when the walkthrough is done.
 
 When no checkout is performed: `git rev-parse HEAD` → `{targetHash}`; set `checkedOut = false`, `originalBranch` = current branch.
 
@@ -153,10 +153,10 @@ Using the diff and context documents, produce:
 
 Output:
 ```
-变更意图：{intent}
+Change intent: {intent}
 
-共 {N} 组：
-  G1 {label} — {one-line description}（{files}）
+{N} groups:
+  G1 {label} — {one-line description} ({files})
   G2 {label} — {one-line description}
   ...
 ```
@@ -173,5 +173,5 @@ If the user requests adjustments (merge, split, rename groups):
 ### Step 9 — Enter walkthrough loop
 
 Read `{repo}/skills/walkthrough/resource/walkthrough-loop.md`.
-Follow its instructions starting from "展示当前组".
-（walkthrough-loop 本身会读取并输出 g1.md，无需在此处重复读取）
+Follow its instructions starting from "Display current group".
+(walkthrough-loop reads and outputs g1.md itself — no need to repeat it here)

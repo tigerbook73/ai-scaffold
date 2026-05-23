@@ -31,7 +31,7 @@ Choose the mode based on whether design documents were found.
 
 ### Mode A — With design documents
 
-- Map each changed file to its corresponding design step based on the step's "主要变更" section.
+- Map each changed file to its corresponding design step based on the step's "Key changes" section.
 - Create one group per design step that has at least one associated change.
 - Label each group after the step title: `Step N: {title}`.
 - Order groups by step number ascending.
@@ -61,14 +61,14 @@ Use this template for every group file (`g{N}.md`). Write in the analysis langua
 ```
 ## G{N} — {label}
 
-[承接] How this group fits the overall change and how it connects to the previous group. For G1, explain its role in the full change.
+[Context] How this group fits the overall change and how it connects to the previous group. For G1, explain its role in the full change.
 
-[核心变更] The most important before/after changes from the diff. Extract directly from the diff — do not re-read source files unless a complete function context is needed to explain a subtle point.
+[Key changes] The most important before/after changes from the diff. Extract directly from the diff — do not re-read source files unless a complete function context is needed to explain a subtle point.
 
-[设计意图] Why this approach was chosen. If design documents exist, cite the relevant step's 目标 or 验收条件. Otherwise, infer from the diff and context documents.
+[Design intent] Why this approach was chosen. If design documents exist, cite the relevant step's goal or acceptance criteria. Otherwise, infer from the diff and context documents.
 
-[非显然细节] Hidden constraints, subtle invariants, non-obvious decisions, or workarounds that a reader would otherwise miss. Omit this section if nothing qualifies.
+[Non-obvious details] Hidden constraints, subtle invariants, non-obvious decisions, or workarounds that a reader would otherwise miss. Omit this section if nothing qualifies.
 
 ---
-G{N} 完成？
+G{N} done?
 ```
