@@ -1,6 +1,6 @@
-# Walkthrough2 Strategy
+# Walkthrough Strategy
 
-Three strategy sections referenced by the walkthrough2 skills. Update these independently without touching the skill flow files.
+Three strategy sections referenced by the walkthrough skills. Update these independently without touching the skill flow files.
 
 ---
 

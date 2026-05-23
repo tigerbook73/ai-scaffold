@@ -1,8 +1,8 @@
-# create-walkthrough2
+# create-walkthrough
 
 Create a new walkthrough: checkout the target version, analyze all changes in one pass, pre-generate group content, then present group by group.
 
-**Usage**: `/aisk/create-walkthrough2 [<range>]`
+**Usage**: `/aisk/create-walkthrough [<range>]`
 
 ---
 
@@ -12,9 +12,9 @@ Create a new walkthrough: checkout the target version, analyze all changes in on
 - Working tree must be clean before any checkout
 - **Silent preparation**: complete all setup steps without narrating; output text only when asking questions or presenting content
 - **State script**: read `~/.ai-skills/config.json` to get `{repo}`. Index operations go through:
-  `{repo}/node_modules/.bin/tsx {repo}/skills/walkthrough2/resource/walkthrough2-state.ts <cmd> [--options]`
-- **Group files**: write `g{N}.md` directly via the Write tool; read via the Read tool. Path: `{cwd}/.ai-skills/walkthrough2/{stateKey}/g{N}.md`
-- **Strategy**: grouping and presentation rules are in `{repo}/skills/walkthrough2/resource/strategy.md`; read it during Step 6
+  `{repo}/node_modules/.bin/tsx {repo}/skills/walkthrough/resource/walkthrough-state.ts <cmd> [--options]`
+- **Group files**: write `g{N}.md` directly via the Write tool; read via the Read tool. Path: `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md`
+- **Strategy**: grouping and presentation rules are in `{repo}/skills/walkthrough/resource/strategy.md`; read it during Step 5
 
 ## Input
 
@@ -39,7 +39,7 @@ Get the current branch: `git branch --show-current`.
 
 Check for existing state: `state read --key {stateKey}`.
 - State found and `status === "active"` → ask: resume or overwrite?
-  - Resume → stop (tell user to run `start-walkthrough2`)
+  - Resume → stop (tell user to run `start-walkthrough`)
   - Overwrite → `state delete --key {stateKey}`, continue
 - State found and `status === "completed"` → inform: "该走读已完成。" Ask: start fresh?
   - Yes → `state delete --key {stateKey}`, continue
@@ -108,11 +108,11 @@ When additionally `baseline = HEAD`, also run:
 git diff -U15                               # unstaged changes (staged vs unstaged breakdown)
 ```
 
-**Context documents**: read `{repo}/skills/walkthrough2/resource/strategy.md` now, then follow its Analysis Strategy section to determine which context documents to read and in what order.
+**Context documents**: read `{repo}/skills/walkthrough/resource/strategy.md` now, then follow its Analysis Strategy section to determine which context documents to read and in what order.
 
 ### Step 6 — Full analysis
 
-Read `{repo}/skills/walkthrough2/resource/strategy.md` if not already loaded.
+Read `{repo}/skills/walkthrough/resource/strategy.md` if not already loaded.
 
 Using the diff and context documents, produce:
 
@@ -145,8 +145,8 @@ Using the diff and context documents, produce:
 ```
 
 **Group files** — write each group's pre-generated content via Write tool:
-- `{cwd}/.ai-skills/walkthrough2/{stateKey}/g1.md`
-- `{cwd}/.ai-skills/walkthrough2/{stateKey}/g2.md`
+- `{cwd}/.ai-skills/walkthrough/{stateKey}/g1.md`
+- `{cwd}/.ai-skills/walkthrough/{stateKey}/g2.md`
 - ... (one file per group)
 
 ### Step 8 — Present global overview
@@ -172,6 +172,6 @@ If the user requests adjustments (merge, split, rename groups):
 
 ### Step 9 — Enter walkthrough loop
 
-Read `{repo}/skills/walkthrough2/resource/walkthrough-loop.md`.
+Read `{repo}/skills/walkthrough/resource/walkthrough-loop.md`.
 Follow its instructions starting from "展示当前组".
 （walkthrough-loop 本身会读取并输出 g1.md，无需在此处重复读取）

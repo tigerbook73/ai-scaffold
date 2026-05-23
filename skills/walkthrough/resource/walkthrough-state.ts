@@ -1,17 +1,17 @@
 /**
- * Walkthrough2 state I/O helper — manages index.json per state key.
+ * Walkthrough state I/O helper — manages index.json per state key.
  *
  * Usage:
- *   walkthrough2-state.ts init   --key <key> --index '<json>'
- *   walkthrough2-state.ts read   --key <key>
- *   walkthrough2-state.ts update --key <key> --index '<json>'
- *   walkthrough2-state.ts list
- *   walkthrough2-state.ts find   --hash <hash>
- *   walkthrough2-state.ts next   --key <key>
- *   walkthrough2-state.ts prev   --key <key>
- *   walkthrough2-state.ts goto   --key <key> --n <n>
- *   walkthrough2-state.ts finish --key <key>
- *   walkthrough2-state.ts delete --key <key>
+ *   walkthrough-state.ts init   --key <key> --index '<json>'
+ *   walkthrough-state.ts read   --key <key>
+ *   walkthrough-state.ts update --key <key> --index '<json>'
+ *   walkthrough-state.ts list
+ *   walkthrough-state.ts find   --hash <hash>
+ *   walkthrough-state.ts next   --key <key>
+ *   walkthrough-state.ts prev   --key <key>
+ *   walkthrough-state.ts goto   --key <key> --n <n>
+ *   walkthrough-state.ts finish --key <key>
+ *   walkthrough-state.ts delete --key <key>
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from "fs";
@@ -19,7 +19,7 @@ import { join } from "path";
 import { cac } from "cac";
 import type { Index } from "./types";
 
-const BASE_DIR = join(process.cwd(), ".ai-skills", "walkthrough2");
+const BASE_DIR = join(process.cwd(), ".ai-skills", "walkthrough");
 
 class WalkthroughState {
   private stateDir(key: string): string {
@@ -179,7 +179,7 @@ class WalkthroughState {
   }
 
   run(): void {
-    const cli = cac("walkthrough2-state");
+    const cli = cac("walkthrough-state");
 
     cli
       .command("init", "Initialize state directory and write index.json")

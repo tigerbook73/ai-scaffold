@@ -1,6 +1,6 @@
 # walkthrough-loop
 
-共享交互循环 — 由 `create-walkthrough2` 和 `start-walkthrough2` 在进入展示阶段时读取。
+共享交互循环 — 由 `create-walkthrough` 和 `start-walkthrough` 在进入展示阶段时读取。
 
 ---
 
@@ -24,7 +24,7 @@ state read --key {stateKey}
 
 ## 展示当前组
 
-读取并输出 `{cwd}/.ai-skills/walkthrough2/{stateKey}/g{currentGroup}.md`（用 Read 工具）。
+读取并输出 `{cwd}/.ai-skills/walkthrough/{stateKey}/g{currentGroup}.md`（用 Read 工具）。
 
 输出内容后，在末尾紧接前瞻提示（见下）。
 
@@ -147,4 +147,4 @@ G2 [ ] {groups[1].label}
 2. 若 `index.checkedOut === true`：提示用户运行 `git checkout -`
 3. 询问："走读完成，是否删除状态记录？"
    - 是 → `state delete --key {stateKey}`
-   - 否 → 保持，告知用户可随时通过 `start-walkthrough2` 恢复
+   - 否 → 保持，告知用户可随时通过 `start-walkthrough` 恢复
