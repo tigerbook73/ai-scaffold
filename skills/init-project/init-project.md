@@ -6,35 +6,45 @@ Configure a new project to work with globally installed aisk skills.
 
 ---
 
+## Constraints
+
+- Writes to `.gitignore`, `.claude/settings.local.json`, and creates `.ai-skills/` in the current project root
+
 ## Steps
 
-1. Read `~/.ai-skills/config.json` to get the `{repo}` path.
-   If it does not exist, prompt the user to run `npm run register` first, then stop.
+### Step 1 — Read config
 
-2. Add `.ai-skills/` to `.gitignore`:
-   - Show the line to be added
-   - Wait for user confirmation before writing
-   - Append `.ai-skills/` to `.gitignore` (create the file if it does not exist)
+Read `~/.ai-skills/config.json` to get the `{repo}` path.
+If the file does not exist, prompt the user to run `npm run register` first, then stop.
 
-3. Read `.claude/settings.local.json` (create with `{}` if it does not exist).
-   In `permissions.allow`, append the following entries if not already present:
-   - `Read(~/.ai-skills/*)` — allow reading global config and resource files
-   - `Bash(npm --prefix {repo} run *)` — allow all npm scripts scoped to the aisk repo (replace `{repo}` with the actual path from config.json)
+### Step 2 — Update .gitignore
 
-   Use `settings.local.json` because these entries contain machine-specific absolute paths and should not be committed.
+Check whether `.ai-skills` or `.ai-skills/` already appears in `.gitignore`.
 
-4. Output a summary of what was configured, then suggest the following optional next steps for first-time setup:
+- If already present: skip this step
+- If not present:
+  - Show the line to be added: `.ai-skills/`
+  - Wait for user confirmation before writing
+  - Append `.ai-skills/` to `.gitignore` (create the file if it does not exist)
 
-   > **Recommended next steps** (optional, run in a new conversation):
-   >
-   > Generate a project guide for Claude:
-   > ```
-   > /init
-   > ```
-   > Generate the architecture decision document:
-   > ```
-   > /aisk/refresh-arch ALL
-   > ```
+### Step 3 — Create .ai-skills/ directory
+
+If `.ai-skills/` does not exist in the project root, create it automatically (no confirmation needed).
+
+### Step 4 — Update settings.local.json
+
+Read `.claude/settings.local.json`. If it does not exist, create it with `{"permissions": {"allow": []}}`.
+
+In `permissions.allow`, append the following entries if not already present (including coverage by a broader existing permission):
+
+- `Read(~/.ai-skills/*)` — allow reading global config and resource files
+- `Bash(npm --prefix {repo} run *)` — allow all npm scripts scoped to the aisk repo (replace `{repo}` with the actual path from Step 1); skip if an existing permission already covers this (e.g. `Bash(npm *)`)
+
+Use `settings.local.json` because these entries contain machine-specific absolute paths and should not be committed.
+
+### Step 5 — Output summary
+
+Output a summary of what was configured, then suggest the following optional next steps for first-time setup:
 
 ---
 

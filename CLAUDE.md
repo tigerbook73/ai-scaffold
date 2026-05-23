@@ -43,10 +43,3 @@ Full design details: `docs/OVERVIEW.md`
 `docs/new-feature/` contains in-progress design documents for the feature currently being planned. This directory is **temporary** — will be deleted once design is complete.
 
 **Do not reference these files unless in a design session.** If the user says "进入设计阶段", "开始设计", or equivalent, focus exclusively on `docs/new-feature/`. During design, do not modify documents outside this directory.
-
-## Skill File Conventions
-
-- Placed under `skills/`, grouped into subdirectories (`arch/`, `task/`, etc.)
-- File format: see `skills/create-skill/resource/skill-format.md`
-- `README.md` files are automatically skipped and not installed
-- Resource files (read by skills at runtime) go in a `*/resource/` subdirectory — they stay in the repo and are read directly via the path in `~/.ai-skills/config.json`; they are not copied anywhere
