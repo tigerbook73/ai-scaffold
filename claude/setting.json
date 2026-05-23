@@ -44,6 +44,42 @@
       "category": "smart-review"
     },
     {
+      "src": "task/complete-task.md",
+      "dst": ".claude/commands/aisk/complete-task.md",
+      "description": "complete-task",
+      "category": "task"
+    },
+    {
+      "src": "task/create-task.md",
+      "dst": ".claude/commands/aisk/create-task.md",
+      "description": "create-task",
+      "category": "task"
+    },
+    {
+      "src": "task/resume-task.md",
+      "dst": ".claude/commands/aisk/resume-task.md",
+      "description": "resume-task",
+      "category": "task"
+    },
+    {
+      "src": "task/start-task.md",
+      "dst": ".claude/commands/aisk/start-task.md",
+      "description": "start-task",
+      "category": "task"
+    },
+    {
+      "src": "task/verify-step.md",
+      "dst": ".claude/commands/aisk/verify-step.md",
+      "description": "verify-step",
+      "category": "task"
+    },
+    {
+      "src": "task/verify-task.md",
+      "dst": ".claude/commands/aisk/verify-task.md",
+      "description": "verify-task",
+      "category": "task"
+    },
+    {
       "src": "walkthrough/create-walkthrough.md",
       "dst": ".claude/commands/aisk/create-walkthrough.md",
       "description": "Start a new code walkthrough: confirm target, generate groups, present first group",
