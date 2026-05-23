@@ -6,7 +6,7 @@ Resume a walkthrough from the state file. `resume-walkthrough2` is an alias with
 
 ## Constraints
 
-- An active state record must exist; if not found, prompt user to run `create-walkthrough2` first
+- An active (non-completed) state record must exist; if not found or already completed, prompt user to run `create-walkthrough2` first
 - Context is session-scoped; re-run at the start of each new session to restore walkthrough state
 - **Silent preparation**: read and validate state without narrating; output text only for warnings or the resume summary
 - **State script**: read `~/.ai-skills/config.json` to get `{repo}`. Index operations go through:
@@ -23,7 +23,11 @@ Determine state key:
 - `git branch --show-current` returns a branch name → sanitize (replace `/` with `-`) → `{stateKey}` → `state read --key {stateKey}`
 - Returns empty (detached HEAD) → `git rev-parse HEAD` → `state find --hash <hash>` → extract `stateKey` from result → `state read --key {stateKey}`
 
-If no active state found → tell the user to run `create-walkthrough2` first, stop.
+If no state found (exit 1) → tell the user to run `create-walkthrough2` first, stop.
+
+If state found and `index.status === "completed"` → warn:
+> 该走读已完成（`{index.target}`）。如需重新走读，请运行 `create-walkthrough2`。
+Stop.
 
 ### Step 2 — Validate checkout position
 

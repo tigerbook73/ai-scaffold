@@ -37,10 +37,13 @@ Get the current branch: `git branch --show-current`.
 - Branch name returned → sanitize (replace `/` with `-`) → `{stateKey}`
 - Empty string (already in detached HEAD) → `git rev-parse HEAD` → `state find --hash <hash>`. If an active record is found, use its `stateKey`; otherwise generate a key from the short hash.
 
-Check for existing active state: `state read --key {stateKey}`.
-- Active record found → ask: resume or overwrite?
+Check for existing state: `state read --key {stateKey}`.
+- State found and `status === "active"` → ask: resume or overwrite?
   - Resume → stop (tell user to run `start-walkthrough2`)
   - Overwrite → `state delete --key {stateKey}`, continue
+- State found and `status === "completed"` → inform: "该走读已完成。" Ask: start fresh?
+  - Yes → `state delete --key {stateKey}`, continue
+  - No → stop
 
 ### Step 2 — Confirm target and baseline
 
@@ -77,6 +80,12 @@ When no checkout is performed: `git rev-parse HEAD` → `{targetHash}`; set `che
 git diff {baseline} --stat
 ```
 
+When target = current worktree (no checkout performed in Step 3), also count untracked files:
+```bash
+git ls-files --others --exclude-standard | wc -l
+```
+Add this count to the tracked-file total when applying thresholds below.
+
 | Condition | Action |
 |-----------|--------|
 | Files ≤ 20 and lines ≤ 1000 | Silent pass |
@@ -89,10 +98,14 @@ git diff {baseline} --stat
 git diff {baseline} -U15
 ```
 
-When `baseline = HEAD` (uncommitted changes), supplement:
+When target = current worktree (no checkout performed in Step 3), also read:
 ```bash
-git diff -U15                               # unstaged changes
-git ls-files --others --exclude-standard    # untracked files (read each via Read tool)
+git ls-files --others --exclude-standard    # untracked files; read each via Read tool
+```
+
+When additionally `baseline = HEAD`, also run:
+```bash
+git diff -U15                               # unstaged changes (staged vs unstaged breakdown)
 ```
 
 **Context documents**: read `{repo}/skills/walkthrough2/resource/strategy.md` now, then follow its Analysis Strategy section to determine which context documents to read and in what order.
@@ -146,8 +159,6 @@ Output:
   G1 {label} — {one-line description}（{files}）
   G2 {label} — {one-line description}
   ...
-
-依赖方向：G1 → G2 → ...（{reason}）
 ```
 
 **STOP here.** Do NOT output G1 content in this response. Wait for the user to reply.
