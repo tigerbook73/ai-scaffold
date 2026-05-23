@@ -39,7 +39,10 @@ Initialize a new Task: create branch, scaffold task documents, and enter work mo
 
 8. Create `docs/tasks/{name}/task-state.md` from `{repo}/skills/task/resource/task-state.md`,
    replacing `{task-name}` and setting initial values:
+   - 元信息 类型: the `task-type` argument (`feature` or `refactor`)
+   - 元信息 状态: `in_progress`
    - current phase: `requirements（进行中）`
+   - current step: `—`
    - requirements phase: `in_progress` — "任务刚创建，需求待规划"
    - design / implementation phases: `pending`, no step entries
    - document index: `requirements.md`, `design.md`

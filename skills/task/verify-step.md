@@ -30,9 +30,11 @@ If `当前步骤` is `—` (not in implementation phase), prompt the user to spe
 
 ### auto mode
 
-**Fast mode** (default): If this session already ran verify-step or verify-task for this step
-and has results in context, skip conditions that previously passed and re-run only those that
-failed or were not yet run. If no prior session context exists, fall back to full mode.
+**Fast mode** (default): First check `task-state.md` — if this step's `自动验收` is already
+`通过`, skip all conditions and report pass immediately. Otherwise, if this session already ran
+verify-step or verify-task for this step and has results in context, skip conditions that
+previously passed and re-run only those that failed or were not yet run. If no prior session
+context exists, fall back to full mode.
 
 **Full mode** (`--full`): Run all `(auto)` conditions for the step regardless of prior results.
 
