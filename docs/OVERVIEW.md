@@ -46,8 +46,6 @@ Skills are available immediately in any project after `npm run register`. For a 
 │   │   └── resource/              ← runtime resources (not installed as commands)
 │   ├── init-project/
 │   │   └── SK-init-project.md
-│   ├── learn-phase/
-│   │   └── SK-learn-phase.md
 │   ├── set-claude-permission/
 │   │   └── SK-set-claude-permission.md
 │   ├── setup-precommit/

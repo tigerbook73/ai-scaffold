@@ -26,12 +26,6 @@
       "category": "init-project"
     },
     {
-      "src": "learn-phase/SK-learn-phase.md",
-      "dst": ".claude/commands/aisk/learn-phase.md",
-      "description": "Walk through the code implemented in the current Phase, grouped by layer, to help understand design decisions and implementation details.",
-      "category": "learn-phase"
-    },
-    {
       "src": "set-claude-permission/SK-set-claude-permission.md",
       "dst": ".claude/commands/aisk/set-claude-permission.md",
       "description": "Organize the `.claude/settings.local.json` permission configuration for the current project.",
@@ -58,7 +52,7 @@
     {
       "src": "task/SK-create-task.md",
       "dst": ".claude/commands/aisk/create-task.md",
-      "description": "Initialize a new Task: create branch, scaffold task documents, and enter work mode.",
+      "description": "Initialize a new task: create branch, scaffold task documents, and enter work mode.",
       "category": "task"
     },
     {

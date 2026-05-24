@@ -56,7 +56,6 @@ This configures `.gitignore` and local permissions. No per-project sync needed â
 | Skill                | Description                                                       |
 | -------------------- | ----------------------------------------------------------------- |
 | `smart-review`       | Iteratively review and fix a specified file, module, or directory |
-| `learn-phase`        | Walk through code by layer to understand design decisions         |
 | `create-walkthrough` | Create a walkthrough of changes at a target version               |
 | `start-walkthrough`  | Resume a walkthrough from the state file                          |
 
