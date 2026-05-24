@@ -59,6 +59,9 @@ test("initial codex target scope is explicit", () => {
     "task/SK-start-task.md",
     "task/SK-verify-step.md",
     "task/SK-verify-task.md",
+    "walkthrough/SK-create-walkthrough.md",
+    "walkthrough/SK-resume-walkthrough.md",
+    "walkthrough/SK-start-walkthrough.md",
   ]);
 
   for (const source of codexSources) {

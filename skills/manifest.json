@@ -137,19 +137,34 @@
     "walkthrough/SK-create-walkthrough.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-create-walkthrough",
+        "description": "Use when the user wants to create a new walkthrough of code changes at a specific version or commit range.",
+        "shortDescription": "Create a code walkthrough"
       }
     },
     "walkthrough/SK-resume-walkthrough.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-resume-walkthrough",
+        "description": "Use when the user wants to resume a walkthrough — identical behavior to start-walkthrough.",
+        "shortDescription": "Resume a walkthrough"
       }
     },
     "walkthrough/SK-start-walkthrough.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-start-walkthrough",
+        "description": "Use when the user wants to resume a walkthrough from the saved state in a new session.",
+        "shortDescription": "Resume a walkthrough"
       }
     }
   }

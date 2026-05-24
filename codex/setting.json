@@ -26,6 +26,14 @@
       "category": "task"
     },
     {
+      "src": "walkthrough/SK-create-walkthrough.md",
+      "name": "aisk-create-walkthrough",
+      "dst": ".codex/skills/aisk-create-walkthrough/SKILL.md",
+      "description": "Use when the user wants to create a new walkthrough of code changes at a specific version or commit range.",
+      "shortDescription": "Create a code walkthrough",
+      "category": "walkthrough"
+    },
+    {
       "src": "init-project/SK-init-project.md",
       "name": "aisk-init-project",
       "dst": ".codex/skills/aisk-init-project/SKILL.md",
@@ -50,6 +58,14 @@
       "category": "task"
     },
     {
+      "src": "walkthrough/SK-resume-walkthrough.md",
+      "name": "aisk-resume-walkthrough",
+      "dst": ".codex/skills/aisk-resume-walkthrough/SKILL.md",
+      "description": "Use when the user wants to resume a walkthrough — identical behavior to start-walkthrough.",
+      "shortDescription": "Resume a walkthrough",
+      "category": "walkthrough"
+    },
+    {
       "src": "setup-precommit/SK-setup-precommit.md",
       "name": "aisk-setup-precommit",
       "dst": ".codex/skills/aisk-setup-precommit/SKILL.md",
@@ -72,6 +88,14 @@
       "description": "Use when the user wants to enter task work mode and load context for the current task.",
       "shortDescription": "Enter task work mode",
       "category": "task"
+    },
+    {
+      "src": "walkthrough/SK-start-walkthrough.md",
+      "name": "aisk-start-walkthrough",
+      "dst": ".codex/skills/aisk-start-walkthrough/SKILL.md",
+      "description": "Use when the user wants to resume a walkthrough from the saved state in a new session.",
+      "shortDescription": "Resume a walkthrough",
+      "category": "walkthrough"
     },
     {
       "src": "task/SK-verify-step.md",

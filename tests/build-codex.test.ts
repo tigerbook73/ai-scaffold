@@ -61,11 +61,6 @@ test("codex manifest is valid and follows target metadata", () => {
     ),
     false,
   );
-  assert.equal(
-    manifest.files.some((entry) => entry.src.startsWith("walkthrough/")),
-    false,
-  );
-
   const taskSkills = [
     "task/SK-create-task.md",
     "task/SK-start-task.md",

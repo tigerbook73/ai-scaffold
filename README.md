@@ -69,11 +69,11 @@ Skills marked ✦ are available in both Claude Code and Codex. Others are Claude
 
 ### Code review & learning
 
-| Skill                | Description                                                       |
-| -------------------- | ----------------------------------------------------------------- |
-| `smart-review` ✦     | Iteratively review and fix a specified file, module, or directory |
-| `create-walkthrough` | Create a walkthrough of changes at a target version               |
-| `start-walkthrough`  | Resume a walkthrough from the state file                          |
+| Skill                  | Description                                                       |
+| ---------------------- | ----------------------------------------------------------------- |
+| `smart-review` ✦       | Iteratively review and fix a specified file, module, or directory |
+| `create-walkthrough` ✦ | Create a walkthrough of changes at a target version               |
+| `start-walkthrough` ✦  | Resume a walkthrough from the state file                          |
 
 ### Skill management
 
