@@ -40,46 +40,46 @@ This configures `.gitignore` and local permissions. No per-project sync needed �
 
 ## Available skills
 
-Skills marked ✦ are available in both Claude Code and Codex. Others are Claude Code only.
+All skills are available in both Claude Code and Codex, except `set-claude-permission` which is Claude Code only.
 
 ### Project setup
 
-| Skill                   | Description                                                         |
-| ----------------------- | ------------------------------------------------------------------- |
-| `init-project` ✦        | Configure a new project to work with globally installed aisk skills |
-| `set-claude-permission` | Organize the `.claude/settings.local.json` permission configuration |
-| `setup-precommit` ✦     | Configure a git pre-commit hook using lint-staged                   |
+| Skill                   | Description                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| `init-project`          | Configure a new project to work with globally installed aisk skills                    |
+| `set-claude-permission` | Organize the `.claude/settings.local.json` permission configuration (Claude Code only) |
+| `setup-precommit`       | Configure a git pre-commit hook using lint-staged                                      |
 
 ### Architecture
 
-| Skill            | Description                                                            |
-| ---------------- | ---------------------------------------------------------------------- |
-| `refresh-arch` ✦ | Scan the codebase and generate or refresh `.ai-skills/architecture.md` |
-| `check-arch` ✦   | Check whether code changes align with architecture decisions           |
+| Skill          | Description                                                            |
+| -------------- | ---------------------------------------------------------------------- |
+| `refresh-arch` | Scan the codebase and generate or refresh `.ai-skills/architecture.md` |
+| `check-arch`   | Check whether code changes align with architecture decisions           |
 
 ### Task workflow
 
-| Skill             | Description                                                                    |
-| ----------------- | ------------------------------------------------------------------------------ |
-| `create-task` ✦   | Initialize a new task: create branch, scaffold task documents, enter work mode |
-| `start-task` ✦    | Enter task work mode for the current session (re-run at each new session)      |
-| `verify-step` ✦   | Run acceptance checks for a single step                                        |
-| `verify-task` ✦   | Run acceptance checks across all steps                                         |
-| `complete-task` ✦ | Verify task completion, clean up task documents, and prompt to create a PR     |
+| Skill           | Description                                                                    |
+| --------------- | ------------------------------------------------------------------------------ |
+| `create-task`   | Initialize a new task: create branch, scaffold task documents, enter work mode |
+| `start-task`    | Enter task work mode for the current session (re-run at each new session)      |
+| `verify-step`   | Run acceptance checks for a single step                                        |
+| `verify-task`   | Run acceptance checks across all steps                                         |
+| `complete-task` | Verify task completion, clean up task documents, and prompt to create a PR     |
 
 ### Code review & learning
 
-| Skill                  | Description                                                       |
-| ---------------------- | ----------------------------------------------------------------- |
-| `smart-review` ✦       | Iteratively review and fix a specified file, module, or directory |
-| `create-walkthrough` ✦ | Create a walkthrough of changes at a target version               |
-| `start-walkthrough` ✦  | Resume a walkthrough from the state file                          |
+| Skill                | Description                                                       |
+| -------------------- | ----------------------------------------------------------------- |
+| `smart-review`       | Iteratively review and fix a specified file, module, or directory |
+| `create-walkthrough` | Create a walkthrough of changes at a target version               |
+| `start-walkthrough`  | Resume a walkthrough from the state file                          |
 
 ### Skill management
 
-| Skill            | Description                                   |
-| ---------------- | --------------------------------------------- |
-| `create-skill` ✦ | Promote a skill file to the global repository |
+| Skill          | Description                                   |
+| -------------- | --------------------------------------------- |
+| `create-skill` | Promote a skill file to the global repository |
 
 ## Adding a new skill
 
@@ -95,7 +95,7 @@ Or promote an existing file:
 /aisk/create-skill path/to/my-skill.md
 ```
 
-After adding, run `pnpm build` then `git commit` to persist, then `pnpm register` to apply globally.
+After adding, run `pnpm verify` then `git commit` to persist, then `pnpm register` and `pnpm register:codex` to apply globally.
 
 ## Repository structure
 
@@ -113,6 +113,5 @@ scripts/
   build.ts        # generates setting.json (pnpm build)
   build-codex.ts  # generates codex/setting.json (pnpm build:codex)
 docs/
-  AI-CONTEXT.md   # shared AI agent context
   OVERVIEW.md     # full design documentation
 ```
