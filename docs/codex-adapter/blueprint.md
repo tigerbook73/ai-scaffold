@@ -645,6 +645,7 @@ Acceptance:
 - `pnpm register:codex` installs valid Codex skill directories.
 - Existing non-aisk Codex skills are untouched.
 - Generated `SKILL.md` files are readable and do not pretend slash commands exist in Codex.
+- Installer tests cover temporary Codex home installation and stale generated skill cleanup.
 
 Per-phase gate:
 

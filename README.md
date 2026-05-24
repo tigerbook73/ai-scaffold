@@ -93,6 +93,7 @@ codex/
 scripts/
   setup.ts        # compatibility wrapper for Claude initialization (pnpm register)
   setup-claude.ts # Claude initialization implementation
+  setup-codex.ts  # Codex initialization implementation
   build.ts        # generates setting.json (pnpm build)
   build-codex.ts  # generates codex/setting.json (pnpm build:codex)
 docs/

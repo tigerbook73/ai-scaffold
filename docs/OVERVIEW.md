@@ -73,6 +73,7 @@ Skills are available immediately in any project after `pnpm register`. For a new
 ├── scripts/
 │   ├── setup.ts                   ← compatibility wrapper for Claude setup
 │   ├── setup-claude.ts            ← Claude setup implementation
+│   ├── setup-codex.ts             ← Codex setup implementation
 │   ├── build-codex.ts             ← generate Codex manifest
 │   └── build.ts                   ← scan skills/ to generate setting.json
 ├── package.json
@@ -100,6 +101,7 @@ These files should be added to `.gitignore` (handled by `/aisk/init-project`).
 | ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `pnpm register`        | `scripts/setup.ts`                             | Compatibility wrapper for Claude initialization                                                    |
 | `pnpm register:claude` | `scripts/setup-claude.ts`                      | Claude initialization (run once on a new machine)                                                  |
+| `pnpm register:codex`  | `scripts/setup-codex.ts`                       | Codex skill installation                                                                           |
 | `pnpm build`           | `scripts/build.ts`                             | Scan `skills/` and regenerate `claude/setting.json`                                                |
 | `pnpm build:codex`     | `scripts/build-codex.ts`                       | Generate `codex/setting.json` from target metadata                                                 |
 | `pnpm create-skill`    | `skills/create-skill/resource/create-skill.ts` | Write a skill file to `skills/` and update `setting.json` (usually called by `/aisk/create-skill`) |
@@ -277,6 +279,17 @@ Each entry contains:
 - `description`: Codex trigger description
 - `shortDescription`: short Codex display description
 - `category`: source skill category
+
+## scripts/setup-codex.ts
+
+Installs Codex skills from `codex/setting.json` into `~/.codex/skills/{name}/SKILL.md`.
+
+The installer:
+
+1. Writes this repository path to `~/.ai-skills/config.json`
+2. Generates Codex `SKILL.md` files with YAML frontmatter
+3. Removes stale generated `aisk-*` Codex skill directories
+4. Preserves non-aisk Codex skills
 
 After adding or removing skills, run `pnpm build` to regenerate this file, then `pnpm register` to apply.
 
