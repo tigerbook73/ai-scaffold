@@ -26,6 +26,14 @@
       "category": "task"
     },
     {
+      "src": "init-project/SK-init-project.md",
+      "name": "aisk-init-project",
+      "dst": ".codex/skills/aisk-init-project/SKILL.md",
+      "description": "Use when the user wants to configure a new project to work with globally installed aisk skills, setting up .gitignore and the .ai-skills directory.",
+      "shortDescription": "Initialize project config",
+      "category": "init-project"
+    },
+    {
       "src": "arch/SK-refresh-arch.md",
       "name": "aisk-refresh-arch",
       "dst": ".codex/skills/aisk-refresh-arch/SKILL.md",

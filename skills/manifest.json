@@ -32,7 +32,12 @@
     "init-project/SK-init-project.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-init-project",
+        "description": "Use when the user wants to configure a new project to work with globally installed aisk skills, setting up .gitignore and the .ai-skills directory.",
+        "shortDescription": "Initialize project config"
       }
     },
     "set-claude-permission/SK-set-claude-permission.md": {

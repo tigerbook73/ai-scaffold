@@ -50,6 +50,7 @@ test("initial codex target scope is explicit", () => {
   assert.deepEqual(codexSources, [
     "arch/SK-check-arch.md",
     "arch/SK-refresh-arch.md",
+    "init-project/SK-init-project.md",
     "setup-precommit/SK-setup-precommit.md",
     "smart-review/SK-smart-review.md",
     "task/SK-complete-task.md",
@@ -68,6 +69,5 @@ test("initial codex target scope is explicit", () => {
     manifest.skills["set-claude-permission/SK-set-claude-permission.md"].targets.codex,
     false,
   );
-  assert.equal(manifest.skills["init-project/SK-init-project.md"].targets.codex, false);
   assert.equal(manifest.skills["create-skill/SK-create-skill.md"].targets.codex, false);
 });

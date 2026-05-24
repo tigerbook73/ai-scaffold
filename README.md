@@ -1,8 +1,10 @@
 # AI Skills
 
-A local AI skill library that installs all skills globally with a single `pnpm register` command.
+A local AI skill library for Claude Code and Codex. Install all skills globally with a single command.
 
 ## Setup (one-time per machine)
+
+### Claude Code
 
 ```bash
 git clone .../ai-skills ~/code/ai-skills
@@ -13,6 +15,18 @@ After this:
 
 - `~/.ai-skills/config.json` records this repository's path
 - All skill commands are installed to `~/.claude/commands/aisk/` and available globally in every project
+
+### Codex
+
+```bash
+git clone .../ai-skills ~/code/ai-skills
+cd ~/code/ai-skills && pnpm install && pnpm build:codex && pnpm register:codex
+```
+
+After this:
+
+- `~/.ai-skills/config.json` records this repository's path
+- Skills are installed to `~/.codex/skills/aisk-*/SKILL.md` and available globally in Codex
 
 ## Using skills in a new project
 
@@ -26,36 +40,38 @@ This configures `.gitignore` and local permissions. No per-project sync needed �
 
 ## Available skills
 
+Skills marked ✦ are available in both Claude Code and Codex. Others are Claude Code only.
+
 ### Project setup
 
 | Skill                   | Description                                                         |
 | ----------------------- | ------------------------------------------------------------------- |
-| `init-project`          | Configure a new project to work with globally installed aisk skills |
+| `init-project` ✦        | Configure a new project to work with globally installed aisk skills |
 | `set-claude-permission` | Organize the `.claude/settings.local.json` permission configuration |
-| `setup-precommit`       | Configure a git pre-commit hook using lint-staged                   |
+| `setup-precommit` ✦     | Configure a git pre-commit hook using lint-staged                   |
 
 ### Architecture
 
-| Skill          | Description                                                            |
-| -------------- | ---------------------------------------------------------------------- |
-| `refresh-arch` | Scan the codebase and generate or refresh `.ai-skills/architecture.md` |
-| `check-arch`   | Check whether code changes align with architecture decisions           |
+| Skill            | Description                                                            |
+| ---------------- | ---------------------------------------------------------------------- |
+| `refresh-arch` ✦ | Scan the codebase and generate or refresh `.ai-skills/architecture.md` |
+| `check-arch` ✦   | Check whether code changes align with architecture decisions           |
 
 ### Task workflow
 
-| Skill           | Description                                                                    |
-| --------------- | ------------------------------------------------------------------------------ |
-| `create-task`   | Initialize a new task: create branch, scaffold task documents, enter work mode |
-| `start-task`    | Enter task work mode for the current session (re-run at each new session)      |
-| `verify-step`   | Run acceptance checks for a single step                                        |
-| `verify-task`   | Run acceptance checks across all steps                                         |
-| `complete-task` | Verify task completion, clean up task documents, and prompt to create a PR     |
+| Skill             | Description                                                                    |
+| ----------------- | ------------------------------------------------------------------------------ |
+| `create-task` ✦   | Initialize a new task: create branch, scaffold task documents, enter work mode |
+| `start-task` ✦    | Enter task work mode for the current session (re-run at each new session)      |
+| `verify-step` ✦   | Run acceptance checks for a single step                                        |
+| `verify-task` ✦   | Run acceptance checks across all steps                                         |
+| `complete-task` ✦ | Verify task completion, clean up task documents, and prompt to create a PR     |
 
 ### Code review & learning
 
 | Skill                | Description                                                       |
 | -------------------- | ----------------------------------------------------------------- |
-| `smart-review`       | Iteratively review and fix a specified file, module, or directory |
+| `smart-review` ✦     | Iteratively review and fix a specified file, module, or directory |
 | `create-walkthrough` | Create a walkthrough of changes at a target version               |
 | `start-walkthrough`  | Resume a walkthrough from the state file                          |
 
