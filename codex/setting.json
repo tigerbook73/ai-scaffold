@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "files": [
+    {
+      "src": "arch/SK-check-arch.md",
+      "name": "aisk-check-arch",
+      "dst": ".codex/skills/aisk-check-arch/SKILL.md",
+      "description": "Use when the user wants to check whether code changes align with recorded architecture decisions.",
+      "shortDescription": "Check architecture alignment",
+      "category": "arch"
+    },
+    {
+      "src": "arch/SK-refresh-arch.md",
+      "name": "aisk-refresh-arch",
+      "dst": ".codex/skills/aisk-refresh-arch/SKILL.md",
+      "description": "Use when the user wants to scan a codebase and generate or refresh architecture decision notes.",
+      "shortDescription": "Refresh architecture notes",
+      "category": "arch"
+    },
+    {
+      "src": "setup-precommit/SK-setup-precommit.md",
+      "name": "aisk-setup-precommit",
+      "dst": ".codex/skills/aisk-setup-precommit/SKILL.md",
+      "description": "Use when the user wants to configure a Node.js project pre-commit hook with lint-staged.",
+      "shortDescription": "Set up pre-commit",
+      "category": "setup-precommit"
+    },
+    {
+      "src": "smart-review/SK-smart-review.md",
+      "name": "aisk-smart-review",
+      "dst": ".codex/skills/aisk-smart-review/SKILL.md",
+      "description": "Use when the user asks for iterative review and fixes within a specified file, module, or directory.",
+      "shortDescription": "Review and fix scoped code",
+      "category": "smart-review"
+    }
+  ]
+}

@@ -618,6 +618,7 @@ Acceptance:
 - `pnpm build:codex` creates a stable manifest.
 - It does not modify `claude/setting.json`.
 - Unsupported Claude-only skills do not appear in the Codex manifest.
+- Phase 4 generates `codex/setting.json` only; Codex `SKILL.md` output is generated in Phase 5.
 
 Per-phase gate:
 
