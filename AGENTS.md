@@ -47,11 +47,11 @@ Skills default to both Claude Code and Codex targets. Add `---\ntargets: [claude
 ## Key Files
 
 - `scripts/scan-skills.ts`: scans `skills/` and infers all target metadata from SK-\*.md frontmatter and H1.
-- `scripts/build.ts`: syncs `docs/SKILL-SOURCE-FORMAT.md` → `skill-format.md` and Claude skill rules.
+- `skills/skill-format.md`: canonical skill source format (human-maintained, synced to Claude rules by `pnpm build`).
+- `scripts/build.ts`: syncs `skills/skill-format.md` → `.claude/rules/skill-rules.md`.
 - `scripts/setup.ts`: unified installer entry point — runs Claude Code + Codex setup (`pnpm register`).
 - `scripts/setup-claude.ts`: Claude installer — scans skills and installs to `~/.claude/commands/aisk/`.
 - `scripts/setup-codex.ts`: Codex installer — scans skills and installs to `~/.codex/skills/aisk-*/`.
-- `docs/SKILL-SOURCE-FORMAT.md`: canonical skill source format.
 - `docs/codex-adapter/blueprint.md`: plan and phase gates for Claude + Codex support.
 - `tests/`: baseline validation for installers and skill metadata.
 

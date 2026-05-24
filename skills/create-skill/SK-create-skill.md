@@ -17,7 +17,7 @@ Promote a skill to the global repository so it can be applied globally with `pnp
 
 - Writes to `{repo}/skills/{name}/SK-{name}.md` (Mode 1 and Mode 2)
 - May write a temp file to `/tmp/aisk-*/` during Mode 1 processing (deleted after copy if `--cleanup` is passed)
-- Triggers `pnpm build` which regenerates `{repo}/claude/setting.json`
+- Triggers `pnpm build` which syncs `.claude/rules/skill-rules.md`
 
 ## Steps
 
@@ -25,7 +25,7 @@ Promote a skill to the global repository so it can be applied globally with `pnp
 
 1. Read `~/.ai-skills/config.json` to get the `{repo}` path.
    If it does not exist, prompt the user to run `pnpm register` first, then stop.
-   Then read `{repo}/skills/create-skill/resource/skill-format.md` for the format specification.
+   Then read `{repo}/skills/skill-format.md` for the format specification.
    If the spec file does not exist, skip format compliance.
 
 ### Mode 1: File path

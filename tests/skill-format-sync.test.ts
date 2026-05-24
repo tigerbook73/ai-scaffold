@@ -24,8 +24,8 @@ function extractMarkedContent(content: string, path: string): string {
 
 test("skill format source is synchronized to generated resources", () => {
   const sourceContent = extractMarkedContent(
-    readRepoFile("docs/SKILL-SOURCE-FORMAT.md"),
-    "docs/SKILL-SOURCE-FORMAT.md",
+    readRepoFile("skills/skill-format.md"),
+    "skills/skill-format.md",
   );
 
   const claudeRuleContent = extractMarkedContent(
@@ -33,10 +33,5 @@ test("skill format source is synchronized to generated resources", () => {
     ".claude/rules/skill-rules.md",
   );
 
-  const generatedSkillFormat = readRepoFile("skills/create-skill/resource/skill-format.md");
-
   assert.equal(claudeRuleContent, sourceContent);
-  assert.match(generatedSkillFormat, /Source: docs\/SKILL-SOURCE-FORMAT\.md/);
-  assert.match(generatedSkillFormat, /To regenerate: pnpm build/);
-  assert.ok(generatedSkillFormat.includes(sourceContent));
 });

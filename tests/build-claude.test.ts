@@ -5,14 +5,14 @@ import test from "node:test";
 
 const repoRoot = process.cwd();
 
-test("skill-format.md is generated and non-empty", () => {
-  const skillFormatPath = join(repoRoot, "skills", "create-skill", "resource", "skill-format.md");
-  assert.equal(existsSync(skillFormatPath), true, "skill-format.md not found");
+test("skills/skill-format.md exists and contains format spec", () => {
+  const skillFormatPath = join(repoRoot, "skills", "skill-format.md");
+  assert.equal(existsSync(skillFormatPath), true, "skills/skill-format.md not found");
 
   const content = readFileSync(skillFormatPath, "utf-8");
-  assert.match(content, /AUTO-GENERATED/);
-  assert.match(content, /# Skill Format Specification/);
-  assert.ok(content.trim().length > 100, "skill-format.md appears empty");
+  assert.match(content, /## Mandatory Rules/);
+  assert.match(content, /## Format Tiers/);
+  assert.match(content, /EXTRACT:skill-format:start/);
 });
 
 test("claude skill-rules.md contains format spec content", () => {

@@ -8,62 +8,45 @@ class Builder {
     this.repoRoot = resolve(process.env.AISK_REPO_ROOT ?? join(__dirname, ".."));
   }
 
-  private generateSkillFormat(): void {
-    const sourcePath = join(this.repoRoot, "docs", "SKILL-SOURCE-FORMAT.md");
-    const targetPath = join(this.repoRoot, "skills", "create-skill", "resource", "skill-format.md");
+  private syncClaudeSkillRules(): void {
+    const sourcePath = join(this.repoRoot, "skills", "skill-format.md");
+    const rulesPath = join(this.repoRoot, ".claude", "rules", "skill-rules.md");
 
-    const content = readFileSync(sourcePath, "utf-8");
     const startMarker = "<!-- EXTRACT:skill-format:start -->";
     const endMarker = "<!-- EXTRACT:skill-format:end -->";
-    const startIdx = content.indexOf(startMarker);
-    const endIdx = content.indexOf(endMarker);
+
+    const sourceContent = readFileSync(sourcePath, "utf-8");
+    const startIdx = sourceContent.indexOf(startMarker);
+    const endIdx = sourceContent.indexOf(endMarker);
 
     if (startIdx === -1 || endIdx === -1) {
       console.warn(
-        "Warning: EXTRACT markers not found in docs/SKILL-SOURCE-FORMAT.md — skill-format.md not updated",
+        "Warning: EXTRACT markers not found in skills/skill-format.md — skill-rules.md not updated",
       );
       return;
     }
 
-    const formatContent = content.slice(startIdx + startMarker.length, endIdx).trim();
-    const generated =
-      `<!-- AUTO-GENERATED — Do not edit manually.\n` +
-      `     Source: docs/SKILL-SOURCE-FORMAT.md\n` +
-      `     To regenerate: pnpm build -->\n\n` +
-      `# Skill Format Specification\n\n` +
-      formatContent +
-      "\n";
+    const formatContent = sourceContent.slice(startIdx + startMarker.length, endIdx).trim();
 
-    writeFileSync(targetPath, generated);
-    console.log("skills/create-skill/resource/skill-format.md regenerated");
-    this.syncClaudeSkillRules(formatContent, startMarker, endMarker);
-  }
+    const rulesContent = readFileSync(rulesPath, "utf-8");
+    const rStartIdx = rulesContent.indexOf(startMarker);
+    const rEndIdx = rulesContent.indexOf(endMarker);
 
-  private syncClaudeSkillRules(
-    formatContent: string,
-    startMarker: string,
-    endMarker: string,
-  ): void {
-    const rulesPath = join(this.repoRoot, ".claude", "rules", "skill-rules.md");
-    const content = readFileSync(rulesPath, "utf-8");
-    const startIdx = content.indexOf(startMarker);
-    const endIdx = content.indexOf(endMarker);
-
-    if (startIdx === -1 || endIdx === -1) {
+    if (rStartIdx === -1 || rEndIdx === -1) {
       console.warn(
-        "Warning: EXTRACT markers not found in .claude/rules/skill-rules.md — Claude skill rules not updated",
+        "Warning: EXTRACT markers not found in .claude/rules/skill-rules.md — not updated",
       );
       return;
     }
 
-    const before = content.slice(0, startIdx + startMarker.length);
-    const after = content.slice(endIdx);
+    const before = rulesContent.slice(0, rStartIdx + startMarker.length);
+    const after = rulesContent.slice(rEndIdx);
     writeFileSync(rulesPath, `${before}\n\n${formatContent}\n\n${after}`);
-    console.log(".claude/rules/skill-rules.md synchronized");
+    console.log(".claude/rules/skill-rules.md synchronized from skills/skill-format.md");
   }
 
   run(): void {
-    this.generateSkillFormat();
+    this.syncClaudeSkillRules();
   }
 }
 

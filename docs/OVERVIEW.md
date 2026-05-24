@@ -155,13 +155,12 @@ pnpm register
 
 ### scripts/build.ts
 
-**Purpose**: Sync skill format documentation. Does not generate install manifests.
+**Purpose**: Sync skill format rules from `skills/skill-format.md` into `.claude/rules/skill-rules.md`. Does not generate install manifests.
 
 **Operations:**
 
-1. Extract the format spec from `docs/SKILL-SOURCE-FORMAT.md` (between EXTRACT markers)
-2. Write to `skills/create-skill/resource/skill-format.md`
-3. Sync the same content into `.claude/rules/skill-rules.md`
+1. Read `skills/skill-format.md` and extract content between EXTRACT markers
+2. Sync that content into `.claude/rules/skill-rules.md` (so Claude Code auto-loads format rules when editing SK-\*.md files)
 
 **Invocation:**
 
@@ -169,7 +168,7 @@ pnpm register
 pnpm build
 ```
 
-Run after editing `docs/SKILL-SOURCE-FORMAT.md`.
+Run after editing `skills/skill-format.md`.
 
 ---
 
