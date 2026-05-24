@@ -48,6 +48,7 @@ Codex support is not installed yet. Until the Codex adapter exists, do not treat
 - `scripts/setup-claude.ts`: Claude installer implementation.
 - `docs/SKILL-SOURCE-FORMAT.md`: canonical skill source format.
 - `docs/codex-adapter/blueprint.md`: plan and phase gates for Claude + Codex support.
+- `skills/manifest.json`: target metadata registry for Claude and Codex support.
 - `tests/`: baseline validation for generated manifests and future adapters.
 
 ## Generated Files

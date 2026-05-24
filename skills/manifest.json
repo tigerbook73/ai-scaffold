@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "skills": {
+    "arch/SK-check-arch.md": {
+      "targets": {
+        "claude": true,
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-check-arch",
+        "description": "Use when the user wants to check whether code changes align with recorded architecture decisions.",
+        "shortDescription": "Check architecture alignment"
+      }
+    },
+    "arch/SK-refresh-arch.md": {
+      "targets": {
+        "claude": true,
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-refresh-arch",
+        "description": "Use when the user wants to scan a codebase and generate or refresh architecture decision notes.",
+        "shortDescription": "Refresh architecture notes"
+      }
+    },
+    "create-skill/SK-create-skill.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "init-project/SK-init-project.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "set-claude-permission/SK-set-claude-permission.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "setup-precommit/SK-setup-precommit.md": {
+      "targets": {
+        "claude": true,
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-setup-precommit",
+        "description": "Use when the user wants to configure a Node.js project pre-commit hook with lint-staged.",
+        "shortDescription": "Set up pre-commit"
+      }
+    },
+    "smart-review/SK-smart-review.md": {
+      "targets": {
+        "claude": true,
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-smart-review",
+        "description": "Use when the user asks for iterative review and fixes within a specified file, module, or directory.",
+        "shortDescription": "Review and fix scoped code"
+      }
+    },
+    "task/SK-complete-task.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "task/SK-create-task.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "task/SK-resume-task.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "task/SK-start-task.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "task/SK-verify-step.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "task/SK-verify-task.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "walkthrough/SK-create-walkthrough.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "walkthrough/SK-resume-walkthrough.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    },
+    "walkthrough/SK-start-walkthrough.md": {
+      "targets": {
+        "claude": true,
+        "codex": false
+      }
+    }
+  }
+}

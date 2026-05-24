@@ -592,6 +592,7 @@ Acceptance:
 
 - A script can determine whether each skill targets Claude, Codex, both, or neither.
 - Claude-only exclusions are data-driven, not hardcoded.
+- Metadata is stored centrally in `skills/manifest.json`.
 
 Per-phase gate:
 

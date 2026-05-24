@@ -38,6 +38,7 @@ Skills are available immediately in any project after `pnpm register`. For a new
 ```
 {repo}/
 ├── skills/                        ← all skill files, organized by group
+│   ├── manifest.json              ← target metadata registry
 │   ├── arch/
 │   │   ├── SK-refresh-arch.md
 │   │   └── SK-check-arch.md
@@ -249,6 +250,16 @@ The install manifest; describes which skill command files are installed globally
 - `src`: source path relative to the `skills/` directory
 - `dst`: path relative to `~` where the file is installed
 - `category`: skill category (`arch`, `task`, `create-skill`, etc.)
+
+## skills/manifest.json
+
+Target metadata registry for source skills. Every `skills/**/SK-*.md` file must have an entry.
+
+- `targets.claude`: whether the skill is included in Claude outputs
+- `targets.codex`: whether the skill is included in Codex outputs
+- `codex.name`: Codex skill name, using the `aisk-*` namespace
+- `codex.description`: Codex trigger description
+- `codex.shortDescription`: short Codex display description
 
 After adding or removing skills, run `pnpm build` to regenerate this file, then `pnpm register` to apply.
 
