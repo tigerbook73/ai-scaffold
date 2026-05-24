@@ -6,12 +6,10 @@ Promote a skill to the global repository so it can be distributed to any project
 
 ---
 
-## Input Modes
+## Input
 
-`$ARGUMENTS` can take two forms:
-
-1. **File path** (path to an existing `.md` file) → promote that file directly as a global skill
-2. **Skill name** (plain name, e.g. `my-skill`) → Claude generates the skill content based on the current conversation context
+- **File path** (path to an existing `.md` file) → promote that file directly as a global skill
+- **Skill name** (e.g. `my-skill`) → generate skill content based on conversation context
 
 ---
 

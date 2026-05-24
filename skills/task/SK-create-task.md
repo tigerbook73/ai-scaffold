@@ -9,6 +9,7 @@ Initialize a new Task: create branch, scaffold task documents, and enter work mo
 - Only allowed on main or master branch
 - Working tree must be clean (no uncommitted changes, no untracked files)
 - `docs/tasks/` must contain no existing task directory
+- [Write operation] Creates `docs/tasks/{name}/` with task documents and a git commit
 
 ## Input
 

@@ -7,7 +7,7 @@ Run acceptance checks across all steps of the current task.
 ## Constraints
 
 - Must be in task work mode (start-task executed in current session)
-- Results are written back to each step's verification fields in `task-state.md`
+- [Write operation] Updates each step's verification fields in `task-state.md`
 
 ## Input
 

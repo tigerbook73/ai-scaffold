@@ -9,7 +9,7 @@ Auto/manual/fast/full logic is identical to verify-task; the difference is scope
 ## Constraints
 
 - Must be in task work mode (start-task executed in current session)
-- Results are written back to the specified step's verification fields in `task-state.md`
+- [Write operation] Updates the specified step's verification fields in `task-state.md`
 
 ## Input
 

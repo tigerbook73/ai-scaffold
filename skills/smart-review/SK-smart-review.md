@@ -2,9 +2,12 @@
 
 Iteratively review and fix a specified file, module, or directory.
 
-This skill is exempt from the global Plan Gate — no need to enter Plan Mode before making changes.
-
 ---
+
+## Constraints
+
+- [Write operation] Writes to files within the specified target scope only; modifying files outside the scope requires explicit user authorization
+- Exempt from the global Plan Gate — no need to enter Plan Mode before making changes
 
 ## Input
 

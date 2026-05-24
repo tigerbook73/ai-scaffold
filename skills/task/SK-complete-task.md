@@ -1,6 +1,7 @@
 # complete-task
 
 Verify task completion, clean up task documents, and prompt the user to create a PR.
+
 Does not run acceptance tests — use verify-task for that.
 
 ---
@@ -10,6 +11,7 @@ Does not run acceptance tests — use verify-task for that.
 - Must be in task work mode (start-task executed in current session)
 - Working tree must be clean (no uncommitted changes, no untracked files)
 - Must be on a task branch (not main/master)
+- [Write operation] Phase 2 deletes `docs/tasks/{task-name}/` and creates a git commit — each action requires explicit user confirmation
 
 ## Steps
 

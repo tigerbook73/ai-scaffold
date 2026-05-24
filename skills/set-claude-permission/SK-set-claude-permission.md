@@ -4,6 +4,10 @@ Organize the `.claude/settings.local.json` permission configuration for the curr
 
 ---
 
+## Constraints
+
+- [Write operation] Only writes to `.claude/settings.local.json`; all other fields in the file are preserved
+
 ## Input
 
 `$ARGUMENTS`: Level 2 categories, space-separated. Valid values: `read` `write` `shell` `npm`

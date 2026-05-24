@@ -2,14 +2,20 @@
 
 Walk through the code implemented in the current Phase, grouped by layer, to help understand design decisions and implementation details.
 
-**Usage**:
-
-- `/learn-phase`: Full walkthrough starting from G1
-- `/learn-phase G3`: Resume from a specific group
+**Usage**: `/aisk/learn-phase [group]`
 
 ---
 
-## Step 1 — Restore Context
+## Input
+
+`$group` (optional)
+
+- No argument → full walkthrough starting from G1
+- Group number (e.g. `G3`) → resume from that group
+
+## Steps
+
+### Step 1 — Restore Context
 
 Find the active Phase document directory (a directory under `docs/features/` **without** a `-` prefix):
 
@@ -18,9 +24,7 @@ Find the active Phase document directory (a directory under `docs/features/` **w
 
 If the user specified a starting group (e.g. `G3`), skip all groups with a lower number.
 
----
-
-## Step 2 — Determine Groups
+### Step 2 — Determine Groups
 
 Use the groupings already defined in `DESIGN.md` when available. If the document has no explicit groupings, organize files bottom-up by layer, 2–4 related files per group:
 
@@ -30,9 +34,7 @@ Use the groupings already defined in `DESIGN.md` when available. If the document
 4. **Component layer**: Server Components → Client Components (outer to inner)
 5. **Routing layer**: `page.tsx`, `loading.tsx`, `layout.tsx`
 
----
-
-## Step 3 — Walk Through Each Group
+### Step 3 — Walk Through Each Group
 
 **Before starting each group**: read all files in the group first, then begin the explanation.
 
@@ -50,9 +52,7 @@ Use the groupings already defined in `DESIGN.md` when available. If the document
 - Wait for user confirmation before moving on; never explain all groups at once
 - User follow-up questions are part of the walkthrough — answer them fully before asking to continue
 
----
-
-## Step 4 — After All Groups
+### Step 4 — After All Groups
 
 Output a learning summary for this Phase:
 

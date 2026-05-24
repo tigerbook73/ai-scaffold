@@ -11,7 +11,7 @@ Scan the codebase and generate or refresh `.ai-skills/architecture.md`, recordin
 
 ## Input
 
-`$ARGUMENTS` (optional):
+`$ARGUMENTS` (optional)
 
 - No argument → auto-detect: if working tree has changes (staged/unstaged/untracked) → same as `changes`; otherwise → same as `commit 1`
 - `help` → list all available modes, then stop

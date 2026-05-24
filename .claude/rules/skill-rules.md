@@ -16,8 +16,8 @@ SK files must be placed directly under `skills/*/` (one level deep). Files at `s
 - **Language**: All content must be written in English
 - **H1 title**: `# command-name` in kebab-case — matches the filename minus the `SK-` prefix and `.md` extension
 - **Description**: One blank line after H1, then a one-sentence summary. If additional description is needed, add another blank line followed by more text.
-- **Input**: Include `**Input** (\`$ARGUMENTS\`, optional)` when the skill accepts arguments; omit otherwise
-- **Constraints**: Include when the skill has write operations or important behavioral limits; omit otherwise
+- **Input**: Include when the skill accepts arguments; use a bold `**Input**` heading in Compact, `## Input` section heading in Structured; prefer descriptive argument names (`$skill-name`, `$file-path`, etc.) when the input structure is clear; `$ARGUMENTS` is acceptable for open-ended or ambiguous input; omit otherwise
+- **Constraints**: Include when the skill has write operations or important behavioral limits; describe write scope (name specific files when known, otherwise describe the boundary); omit otherwise
 - **Steps**: Required in all skill files; use `**Steps**` (bold) in Compact, `## Steps` (heading) in Structured
 
 ## Format Tiers
@@ -36,9 +36,9 @@ One-sentence description.
 
 **Constraints**
 
-- [Write operation] Only writes to ... (omit this section if no constraints)
+- [Write operation] ... (omit this section if no constraints)
 
-**Input** (`$ARGUMENTS`, optional)
+**Input** (`$path`, optional)
 
 - No argument → ...
 - Path (e.g. `src/`) → ...
@@ -62,11 +62,9 @@ One-sentence description.
 
 ## Constraints
 
-- [Write operation] Only writes to ...
+- [Write operation] ...
 
 ## Input
-
-`$ARGUMENTS` can take the following forms:
 
 - No argument → ...
 - Path → ...

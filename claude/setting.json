@@ -70,7 +70,7 @@
     {
       "src": "task/SK-start-task.md",
       "dst": ".claude/commands/aisk/start-task.md",
-      "description": "Enter task work mode for the current session. `resume-task` is an alias with identical behavior.",
+      "description": "Enter task work mode for the current session.",
       "category": "task"
     },
     {
@@ -100,7 +100,7 @@
     {
       "src": "walkthrough/SK-start-walkthrough.md",
       "dst": ".claude/commands/aisk/start-walkthrough.md",
-      "description": "Resume a walkthrough from the state file. `resume-walkthrough` is an alias with identical behavior.",
+      "description": "Resume a walkthrough from the state file.",
       "category": "walkthrough"
     }
   ]

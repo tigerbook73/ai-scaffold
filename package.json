@@ -6,7 +6,7 @@
     "register": "tsx scripts/setup.ts",
     "build": "tsx scripts/build.ts",
     "create-skill": "tsx skills/create-skill/resource/create-skill.ts",
-    "lint": "eslint scripts/ skills/*/resource/*.ts",
+    "lint": "eslint scripts/ skills/*/resource/*.ts --fix",
     "format": "prettier --write ."
   },
   "keywords": [
