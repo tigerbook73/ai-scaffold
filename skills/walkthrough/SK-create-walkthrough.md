@@ -126,7 +126,7 @@ Using the diff and context documents, produce:
 
 1. **Change intent**: 1–3 sentences describing what this change achieves and why.
 2. **Groups**: apply the Grouping Strategy from `strategy.md`. Each group must include: label, list of files, optional `designStep` reference, and done=false.
-3. **Pre-generated content** for each group: write the complete walkthrough prose for all groups now, following the Presentation Format from `strategy.md`. This is the content that will go into each `g{N}.md`.
+3. **G1 content only**: write the complete walkthrough prose for **G1 only** following the Presentation Format from `strategy.md`. G2..GN will be generated on demand when the user navigates to them — do not generate them now.
 
 ### Step 7 — Write state
 
@@ -153,11 +153,11 @@ Using the diff and context documents, produce:
 }
 ```
 
-**Group files** — write each group's pre-generated content via Write tool:
+**Group files** — write only G1's content via Write tool:
 
 - `{cwd}/.ai-skills/walkthrough/{stateKey}/g1.md`
-- `{cwd}/.ai-skills/walkthrough/{stateKey}/g2.md`
-- ... (one file per group)
+
+G2..GN files are generated on demand during navigation; do not create them here.
 
 ### Step 8 — Present global overview
 

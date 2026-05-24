@@ -63,12 +63,27 @@ Use this template for every group file (`g{N}.md`). Write in the analysis langua
 
 [Context] How this group fits the overall change and how it connects to the previous group. For G1, explain its role in the full change.
 
-[Key changes] The most important before/after changes from the diff. Extract directly from the diff — do not re-read source files unless a complete function context is needed to explain a subtle point.
+[Key changes]
+Break into one `###` subsection per meaningful change (type, function, config entry, etc.):
 
-[Design intent] Why this approach was chosen. If design documents exist, cite the relevant step's goal or acceptance criteria. Otherwise, infer from the diff and context documents.
+### {item name}
 
-[Non-obvious details] Hidden constraints, subtle invariants, non-obvious decisions, or workarounds that a reader would otherwise miss. Omit this section if nothing qualifies.
+Before/after code snippet extracted directly from the diff (omit if the item is purely additive and the addition itself is self-explanatory).
+
+Explain what changed AND why — inline in the same paragraph. Do not separate "what" from "why".
+
+▎ 对比：{comparison with a similar pattern already in the codebase} — add this callout when a reader might conflate this item with something similar, or when the contrast clarifies a design decision. Omit if no meaningful comparison exists.
+
+(Repeat `###` subsections for each meaningful item.)
+
+For groups in the foundation layer (types, constants, schema definitions), append after all subsections:
+
+[层间关系]
+Show which modules depend on this group's output, as a downward arrow chain:
+  {this group's module} → {direct dependents} → {their dependents}
+
+[Design intent] Why this overall approach was chosen for the group. If design documents exist, cite the relevant step's goal or acceptance criteria. Otherwise, infer from the diff and context documents. Keep to 2–4 sentences.
 
 ---
-G{N} done?
+G{N} 讲完，继续 G{N+1}？
 ```

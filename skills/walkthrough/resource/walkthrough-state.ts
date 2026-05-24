@@ -112,17 +112,13 @@ class WalkthroughState {
     // currentGroup is 1-based; groups[] is 0-based — mark current group done first
     index.groups[index.currentGroup - 1].done = true;
     const nextN = index.currentGroup + 1;
-    const nextFile = join(this.stateDir(key), `g${nextN}.md`);
-    if (!existsSync(nextFile)) {
-      // Save with current group marked done but currentGroup unchanged (valid state)
+    if (nextN > index.totalGroups) {
       writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8");
       console.error(`Already at last group (${index.totalGroups}); no next group exists`);
       process.exit(1);
     }
     index.currentGroup = nextN;
     writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8");
-    // Callers pipe this output directly as the next group's instruction text
-    process.stdout.write(readFileSync(nextFile, "utf-8"));
   }
 
   cmdPrev(key: string): void {
@@ -132,16 +128,10 @@ class WalkthroughState {
       process.exit(1);
     }
     const prevN = index.currentGroup - 1;
-    const groupFile = join(this.stateDir(key), `g${prevN}.md`);
-    if (!existsSync(groupFile)) {
-      console.error(`Group file g${prevN}.md not found`);
-      process.exit(1);
-    }
     index.currentGroup = prevN;
     // currentGroup is 1-based; groups[] is 0-based — reset target group to not-done
     index.groups[prevN - 1].done = false;
     writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8");
-    process.stdout.write(readFileSync(groupFile, "utf-8"));
   }
 
   cmdGoto(key: string, n: number): void {
@@ -150,16 +140,10 @@ class WalkthroughState {
       console.error(`Group ${n} out of range (1..${index.totalGroups})`);
       process.exit(1);
     }
-    const groupFile = join(this.stateDir(key), `g${n}.md`);
-    if (!existsSync(groupFile)) {
-      console.error(`Group file g${n}.md not found`);
-      process.exit(1);
-    }
     index.currentGroup = n;
     // Reset target group to not-done regardless of direction
     index.groups[n - 1].done = false;
     writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8");
-    process.stdout.write(readFileSync(groupFile, "utf-8"));
   }
 
   cmdFinish(key: string): void {

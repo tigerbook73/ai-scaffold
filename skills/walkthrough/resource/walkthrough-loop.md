@@ -35,9 +35,10 @@ After outputting the content, immediately append the lookahead prompt (see below
 After each group's content, append one line:
 
 ```
----
-Walkthrough (G{N}/{totalGroups}) — `wtgroup next` next · `wtgroup G{N}` goto · `wtgroup list` list · `wtgroup finish` finish
+---G{N}/{totalGroups} — `wtgroup next` · `wtgroup G{X}` · `wtgroup list` · `wtgroup finish`
 ```
+
+Where `{N}` is the current group number and `{X}` is `{N}+1` (the actual next group number, not a placeholder). On the last group, omit `wtgroup next` and `wtgroup G{X}`.
 
 **Note**: Do not guess whether the last group has been reached based on position — users may read non-sequentially.
 Only proactively enter the completion flow when reading index.json shows **all** `groups[].done === true`.
@@ -82,34 +83,44 @@ Answer the user's question normally, then append at the end:
 
 ---
 
+## On-demand group generation
+
+Groups are generated lazily — only G1 is pre-written; G2..GN are created when first visited.
+
+Before displaying any group G{N}, check whether `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md` exists (attempt to Read it). If it does not exist, run the generation procedure below, then write the result via the Write tool.
+
+**Generation procedure for G{N}:**
+
+1. Read `groups[N-1].files` from index.json.
+2. Run `git diff {baseline} -U15 -- {files...}` to get the targeted diff for this group's files only.
+3. For each directory containing a changed file, check for `README.md`, `types.ts`, or `index.ts`; read any that are present and relevant to understanding the module boundary.
+4. Read `{repo}/skills/walkthrough/resource/strategy.md` if not already in context.
+5. Generate the full walkthrough content for G{N} following the Presentation Format from `strategy.md`.
+6. Write the result to `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md` via the Write tool.
+
 ## Command execution
 
 **next**
 
-```
-state next --key {stateKey}
-```
-
-- Success → output the command's stdout (the next group's content), append lookahead prompt
-- exit 1 (no next group file) → enter completion flow
+1. Determine `nextN = currentGroup + 1`.
+2. If `nextN > totalGroups` → enter completion flow.
+3. If `g{nextN}.md` does not exist → run the on-demand generation procedure for G{nextN}.
+4. Run `state next --key {stateKey}`.
+5. Read `{cwd}/.ai-skills/walkthrough/{stateKey}/g{nextN}.md` and output its content, then append the lookahead prompt.
 
 **prev**
 
-```
-state prev --key {stateKey}
-```
-
-- Success → output the previous group's content, append lookahead prompt
-- exit 1 (already at first group) → inform "Already at the first group"
+1. Run `state prev --key {stateKey}`.
+   - exit 1 → inform "Already at the first group"
+2. Determine the new `currentGroup` from the updated index (re-read if needed, or derive as old currentGroup − 1).
+3. Read `{cwd}/.ai-skills/walkthrough/{stateKey}/g{currentGroup}.md` and output its content, then append the lookahead prompt.
 
 **goto N**
 
-```
-state goto --n {N} --key {stateKey}
-```
-
-- Success → output the target group's content, append lookahead prompt
-- exit 1 (N out of range) → report valid range `1..{totalGroups}`
+1. Run `state goto --n {N} --key {stateKey}`.
+   - exit 1 (N out of range) → report valid range `1..{totalGroups}`
+2. If `g{N}.md` does not exist → run the on-demand generation procedure for G{N}.
+3. Read `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md` and output its content, then append the lookahead prompt.
 
 **list**
 
