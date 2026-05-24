@@ -43,6 +43,7 @@ If no prior session context exists, fall back to full mode automatically.
 **Full mode** (`--full`): Run all `(auto)` conditions for all steps regardless of prior results.
 
 For each step being verified:
+
 1. Read `(auto)` conditions from the step's section in the design documents.
 2. Execute each condition's command and record the result (pass / fail).
 3. If all pass: update that step's `自动验收: 通过` in `task-state.md`.
