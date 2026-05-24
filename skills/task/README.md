@@ -39,7 +39,8 @@ Skills for managing structured development tasks with branch-per-task workflow, 
 ```
 docs/tasks/{task-name}/
 ├── .claude/
-│   └── CLAUDE.md       ← auto-loaded when accessing any file in this directory
+│   └── CLAUDE.md       ← auto-loaded by Claude Code when accessing any file in this directory
+├── AGENTS.md           ← auto-loaded by Codex when working in this directory
 ├── requirements.md
 ├── design.md
 └── task-state.md       ← single source of truth for progress
@@ -49,7 +50,7 @@ docs/tasks/{task-name}/
 
 Templates used by `create-task` to scaffold task documents:
 
-- `resource/resource-claude.md` — task context instructions template
+- `resource/task-context.md` — task work mode context template (installed as both CLAUDE.md and AGENTS.md)
 - `resource/task-state.md` — task-state.md format template
 - `resource/design.md` — design document step format reference
 - `resource/requirements-feature.md` — requirements template for feature tasks

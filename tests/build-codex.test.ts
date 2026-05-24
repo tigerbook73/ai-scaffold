@@ -62,13 +62,25 @@ test("codex manifest is valid and follows target metadata", () => {
     false,
   );
   assert.equal(
-    manifest.files.some((entry) => entry.src.startsWith("task/")),
-    false,
-  );
-  assert.equal(
     manifest.files.some((entry) => entry.src.startsWith("walkthrough/")),
     false,
   );
+
+  const taskSkills = [
+    "task/SK-create-task.md",
+    "task/SK-start-task.md",
+    "task/SK-resume-task.md",
+    "task/SK-verify-step.md",
+    "task/SK-verify-task.md",
+    "task/SK-complete-task.md",
+  ];
+  for (const src of taskSkills) {
+    assert.equal(
+      manifest.files.some((entry) => entry.src === src),
+      true,
+      `expected task skill in codex manifest: ${src}`,
+    );
+  }
 });
 
 test("codex builder output is stable and does not modify claude manifest", () => {

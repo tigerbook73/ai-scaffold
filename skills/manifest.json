@@ -66,37 +66,67 @@
     "task/SK-complete-task.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-complete-task",
+        "description": "Use when the user wants to verify task completion, clean up task documents, and prepare a pull request.",
+        "shortDescription": "Complete and clean up task"
       }
     },
     "task/SK-create-task.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-create-task",
+        "description": "Use when the user wants to initialize a new development task with branch setup, task documents, and work mode.",
+        "shortDescription": "Initialize a task"
       }
     },
     "task/SK-resume-task.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-resume-task",
+        "description": "Use when the user wants to resume task work mode — identical behavior to start-task.",
+        "shortDescription": "Resume task work mode"
       }
     },
     "task/SK-start-task.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-start-task",
+        "description": "Use when the user wants to enter task work mode and load context for the current task.",
+        "shortDescription": "Enter task work mode"
       }
     },
     "task/SK-verify-step.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-verify-step",
+        "description": "Use when the user wants to run acceptance checks for a single implementation step.",
+        "shortDescription": "Verify a single step"
       }
     },
     "task/SK-verify-task.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-verify-task",
+        "description": "Use when the user wants to run acceptance checks across all steps of the current task.",
+        "shortDescription": "Verify all task steps"
       }
     },
     "walkthrough/SK-create-walkthrough.md": {

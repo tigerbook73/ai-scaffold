@@ -10,12 +10,36 @@
       "category": "arch"
     },
     {
+      "src": "task/SK-complete-task.md",
+      "name": "aisk-complete-task",
+      "dst": ".codex/skills/aisk-complete-task/SKILL.md",
+      "description": "Use when the user wants to verify task completion, clean up task documents, and prepare a pull request.",
+      "shortDescription": "Complete and clean up task",
+      "category": "task"
+    },
+    {
+      "src": "task/SK-create-task.md",
+      "name": "aisk-create-task",
+      "dst": ".codex/skills/aisk-create-task/SKILL.md",
+      "description": "Use when the user wants to initialize a new development task with branch setup, task documents, and work mode.",
+      "shortDescription": "Initialize a task",
+      "category": "task"
+    },
+    {
       "src": "arch/SK-refresh-arch.md",
       "name": "aisk-refresh-arch",
       "dst": ".codex/skills/aisk-refresh-arch/SKILL.md",
       "description": "Use when the user wants to scan a codebase and generate or refresh architecture decision notes.",
       "shortDescription": "Refresh architecture notes",
       "category": "arch"
+    },
+    {
+      "src": "task/SK-resume-task.md",
+      "name": "aisk-resume-task",
+      "dst": ".codex/skills/aisk-resume-task/SKILL.md",
+      "description": "Use when the user wants to resume task work mode — identical behavior to start-task.",
+      "shortDescription": "Resume task work mode",
+      "category": "task"
     },
     {
       "src": "setup-precommit/SK-setup-precommit.md",
@@ -32,6 +56,30 @@
       "description": "Use when the user asks for iterative review and fixes within a specified file, module, or directory.",
       "shortDescription": "Review and fix scoped code",
       "category": "smart-review"
+    },
+    {
+      "src": "task/SK-start-task.md",
+      "name": "aisk-start-task",
+      "dst": ".codex/skills/aisk-start-task/SKILL.md",
+      "description": "Use when the user wants to enter task work mode and load context for the current task.",
+      "shortDescription": "Enter task work mode",
+      "category": "task"
+    },
+    {
+      "src": "task/SK-verify-step.md",
+      "name": "aisk-verify-step",
+      "dst": ".codex/skills/aisk-verify-step/SKILL.md",
+      "description": "Use when the user wants to run acceptance checks for a single implementation step.",
+      "shortDescription": "Verify a single step",
+      "category": "task"
+    },
+    {
+      "src": "task/SK-verify-task.md",
+      "name": "aisk-verify-task",
+      "dst": ".codex/skills/aisk-verify-task/SKILL.md",
+      "description": "Use when the user wants to run acceptance checks across all steps of the current task.",
+      "shortDescription": "Verify all task steps",
+      "category": "task"
     }
   ]
 }

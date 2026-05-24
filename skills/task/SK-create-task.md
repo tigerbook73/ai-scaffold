@@ -31,8 +31,11 @@ Initialize a new task: create branch, scaffold task documents, and enter work mo
 
 4. Create directory `docs/tasks/{name}/`
 
-5. Create `docs/tasks/{name}/.claude/CLAUDE.md` from `{repo}/skills/task/resource/resource-claude.md`,
+5. Create `docs/tasks/{name}/.claude/CLAUDE.md` from `{repo}/skills/task/resource/task-context.md`,
    replacing `{task-name}` and `{task-type}` placeholders.
+
+5b. Create `docs/tasks/{name}/AGENTS.md` from `{repo}/skills/task/resource/task-context.md`,
+replacing `{task-name}` and `{task-type}` placeholders.
 
 6. Create `docs/tasks/{name}/requirements.md` from `{repo}/skills/task/resource/requirements-{task-type}.md`,
    replacing `{task-name}` placeholder.

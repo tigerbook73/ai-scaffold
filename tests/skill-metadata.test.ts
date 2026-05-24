@@ -52,6 +52,12 @@ test("initial codex target scope is explicit", () => {
     "arch/SK-refresh-arch.md",
     "setup-precommit/SK-setup-precommit.md",
     "smart-review/SK-smart-review.md",
+    "task/SK-complete-task.md",
+    "task/SK-create-task.md",
+    "task/SK-resume-task.md",
+    "task/SK-start-task.md",
+    "task/SK-verify-step.md",
+    "task/SK-verify-task.md",
   ]);
 
   for (const source of codexSources) {
