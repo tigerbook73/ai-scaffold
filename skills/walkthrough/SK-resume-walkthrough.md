@@ -15,4 +15,4 @@ Alias for `start-walkthrough` — resume a walkthrough from the state file.
 
 ## Steps
 
-Read `~/.claude/commands/aisk/start-walkthrough.md` and follow its Steps section.
+Follow the same steps as `start-walkthrough`.

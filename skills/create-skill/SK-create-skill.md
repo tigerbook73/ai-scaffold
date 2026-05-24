@@ -1,6 +1,6 @@
 # create-skill
 
-Promote a skill to the global repository so it can be distributed to any project via `/aisk/sync`.
+Promote a skill to the global repository so it can be applied globally with `pnpm register`.
 
 **Usage**: `/aisk/create-skill <argument>`
 
@@ -15,17 +15,17 @@ Promote a skill to the global repository so it can be distributed to any project
 
 ## Constraints
 
-- Writes to `{repo}/skills/{name}/{name}.md` (Mode 1 and Mode 2)
+- Writes to `{repo}/skills/{name}/SK-{name}.md` (Mode 1 and Mode 2)
 - May write a temp file to `/tmp/aisk-*/` during Mode 1 processing (deleted after copy if `--cleanup` is passed)
-- Triggers `npm run build` which regenerates `{repo}/claude/setting.json`
+- Triggers `pnpm build` which syncs `.claude/rules/skill-rules.md`
 
 ## Steps
 
 ### Common prerequisite
 
 1. Read `~/.ai-skills/config.json` to get the `{repo}` path.
-   If it does not exist, prompt the user to run `npm run register` first, then stop.
-   Then read `{repo}/skills/create-skill/resource/skill-format.md` for the format specification.
+   If it does not exist, prompt the user to run `pnpm register` first, then stop.
+   Then read `{repo}/skills/skill-format.md` for the format specification.
    If the spec file does not exist, skip format compliance.
 
 ### Mode 1: File path
@@ -47,7 +47,7 @@ Promote a skill to the global repository so it can be distributed to any project
 6. Run:
 
    ```bash
-   npm --prefix {repo} run create-skill -- <path> --name {name} [--cleanup] [--force]
+   pnpm --dir {repo} create-skill -- <path> --name {name} [--cleanup] [--force]
    ```
 
    - `<path>`: the temp file path if step 5 was executed; original source path if step 5 was skipped
@@ -62,11 +62,21 @@ Promote a skill to the global repository so it can be distributed to any project
 
 4. Generate the skill content in English following the chosen template
 
-5. Write the content directly to `{repo}/skills/{name}/{name}.md` (create the `{name}/` directory first if it does not exist)
+5. Write the content directly to `{repo}/skills/{name}/SK-{name}.md` (create the `{name}/` directory first if it does not exist)
 
-6. Run:
+6. If the skill should be Claude Code only (not Codex), prepend frontmatter to the file:
+
+   ```
+   ---
+   targets: [claude]
+   ---
+   ```
+
+   Otherwise no action is needed — skills default to both targets.
+
+7. Run:
    ```bash
-   npm --prefix {repo} run build
+   pnpm --dir {repo} build
    ```
 
 ### Done
@@ -74,11 +84,11 @@ Promote a skill to the global repository so it can be distributed to any project
 Output a confirmation message, prompting the user to:
 
 - Run `git commit` in the ai-skills repository to persist the change
-- Run `/aisk/sync` in the target project to distribute
+- Run `pnpm register` to apply globally (Claude Code + Codex)
 
 ---
 
 ## Notes
 
 - This command modifies the global ai-skills repository and does not immediately affect the current project
-- If you only need the skill temporarily in the current project, create the file directly in `.claude/commands/aisk/`
+- New skills default to both Claude Code and Codex targets; add `---\ntargets: [claude]\n---` frontmatter to restrict a skill to Claude Code only
