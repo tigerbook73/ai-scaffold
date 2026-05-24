@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "fs"
 import { dirname, join, resolve } from "path";
 import { homedir } from "os";
 
-import { SkillEntry, scanSkills } from "./scan-skills";
+import { SkillEntry, scanSkills, stripFrontmatter } from "./scan-skills";
 
 interface CodexSetupOptions {
   repoPath?: string;
@@ -19,9 +19,9 @@ function yamlString(value: string): string {
 }
 
 export function transformCodexSkill(source: string, entry: SkillEntry): string {
-  const body = source
+  const body = stripFrontmatter(source)
     .split("\n")
-    .filter((line) => !/^\*\*Usage\*\*:\s*`\/aisk\//.test(line.trim()))
+    .filter((line) => !/^\*\*Usage\*\*:\s*`\/aisk\//.test(line))
     .map((line) => line.replace(/\/aisk\/([a-z0-9-]+)/g, "aisk-$1"))
     .join("\n")
     .trim();
@@ -74,8 +74,7 @@ export class CodexSetup {
       const srcPath = join(this.repoPath, "skills", entry.src);
       const dstPath = join(this.skillsDir, entry.codex.name, "SKILL.md");
       mkdirSync(dirname(dstPath), { recursive: true });
-      const content = readFileSync(srcPath, "utf-8");
-      writeFileSync(dstPath, transformCodexSkill(content, entry));
+      writeFileSync(dstPath, transformCodexSkill(readFileSync(srcPath, "utf-8"), entry));
       installed.add(entry.codex.name);
     }
 

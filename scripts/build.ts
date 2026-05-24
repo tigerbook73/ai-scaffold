@@ -20,10 +20,10 @@ class Builder {
     const endIdx = sourceContent.indexOf(endMarker);
 
     if (startIdx === -1 || endIdx === -1) {
-      console.warn(
-        "Warning: EXTRACT markers not found in skills/skill-format.md — skill-rules.md not updated",
+      console.error(
+        "Error: EXTRACT markers not found in skills/skill-format.md — skill-rules.md not updated",
       );
-      return;
+      process.exit(1);
     }
 
     const formatContent = sourceContent.slice(startIdx + startMarker.length, endIdx).trim();
@@ -33,10 +33,10 @@ class Builder {
     const rEndIdx = rulesContent.indexOf(endMarker);
 
     if (rStartIdx === -1 || rEndIdx === -1) {
-      console.warn(
-        "Warning: EXTRACT markers not found in .claude/rules/skill-rules.md — not updated",
+      console.error(
+        "Error: EXTRACT markers not found in .claude/rules/skill-rules.md — not updated",
       );
-      return;
+      process.exit(1);
     }
 
     const before = rulesContent.slice(0, rStartIdx + startMarker.length);

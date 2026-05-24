@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync, readdirSync, unlinkSync, readFileSync } from 
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-import { scanSkills } from "./scan-skills";
+import { scanSkills, stripFrontmatter } from "./scan-skills";
 
 interface ClaudeSetupOptions {
   repoPath?: string;
@@ -12,12 +12,6 @@ interface ClaudeSetupOptions {
 
 function resolveHomePath(envName: string, fallbackPath: string): string {
   return process.env[envName] ? resolve(process.env[envName]) : fallbackPath;
-}
-
-function stripFrontmatter(content: string): string {
-  if (!content.startsWith("---\n")) return content;
-  const end = content.indexOf("\n---\n", 4);
-  return end === -1 ? content : content.slice(end + 5);
 }
 
 export class ClaudeSetup {

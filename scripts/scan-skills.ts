@@ -1,6 +1,12 @@
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join } from "path";
 
+export function stripFrontmatter(content: string): string {
+  if (!content.startsWith("---\n")) return content;
+  const end = content.indexOf("\n---\n", 4);
+  return end === -1 ? content : content.slice(end + 5);
+}
+
 export interface SkillEntry {
   src: string;
   name: string;

@@ -41,6 +41,12 @@ test("claude setup installs commands into an isolated home", () => {
     assert.ok(firstEntry);
     const installed = readFileSync(join(commandsDir, `${firstEntry.name}.md`), "utf-8");
     assert.match(installed, /^---\ndescription: /);
+    // closing --- of frontmatter must not be immediately followed by another opening ---
+    assert.doesNotMatch(installed, /\n---\n---\n/, "no double frontmatter block");
+
+    // set-claude-permission has source frontmatter — verify it doesn't leak through
+    const permInstalled = readFileSync(join(commandsDir, "set-claude-permission.md"), "utf-8");
+    assert.doesNotMatch(permInstalled, /^targets:/m);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
