@@ -1,18 +1,11 @@
-import {
-  mkdirSync,
-  copyFileSync,
-  writeFileSync,
-  readdirSync,
-  unlinkSync,
-  readFileSync,
-  existsSync,
-} from "fs";
+import { mkdirSync, writeFileSync, readdirSync, unlinkSync, readFileSync, existsSync } from "fs";
 import { join, resolve, dirname, basename } from "path";
 import { homedir } from "os";
 
 interface FileEntry {
   src: string;
   dst: string;
+  description?: string;
 }
 
 class Setup {
@@ -42,11 +35,16 @@ class Setup {
     const { files } = JSON.parse(readFileSync(settingFile, "utf-8")) as { files: FileEntry[] };
 
     const installed = new Set<string>();
-    for (const { src, dst } of files) {
+    for (const { src, dst, description } of files) {
       const srcPath = join(this.repoPath, "skills", src);
       const dstPath = join(homedir(), dst);
       mkdirSync(dirname(dstPath), { recursive: true });
-      copyFileSync(srcPath, dstPath);
+      const content = readFileSync(srcPath, "utf-8");
+      const output =
+        description && dst.endsWith(".md")
+          ? `---\ndescription: ${JSON.stringify(description)}\n---\n${content}`
+          : content;
+      writeFileSync(dstPath, output);
       installed.add(basename(dst));
     }
 
