@@ -6,7 +6,7 @@
     "register": "tsx scripts/setup.ts",
     "build": "tsx scripts/build.ts",
     "create-skill": "tsx skills/create-skill/resource/create-skill.ts",
-    "lint": "eslint scripts/ skills/*/resource/*.ts && prettier --check .",
+    "lint": "eslint scripts/ skills/*/resource/*.ts",
     "format": "prettier --write ."
   },
   "keywords": [
@@ -24,8 +24,18 @@
     "@types/node": "^25.9.1",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
+    "lint-staged": "^17.0.5",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4"
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{md,json,yaml,yml}": [
+      "prettier --write"
+    ]
   }
 }

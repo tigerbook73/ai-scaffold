@@ -38,6 +38,12 @@
       "category": "set-claude-permission"
     },
     {
+      "src": "setup-precommit/SK-setup-precommit.md",
+      "dst": ".claude/commands/aisk/setup-precommit.md",
+      "description": "Configure a git pre-commit hook for the current Node.js project using lint-staged.",
+      "category": "setup-precommit"
+    },
+    {
       "src": "smart-review/SK-smart-review.md",
       "dst": ".claude/commands/aisk/smart-review.md",
       "description": "Iteratively review and fix a specified file, module, or directory.",
