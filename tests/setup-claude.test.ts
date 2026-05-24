@@ -4,27 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { scanSkills } from "../scripts/scan-skills";
 import { ClaudeSetup } from "../scripts/setup-claude";
 
-interface ClaudeManifest {
-  files: Array<{
-    dst: string;
-    description?: string;
-  }>;
-}
-
 const repoRoot = process.cwd();
-
-function readManifest(): ClaudeManifest {
-  return JSON.parse(
-    readFileSync(join(repoRoot, "claude", "setting.json"), "utf-8"),
-  ) as ClaudeManifest;
-}
-
-function basenameFromDst(dst: string): string {
-  const parts = dst.split("/");
-  return parts[parts.length - 1];
-}
 
 test("claude setup installs commands into an isolated home", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "aisk-claude-setup-"));
@@ -45,19 +28,18 @@ test("claude setup installs commands into an isolated home", () => {
     };
     assert.equal(config.repo, repoRoot);
 
-    const manifest = readManifest();
-    const expectedFiles = manifest.files.map((entry) => basenameFromDst(entry.dst));
-
-    for (const file of expectedFiles) {
+    const entries = scanSkills(repoRoot).filter((e) => e.targets.claude);
+    for (const entry of entries) {
+      const file = `${entry.name}.md`;
       assert.equal(existsSync(join(commandsDir, file)), true, file);
     }
 
     assert.equal(existsSync(join(commandsDir, "stale.md")), false);
     assert.equal(existsSync(join(commandsDir, "keep.txt")), true);
 
-    const firstEntry = manifest.files.find((entry) => entry.description);
+    const firstEntry = entries[0];
     assert.ok(firstEntry);
-    const installed = readFileSync(join(commandsDir, basenameFromDst(firstEntry.dst)), "utf-8");
+    const installed = readFileSync(join(commandsDir, `${firstEntry.name}.md`), "utf-8");
     assert.match(installed, /^---\ndescription: /);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });

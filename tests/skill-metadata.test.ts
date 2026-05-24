@@ -1,77 +1,46 @@
 import assert from "node:assert/strict";
-import { readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
 import test from "node:test";
 
-import { readSkillManifest, validateSkillManifest } from "../scripts/skill-manifest";
+import { scanSkills } from "../scripts/scan-skills";
 
 const repoRoot = process.cwd();
-const skillsDir = join(repoRoot, "skills");
 
-function scanSkillSources(dir: string, base = ""): string[] {
-  const result: string[] = [];
+test("set-claude-permission is claude-only", () => {
+  const entries = scanSkills(repoRoot);
+  const perm = entries.find((e) => e.name === "set-claude-permission");
+  assert.ok(perm, "set-claude-permission not found");
+  assert.equal(perm.targets.claude, true);
+  assert.equal(perm.targets.codex, false);
+});
 
-  for (const entry of readdirSync(dir).sort()) {
-    const full = join(dir, entry);
-    const rel = base ? `${base}/${entry}` : entry;
-
-    if (statSync(full).isDirectory()) {
-      result.push(...scanSkillSources(full, rel));
-    } else if (entry.startsWith("SK-") && entry.endsWith(".md")) {
-      result.push(rel);
-    }
-  }
-
-  return result;
-}
-
-test("skill manifest is valid and covers all skill sources", () => {
-  const manifest = readSkillManifest(repoRoot);
-  const errors = validateSkillManifest(manifest);
-
-  assert.deepEqual(errors, []);
-
-  const sources = scanSkillSources(skillsDir);
-  assert.deepEqual(Object.keys(manifest.skills).sort(), sources);
-
-  for (const source of sources) {
-    assert.equal(manifest.skills[source].targets.claude, true, `${source} must remain in Claude`);
+test("all other skills are dual-target", () => {
+  const entries = scanSkills(repoRoot);
+  for (const entry of entries) {
+    if (entry.name === "set-claude-permission") continue;
+    assert.equal(entry.targets.claude, true, `${entry.src} must target claude`);
+    assert.equal(entry.targets.codex, true, `${entry.src} must target codex`);
   }
 });
 
-test("initial codex target scope is explicit", () => {
-  const manifest = readSkillManifest(repoRoot);
-
-  const codexSources = Object.entries(manifest.skills)
-    .filter(([, entry]) => entry.targets.codex)
-    .map(([source]) => source)
-    .sort();
-
-  assert.deepEqual(codexSources, [
-    "arch/SK-check-arch.md",
-    "arch/SK-refresh-arch.md",
-    "create-skill/SK-create-skill.md",
-    "init-project/SK-init-project.md",
-    "setup-precommit/SK-setup-precommit.md",
-    "smart-review/SK-smart-review.md",
-    "task/SK-complete-task.md",
-    "task/SK-create-task.md",
-    "task/SK-resume-task.md",
-    "task/SK-start-task.md",
-    "task/SK-verify-step.md",
-    "task/SK-verify-task.md",
-    "walkthrough/SK-create-walkthrough.md",
-    "walkthrough/SK-resume-walkthrough.md",
-    "walkthrough/SK-start-walkthrough.md",
-  ]);
-
-  for (const source of codexSources) {
-    assert.ok(manifest.skills[source].codex?.name.startsWith("aisk-"), source);
+test("codex names follow aisk- convention", () => {
+  const entries = scanSkills(repoRoot).filter((e) => e.targets.codex);
+  const names = new Set<string>();
+  for (const entry of entries) {
+    assert.match(entry.codex.name, /^aisk-[a-z0-9]+(?:-[a-z0-9]+)*$/, entry.src);
+    assert.equal(names.has(entry.codex.name), false, `duplicate name: ${entry.codex.name}`);
+    names.add(entry.codex.name);
+    assert.ok(entry.codex.description.trim().length > 0, `${entry.src} missing codex description`);
+    assert.ok(
+      entry.codex.shortDescription.trim().length > 0,
+      `${entry.src} missing shortDescription`,
+    );
   }
+});
 
+test("codex scope excludes set-claude-permission", () => {
+  const entries = scanSkills(repoRoot).filter((e) => e.targets.codex);
   assert.equal(
-    manifest.skills["set-claude-permission/SK-set-claude-permission.md"].targets.codex,
+    entries.some((e) => e.name === "set-claude-permission"),
     false,
   );
-  assert.equal(manifest.skills["create-skill/SK-create-skill.md"].targets.codex, true);
 });

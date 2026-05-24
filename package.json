@@ -4,17 +4,14 @@
   "description": "Local AI skill library — install all skills globally with pnpm register",
   "scripts": {
     "register": "node --import tsx scripts/setup.ts",
-    "register:claude": "node --import tsx scripts/setup-claude.ts",
-    "register:codex": "node --import tsx scripts/setup-codex.ts",
     "build": "node --import tsx scripts/build.ts",
-    "build:codex": "node --import tsx scripts/build-codex.ts",
     "create-skill": "node --import tsx skills/create-skill/resource/create-skill.ts",
     "lint": "pnpm lint:fix",
     "lint:check": "eslint scripts/**/*.ts skills/*/resource/*.ts tests/**/*.ts",
     "lint:fix": "eslint scripts/**/*.ts skills/*/resource/*.ts tests/**/*.ts --fix",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test --test-concurrency=1 --test-reporter=spec tests/**/*.test.ts",
-    "verify": "pnpm lint:check && pnpm typecheck && pnpm test && pnpm build && pnpm build:codex",
+    "verify": "pnpm lint:check && pnpm typecheck && pnpm test && pnpm build",
     "format": "prettier --write ."
   },
   "keywords": [

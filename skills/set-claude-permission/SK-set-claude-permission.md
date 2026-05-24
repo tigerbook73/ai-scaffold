@@ -1,3 +1,7 @@
+---
+targets: [claude]
+---
+
 # set-claude-permission
 
 Organize the `.claude/settings.local.json` permission configuration for the current project.

@@ -1,18 +1,8 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { homedir } from "os";
 
-interface CodexManifest {
-  files: CodexManifestEntry[];
-}
-
-interface CodexManifestEntry {
-  src: string;
-  name: string;
-  dst: string;
-  description: string;
-  shortDescription: string;
-}
+import { SkillEntry, scanSkills } from "./scan-skills";
 
 interface CodexSetupOptions {
   repoPath?: string;
@@ -28,7 +18,7 @@ function yamlString(value: string): string {
   return JSON.stringify(value);
 }
 
-export function transformCodexSkill(source: string, entry: CodexManifestEntry): string {
+export function transformCodexSkill(source: string, entry: SkillEntry): string {
   const body = source
     .split("\n")
     .filter((line) => !/^\*\*Usage\*\*:\s*`\/aisk\//.test(line.trim()))
@@ -38,10 +28,10 @@ export function transformCodexSkill(source: string, entry: CodexManifestEntry): 
 
   return (
     `---\n` +
-    `name: ${entry.name}\n` +
-    `description: ${yamlString(entry.description)}\n` +
+    `name: ${entry.codex.name}\n` +
+    `description: ${yamlString(entry.codex.description)}\n` +
     `metadata:\n` +
-    `  short-description: ${yamlString(entry.shortDescription)}\n` +
+    `  short-description: ${yamlString(entry.codex.shortDescription)}\n` +
     `---\n\n` +
     `<!-- AUTO-GENERATED - Do not edit manually.\n` +
     `     Source: skills/${entry.src}\n` +
@@ -77,22 +67,16 @@ export class CodexSetup {
     mkdirSync(this.skillsDir, { recursive: true });
     writeFileSync(this.configFile, JSON.stringify({ repo: this.repoPath }, null, 2) + "\n");
 
-    const settingFile = join(this.repoPath, "codex", "setting.json");
-    if (!existsSync(settingFile)) {
-      console.error("Error: codex/setting.json not found. Run pnpm build:codex first.");
-      process.exit(1);
-    }
-
-    const { files } = JSON.parse(readFileSync(settingFile, "utf-8")) as CodexManifest;
+    const entries = scanSkills(this.repoPath).filter((e) => e.targets.codex);
 
     const installed = new Set<string>();
-    for (const entry of files) {
+    for (const entry of entries) {
       const srcPath = join(this.repoPath, "skills", entry.src);
-      const dstPath = join(this.skillsDir, entry.name, "SKILL.md");
+      const dstPath = join(this.skillsDir, entry.codex.name, "SKILL.md");
       mkdirSync(dirname(dstPath), { recursive: true });
       const content = readFileSync(srcPath, "utf-8");
       writeFileSync(dstPath, transformCodexSkill(content, entry));
-      installed.add(entry.name);
+      installed.add(entry.codex.name);
     }
 
     for (const dirent of readdirSync(this.skillsDir, { withFileTypes: true })) {

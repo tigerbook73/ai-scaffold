@@ -1,12 +1,8 @@
-import { mkdirSync, writeFileSync, readdirSync, unlinkSync, readFileSync, existsSync } from "fs";
-import { join, resolve, dirname, basename } from "path";
+import { mkdirSync, writeFileSync, readdirSync, unlinkSync, readFileSync } from "fs";
+import { join, resolve } from "path";
 import { homedir } from "os";
 
-interface FileEntry {
-  src: string;
-  dst: string;
-  description?: string;
-}
+import { scanSkills } from "./scan-skills";
 
 interface ClaudeSetupOptions {
   repoPath?: string;
@@ -42,26 +38,17 @@ export class ClaudeSetup {
     mkdirSync(this.globalCmdsDir, { recursive: true });
     writeFileSync(this.configFile, JSON.stringify({ repo: this.repoPath }, null, 2) + "\n");
 
-    const settingFile = join(this.repoPath, "claude", "setting.json");
-    if (!existsSync(settingFile)) {
-      console.error("Error: claude/setting.json not found. Run pnpm build first.");
-      process.exit(1);
-    }
-
-    const { files } = JSON.parse(readFileSync(settingFile, "utf-8")) as { files: FileEntry[] };
+    const entries = scanSkills(this.repoPath).filter((e) => e.targets.claude);
 
     const installed = new Set<string>();
-    for (const { src, dst, description } of files) {
-      const srcPath = join(this.repoPath, "skills", src);
-      const dstPath = resolveInstallPath(dst, this.globalCmdsDir);
-      mkdirSync(dirname(dstPath), { recursive: true });
+    for (const entry of entries) {
+      const srcPath = join(this.repoPath, "skills", entry.src);
+      const dstName = `${entry.name}.md`;
+      const dstPath = join(this.globalCmdsDir, dstName);
       const content = readFileSync(srcPath, "utf-8");
-      const output =
-        description && dst.endsWith(".md")
-          ? `---\ndescription: ${JSON.stringify(description)}\n---\n${content}`
-          : content;
+      const output = `---\ndescription: ${JSON.stringify(entry.description)}\n---\n${content}`;
       writeFileSync(dstPath, output);
-      installed.add(basename(dst));
+      installed.add(dstName);
     }
 
     for (const f of readdirSync(this.globalCmdsDir)) {
@@ -79,11 +66,6 @@ export class ClaudeSetup {
       console.log(`    ${join(this.globalCmdsDir, name)}`);
     }
   }
-}
-
-function resolveInstallPath(dst: string, globalCmdsDir: string): string {
-  if (dst.startsWith(".claude/commands/aisk/")) return join(globalCmdsDir, basename(dst));
-  return join(homedir(), dst);
 }
 
 if (require.main === module) {
