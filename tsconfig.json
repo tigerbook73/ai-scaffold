@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["scripts/**/*.ts", "skills/*/resource/*.ts"]
+  "include": ["scripts/**/*.ts", "skills/*/resource/*.ts", "tests/**/*.ts"]
 }

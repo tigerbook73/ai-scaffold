@@ -3,10 +3,15 @@
   "version": "3.0.0",
   "description": "Local AI skill library — install all skills globally with npm run register",
   "scripts": {
-    "register": "tsx scripts/setup.ts",
-    "build": "tsx scripts/build.ts",
-    "create-skill": "tsx skills/create-skill/resource/create-skill.ts",
-    "lint": "eslint scripts/ skills/*/resource/*.ts --fix",
+    "register": "node --import tsx scripts/setup.ts",
+    "build": "node --import tsx scripts/build.ts",
+    "create-skill": "node --import tsx skills/create-skill/resource/create-skill.ts",
+    "lint": "pnpm lint:fix",
+    "lint:check": "eslint scripts/**/*.ts skills/*/resource/*.ts tests/**/*.ts",
+    "lint:fix": "eslint scripts/**/*.ts skills/*/resource/*.ts tests/**/*.ts --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "verify": "pnpm lint:check && pnpm typecheck && pnpm test && pnpm build",
     "format": "prettier --write ."
   },
   "keywords": [
