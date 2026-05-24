@@ -71,4 +71,4 @@ Codex skill metadata (name, description, shortDescription) is inferred automatic
 
 ## No Generated Manifest Files
 
-There are no intermediate JSON manifest files. `pnpm register` and `pnpm register:codex` scan `skills/` at install time. The `pnpm build` command only syncs skill format documentation, not install manifests.
+There are no intermediate JSON manifest files. `pnpm register` scans `skills/` at install time for both agents. The `pnpm build` command only syncs skill format documentation, not install manifests.

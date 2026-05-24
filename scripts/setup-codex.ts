@@ -35,7 +35,7 @@ export function transformCodexSkill(source: string, entry: SkillEntry): string {
     `---\n\n` +
     `<!-- AUTO-GENERATED - Do not edit manually.\n` +
     `     Source: skills/${entry.src}\n` +
-    `     To regenerate: pnpm register:codex -->\n\n` +
+    `     To regenerate: pnpm register -->\n\n` +
     `${body}\n\n` +
     `## Codex Notes\n\n` +
     `- This skill is installed from the local ai-skills repository.\n` +
