@@ -64,9 +64,16 @@ Promote a skill to the global repository so it can be applied globally with `pnp
 
 5. Write the content directly to `{repo}/skills/{name}/SK-{name}.md` (create the `{name}/` directory first if it does not exist)
 
-6. Run:
+6. Add an entry for the new skill in `{repo}/skills/manifest.json` under `skills` with:
+   - `targets: { claude: true, codex: true }`
+   - `codex.name`: `aisk-{name}`
+   - `codex.description`: infer from the H1 description line — prefix with `"Use when the user wants to "` and lowercase the first character
+   - `codex.shortDescription`: title-case the skill name (e.g. `my-skill` → `"My skill"`)
+     Keep the `skills` keys sorted alphabetically.
+
+7. Run:
    ```bash
-   pnpm --dir {repo} build
+   pnpm --dir {repo} build && pnpm --dir {repo} build:codex
    ```
 
 ### Done
@@ -74,11 +81,12 @@ Promote a skill to the global repository so it can be applied globally with `pnp
 Output a confirmation message, prompting the user to:
 
 - Run `git commit` in the ai-skills repository to persist the change
-- Run `pnpm register` in the skill repository to apply globally
+- Run `pnpm register` to apply to Claude Code
+- Run `pnpm register:codex` to apply to Codex
 
 ---
 
 ## Notes
 
 - This command modifies the global ai-skills repository and does not immediately affect the current project
-- If you only need the skill temporarily in the current project, create the file directly in `.claude/commands/aisk/`
+- New skills default to both Claude Code and Codex targets; edit `skills/manifest.json` to restrict a skill to a single target if needed

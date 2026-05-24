@@ -18,6 +18,14 @@
       "category": "task"
     },
     {
+      "src": "create-skill/SK-create-skill.md",
+      "name": "aisk-create-skill",
+      "dst": ".codex/skills/aisk-create-skill/SKILL.md",
+      "description": "Use when the user wants to promote a skill file to the global repository so it can be applied globally.",
+      "shortDescription": "Create a skill",
+      "category": "create-skill"
+    },
+    {
       "src": "task/SK-create-task.md",
       "name": "aisk-create-task",
       "dst": ".codex/skills/aisk-create-task/SKILL.md",

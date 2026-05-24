@@ -26,7 +26,12 @@
     "create-skill/SK-create-skill.md": {
       "targets": {
         "claude": true,
-        "codex": false
+        "codex": true
+      },
+      "codex": {
+        "name": "aisk-create-skill",
+        "description": "Use when the user wants to promote a skill file to the global repository so it can be applied globally.",
+        "shortDescription": "Create a skill"
       }
     },
     "init-project/SK-init-project.md": {

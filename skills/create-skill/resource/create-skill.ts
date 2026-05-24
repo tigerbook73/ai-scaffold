@@ -12,6 +12,64 @@ interface Options {
   force?: boolean;
 }
 
+interface ManifestEntry {
+  targets: { claude: boolean; codex: boolean };
+  codex?: { name: string; description: string; shortDescription: string };
+}
+
+interface Manifest {
+  version: string;
+  skills: Record<string, ManifestEntry>;
+}
+
+function inferCodexDescription(content: string): string {
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith("# ")) {
+      for (let j = i + 1; j < lines.length; j++) {
+        const line = lines[j].trim();
+        if (line && !line.startsWith("**Usage**") && line !== "---") {
+          const stripped = line.replace(/\.$/, "");
+          return `Use when the user wants to ${stripped.charAt(0).toLowerCase()}${stripped.slice(1)}.`;
+        }
+      }
+      break;
+    }
+  }
+  return "";
+}
+
+function inferShortDescription(skillName: string): string {
+  const [first, ...rest] = skillName.split("-");
+  return [first.charAt(0).toUpperCase() + first.slice(1), ...rest].join(" ");
+}
+
+function updateManifest(repo: string, skillKey: string, content: string): void {
+  const manifestPath = join(repo, "skills", "manifest.json");
+  const manifest: Manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+
+  if (manifest.skills[skillKey]) return;
+
+  const skillName = skillKey.split("/")[1].replace(/^SK-/, "").replace(/\.md$/, "");
+  manifest.skills[skillKey] = {
+    targets: { claude: true, codex: true },
+    codex: {
+      name: `aisk-${skillName}`,
+      description: inferCodexDescription(content),
+      shortDescription: inferShortDescription(skillName),
+    },
+  };
+
+  const sorted: Record<string, ManifestEntry> = {};
+  for (const key of Object.keys(manifest.skills).sort()) {
+    sorted[key] = manifest.skills[key];
+  }
+  manifest.skills = sorted;
+
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+  console.log(`skills/manifest.json updated: added ${skillKey}`);
+}
+
 class SkillCreator {
   private async confirm(question: string): Promise<boolean> {
     const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -81,7 +139,11 @@ class SkillCreator {
           if (options.cleanup) unlinkSync(srcPath);
           console.log(`Skill written to: ${dstPath}`);
 
+          const content = readFileSync(dstPath, "utf-8");
+          updateManifest(repo, `${name}/SK-${name}.md`, content);
+
           execSync("pnpm build", { cwd: repo, stdio: "inherit" });
+          execSync("pnpm build:codex", { cwd: repo, stdio: "inherit" });
 
           if (options.description) {
             const settingFile = join(repo, "claude", "setting.json");
@@ -95,7 +157,11 @@ class SkillCreator {
             }
           }
 
-          console.log("\nRun git commit to persist, then use pnpm register to apply globally.");
+          console.log(
+            "\nRun git commit to persist, then:\n" +
+              "  pnpm register        — apply to Claude Code\n" +
+              "  pnpm register:codex  — apply to Codex",
+          );
         } catch (err) {
           console.error((err as Error).message);
           process.exit(1);

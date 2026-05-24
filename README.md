@@ -77,9 +77,9 @@ Skills marked ✦ are available in both Claude Code and Codex. Others are Claude
 
 ### Skill management
 
-| Skill          | Description                                   |
-| -------------- | --------------------------------------------- |
-| `create-skill` | Promote a skill file to the global repository |
+| Skill            | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `create-skill` ✦ | Promote a skill file to the global repository |
 
 ## Adding a new skill
 
