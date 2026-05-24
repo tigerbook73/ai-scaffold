@@ -5,7 +5,7 @@ paths:
 
 # Skill File Conventions
 
-Canonical source-format rules live in `docs/SKILL-SOURCE-FORMAT.md`. Keep this Claude rule file aligned with that document.
+Canonical source-format rules live in `skills/skill-format.md`. Keep this Claude rule file aligned with that document.
 
 ## Placement
 

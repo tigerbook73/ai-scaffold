@@ -30,6 +30,7 @@ Installers scan `skills/` at install time — no intermediate manifests. Skills 
 ```
 {repo}/
 ├── skills/                        ← all skill files, organized by group
+│   ├── skill-format.md            ← canonical skill source format spec
 │   ├── arch/
 │   │   ├── SK-refresh-arch.md
 │   │   └── SK-check-arch.md

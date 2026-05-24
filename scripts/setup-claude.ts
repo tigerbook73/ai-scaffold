@@ -14,6 +14,12 @@ function resolveHomePath(envName: string, fallbackPath: string): string {
   return process.env[envName] ? resolve(process.env[envName]) : fallbackPath;
 }
 
+function stripFrontmatter(content: string): string {
+  if (!content.startsWith("---\n")) return content;
+  const end = content.indexOf("\n---\n", 4);
+  return end === -1 ? content : content.slice(end + 5);
+}
+
 export class ClaudeSetup {
   private repoPath: string;
   private configDir: string;
@@ -45,7 +51,7 @@ export class ClaudeSetup {
       const srcPath = join(this.repoPath, "skills", entry.src);
       const dstName = `${entry.name}.md`;
       const dstPath = join(this.globalCmdsDir, dstName);
-      const content = readFileSync(srcPath, "utf-8");
+      const content = stripFrontmatter(readFileSync(srcPath, "utf-8"));
       const output = `---\ndescription: ${JSON.stringify(entry.description)}\n---\n${content}`;
       writeFileSync(dstPath, output);
       installed.add(dstName);
