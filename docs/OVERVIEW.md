@@ -24,10 +24,10 @@ Local skill repository/
 
 **Two layers:**
 
-| Layer | Location | Description |
-|-------|----------|-------------|
-| Repository | `{repo}/` | Skill source files, maintained centrally |
-| Global | `~/.ai-skills/`, `~/.claude/commands/aisk/` | Config + all installed skill commands |
+| Layer      | Location                                    | Description                              |
+| ---------- | ------------------------------------------- | ---------------------------------------- |
+| Repository | `{repo}/`                                   | Skill source files, maintained centrally |
+| Global     | `~/.ai-skills/`, `~/.claude/commands/aisk/` | Config + all installed skill commands    |
 
 Skills are available immediately in any project after `npm run register`. For a new project, run `/aisk/init-project` to configure `.gitignore` and local permissions.
 
@@ -78,10 +78,10 @@ These files should be added to `.gitignore` (handled by `/aisk/init-project`).
 
 ## npm Scripts Summary
 
-| Command | Implementation | Purpose |
-|---------|---------------|---------|
-| `npm run register` | `scripts/setup.ts` | Global initialization (run once on a new machine) |
-| `npm run build` | `scripts/build.ts` | Scan `skills/` and regenerate `claude/setting.json` |
+| Command                | Implementation                                 | Purpose                                                                                            |
+| ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `npm run register`     | `scripts/setup.ts`                             | Global initialization (run once on a new machine)                                                  |
+| `npm run build`        | `scripts/build.ts`                             | Scan `skills/` and regenerate `claude/setting.json`                                                |
 | `npm run create-skill` | `skills/create-skill/resource/create-skill.ts` | Write a skill file to `skills/` and update `setting.json` (usually called by `/aisk/create-skill`) |
 
 > **Runtime dependency**: All scripts are executed as TypeScript via `tsx`; CLI argument parsing uses CAC.
@@ -118,12 +118,12 @@ npm run register
 npm run create-skill -- <file> [--name <n>] [--description <desc>] [--force]
 ```
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `<file>` | Source file path (required) | — |
-| `--name` | Skill name (target filename without `.md`) | taken from source filename |
-| `--description` | Skill description | taken from the first `#` heading in the file |
-| `--force` | Skip conflict confirmation for duplicate names | false |
+| Parameter       | Description                                    | Default                                      |
+| --------------- | ---------------------------------------------- | -------------------------------------------- |
+| `<file>`        | Source file path (required)                    | —                                            |
+| `--name`        | Skill name (target filename without `.md`)     | taken from source filename                   |
+| `--description` | Skill description                              | taken from the first `#` heading in the file |
+| `--force`       | Skip conflict confirmation for duplicate names | false                                        |
 
 **Called indirectly by the `/aisk/create-skill` command**; users do not typically run this directly.
 
@@ -162,10 +162,10 @@ Run after adding or removing files in `skills/`.
 
 **Two input modes:**
 
-| Mode | Argument form | Behavior |
-|------|--------------|---------|
-| File path | Path to an existing `.md` file | Passed to `create-skill.ts` for processing |
-| Skill name | Plain name (e.g. `my-skill`) | Claude generates content from conversation context, writes to `{repo}/skills/{name}.md`, calls `npm run build` |
+| Mode       | Argument form                  | Behavior                                                                                                       |
+| ---------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| File path  | Path to an existing `.md` file | Passed to `create-skill.ts` for processing                                                                     |
+| Skill name | Plain name (e.g. `my-skill`)   | Claude generates content from conversation context, writes to `{repo}/skills/{name}.md`, calls `npm run build` |
 
 After execution, manually `git commit` in the ai-skills repository to persist.
 
@@ -178,6 +178,7 @@ After execution, manually `git commit` in the ai-skills repository to persist.
 **Invocation**: `/aisk/init-project` (no arguments)
 
 **Effect**: Configures a new project to work with globally installed aisk skills:
+
 1. Adds `.ai-skills/` to `.gitignore` (with confirmation)
 2. Adds `Read(~/.ai-skills/*)` and `Bash(npm --prefix {repo} run *)` to `.claude/settings.json`
 

@@ -39,7 +39,7 @@ Use the groupings already defined in `DESIGN.md` when available. If the document
 **Each group explanation covers**:
 
 - **Before/after comparison**: show key changes with `// before` / `// after` so the user sees "where it came from"
-- **Design rationale**: explain *why* this design was chosen, not just *what* it does
+- **Design rationale**: explain _why_ this design was chosen, not just _what_ it does
 - **Trade-offs**: if other approaches exist, explain why this one was selected
 - **Cross-layer relationships**: explain how this group works with other layers
 - **Non-obvious details**: call these out explicitly (e.g. version-compatibility constraints, hidden invariants)

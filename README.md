@@ -10,6 +10,7 @@ cd ~/code/ai-skills && npm install && npm run register
 ```
 
 After this:
+
 - `~/.ai-skills/config.json` records this repository's path
 - Global meta-commands (`/aisk/sync`, `/aisk/create-skill`) are installed in `~/.claude/commands/aisk/`
 
@@ -25,12 +26,12 @@ This syncs all skills to the current project's `.claude/commands/aisk/`.
 
 ## Available skills
 
-| Skill | Description |
-|-------|-------------|
+| Skill          | Description                                                            |
+| -------------- | ---------------------------------------------------------------------- |
 | `refresh-arch` | Scan the codebase and generate or refresh `.ai-skills/architecture.md` |
-| `check-arch` | Check whether code changes align with architecture decisions |
-| `prepare-task` | Create a feature/refactor task branch and planning documents |
-| `close-task` | Verify task completion and clean up planning documents |
+| `check-arch`   | Check whether code changes align with architecture decisions           |
+| `prepare-task` | Create a feature/refactor task branch and planning documents           |
+| `close-task`   | Verify task completion and clean up planning documents                 |
 
 ## Adding a new skill
 

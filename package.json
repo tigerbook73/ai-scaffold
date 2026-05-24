@@ -6,8 +6,8 @@
     "register": "tsx scripts/setup.ts",
     "build": "tsx scripts/build.ts",
     "create-skill": "tsx skills/create-skill/resource/create-skill.ts",
-    "lint": "eslint scripts/ skills/*/resource/*.ts && prettier --check scripts/ skills/*/resource/",
-    "format": "prettier --write scripts/ skills/*/resource/"
+    "lint": "eslint scripts/ skills/*/resource/*.ts && prettier --check .",
+    "format": "prettier --write ."
   },
   "keywords": [
     "ai",

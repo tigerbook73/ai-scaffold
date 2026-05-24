@@ -47,9 +47,11 @@ Promote a skill to the global repository so it can be distributed to any project
    `/tmp/aisk-{8-char-random-hex}/{name}.md`
 
 6. Run:
+
    ```bash
    npm --prefix {repo} run create-skill -- <path> --name {name} [--cleanup] [--force]
    ```
+
    - `<path>`: the temp file path if step 5 was executed; original source path if step 5 was skipped
    - Include `--cleanup` only when a temp file was created (step 5 was executed) — the script deletes it after copying
    - `--force` skips all confirmation prompts (source-in-repo and overwrite)
@@ -72,6 +74,7 @@ Promote a skill to the global repository so it can be distributed to any project
 ### Done
 
 Output a confirmation message, prompting the user to:
+
 - Run `git commit` in the ai-skills repository to persist the change
 - Run `/aisk/sync` in the target project to distribute
 

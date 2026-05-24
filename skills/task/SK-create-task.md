@@ -13,6 +13,7 @@ Initialize a new Task: create branch, scaffold task documents, and enter work mo
 ## Input
 
 `$ARGUMENTS`: `<task-type> <task-name>`
+
 - `task-type`: `feature` | `refactor`
 - `task-name`: kebab-case string describing the task
 

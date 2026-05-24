@@ -20,12 +20,12 @@ Create a new walkthrough: checkout the target version, analyze all changes in on
 
 `$ARGUMENTS`: `[<range>]` (optional)
 
-| Form | Target | Baseline | Checkout needed |
-|------|--------|----------|-----------------|
-| _(omitted)_ | inferred (see Step 2) | HEAD or HEAD~1 | only if clean tree |
-| `C1` | C1 | C1~1 | yes |
-| `C1..` | current worktree | C1 | no |
-| `C1..C5` | C5 | C1 | yes (if not already at C5) |
+| Form        | Target                | Baseline       | Checkout needed            |
+| ----------- | --------------------- | -------------- | -------------------------- |
+| _(omitted)_ | inferred (see Step 2) | HEAD or HEAD~1 | only if clean tree         |
+| `C1`        | C1                    | C1~1           | yes                        |
+| `C1..`      | current worktree      | C1             | no                         |
+| `C1..C5`    | C5                    | C1             | yes (if not already at C5) |
 
 ## Steps
 
@@ -34,10 +34,12 @@ Create a new walkthrough: checkout the target version, analyze all changes in on
 Read `~/.ai-skills/config.json` for `{repo}`.
 
 Get the current branch: `git branch --show-current`.
+
 - Branch name returned → sanitize (replace `/` with `-`) → `{stateKey}`
 - Empty string (already in detached HEAD) → `git rev-parse HEAD` → `state find --hash <hash>`. If an active record is found, use its `stateKey`; otherwise generate a key from the short hash.
 
 Check for existing state: `state read --key {stateKey}`.
+
 - State found and `status === "active"` → ask: resume or overwrite?
   - Resume → stop (tell user to run `start-walkthrough`)
   - Overwrite → `state delete --key {stateKey}`, continue
@@ -49,9 +51,10 @@ Check for existing state: `state read --key {stateKey}`.
 
 **No argument**:
 Run `git status --porcelain`.
+
 - Output non-empty → suggest: "Walk through all uncommitted changes (target=working tree, baseline=HEAD)"
 - Empty (clean) → suggest: "Walk through the latest commit (target=HEAD, baseline=HEAD~1)"
-Present suggestion; wait for confirmation. Allow free-text override.
+  Present suggestion; wait for confirmation. Allow free-text override.
 
 **Single ref `C1`** (no `..`):
 Confirm: "Walk through changes introduced by C1 (baseline=C1~1)?" then wait.
@@ -81,29 +84,34 @@ git diff {baseline} --stat
 ```
 
 When target = current worktree (no checkout performed in Step 3), also count untracked files:
+
 ```bash
 git ls-files --others --exclude-standard | wc -l
 ```
+
 Add this count to the tracked-file total when applying thresholds below.
 
-| Condition | Action |
-|-----------|--------|
-| Files ≤ 20 and lines ≤ 1000 | Silent pass |
-| Files > 20 or lines > 1000 | Report the numbers; suggest narrowing to a subdirectory or shorter range; ask whether to continue |
+| Condition                   | Action                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------- |
+| Files ≤ 20 and lines ≤ 1000 | Silent pass                                                                                       |
+| Files > 20 or lines > 1000  | Report the numbers; suggest narrowing to a subdirectory or shorter range; ask whether to continue |
 
 ### Step 5 — Full read
 
 **Diff** (one pass — do not re-read files per group later):
+
 ```bash
 git diff {baseline} -U15
 ```
 
 When target = current worktree (no checkout performed in Step 3), also read:
+
 ```bash
 git ls-files --others --exclude-standard    # untracked files; read each via Read tool
 ```
 
 When additionally `baseline = HEAD`, also run:
+
 ```bash
 git diff -U15                               # unstaged changes (staged vs unstaged breakdown)
 ```
@@ -123,6 +131,7 @@ Using the diff and context documents, produce:
 ### Step 7 — Write state
 
 **index.json** — run `state init --key {stateKey} --index '<json>'`:
+
 ```json
 {
   "stateKey": "{stateKey}",
@@ -145,6 +154,7 @@ Using the diff and context documents, produce:
 ```
 
 **Group files** — write each group's pre-generated content via Write tool:
+
 - `{cwd}/.ai-skills/walkthrough/{stateKey}/g1.md`
 - `{cwd}/.ai-skills/walkthrough/{stateKey}/g2.md`
 - ... (one file per group)
@@ -152,6 +162,7 @@ Using the diff and context documents, produce:
 ### Step 8 — Present global overview
 
 Output:
+
 ```
 Change intent: {intent}
 
@@ -165,6 +176,7 @@ Change intent: {intent}
 
 If the user confirms the grouping (any affirmative response), proceed to Step 9.
 If the user requests adjustments (merge, split, rename groups):
+
 1. Apply the adjustment.
 2. Regenerate the affected `g{N}.md` files via Write tool.
 3. Update `index.json` via `state update --key {stateKey} --index '<json>'`.

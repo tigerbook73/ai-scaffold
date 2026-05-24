@@ -44,11 +44,11 @@ docs/tasks/
 
 ### 文件职责
 
-| 文件              | 作用                                                 | 何时创建              | 何时销毁      |
-| ----------------- | ---------------------------------------------------- | --------------------- | ------------- |
-| .claude/CLAUDE.md | 任务工作模式指令（子命令列表等），访问目录时自动加载 | create-task           | complete-task |
-| requirements.md   | 记录需求、约束、验收标准（可拆分）                   | create-task（仅标题） | complete-task |
-| design.md         | 记录实现方案与步骤划分（可拆分）                     | create-task（仅标题） | complete-task |
+| 文件              | 作用                                                   | 何时创建              | 何时销毁      |
+| ----------------- | ------------------------------------------------------ | --------------------- | ------------- |
+| .claude/CLAUDE.md | 任务工作模式指令（子命令列表等），访问目录时自动加载   | create-task           | complete-task |
+| requirements.md   | 记录需求、约束、验收标准（可拆分）                     | create-task（仅标题） | complete-task |
+| design.md         | 记录实现方案与步骤划分（可拆分）                       | create-task（仅标题） | complete-task |
 | task-state.md     | 文档列表与全阶段进展的单一来源，含验收结果（不可拆分） | create-task           | complete-task |
 
 ---
@@ -68,14 +68,14 @@ start-task 在当前 session 建立任务上下文，后续自然语言指令默
 
 ## 三、Skill 总览
 
-| Skill | 简介 | 定义文件 |
-| ----- | ---- | -------- |
-| `create-task` | 在主干分支上创建任务分支、初始化任务文档并进入工作模式 | `design-task-skills/create-task.md` |
-| `start-task` | 在当前 session 建立任务上下文，读取任务状态和文档 | `design-task-skills/start-task.md` |
-| `resume-task` | start-task 的别名，语义上强调从中断处恢复 | 同 start-task |
-| `verify-task` | 全量验收：覆盖所有 step，auto / manual / fast / full 模式 | `design-task-skills/verify-task.md` |
-| `verify-step` | 单步验收：默认当前 step，可指定 step-N，逻辑同 verify-task | `design-task-skills/verify-step.md` |
-| `complete-task` | 完成度核查 + 用户确认后清理任务文档 + 提示创建 PR | `design-task-skills/complete-task.md` |
+| Skill           | 简介                                                       | 定义文件                              |
+| --------------- | ---------------------------------------------------------- | ------------------------------------- |
+| `create-task`   | 在主干分支上创建任务分支、初始化任务文档并进入工作模式     | `design-task-skills/create-task.md`   |
+| `start-task`    | 在当前 session 建立任务上下文，读取任务状态和文档          | `design-task-skills/start-task.md`    |
+| `resume-task`   | start-task 的别名，语义上强调从中断处恢复                  | 同 start-task                         |
+| `verify-task`   | 全量验收：覆盖所有 step，auto / manual / fast / full 模式  | `design-task-skills/verify-task.md`   |
+| `verify-step`   | 单步验收：默认当前 step，可指定 step-N，逻辑同 verify-task | `design-task-skills/verify-step.md`   |
+| `complete-task` | 完成度核查 + 用户确认后清理任务文档 + 提示创建 PR          | `design-task-skills/complete-task.md` |
 
 ### Commit Message 规范
 
