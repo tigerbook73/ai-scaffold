@@ -1,61 +1,61 @@
 # Task State: {task-name}
 
-## 元信息
+## Metadata
 
-- 类型: feature | refactor
-- 状态: in_progress | completed
+- type: feature | refactor
+- status: in_progress | completed
 
-## 文档索引
+## Document Index
 
-- `requirements.md` — 需求文档
-- `design.md` — 设计文档（含步骤划分）
-- （可按需拆分，拆分后在此更新）
+- `requirements.md` — requirements document
+- `design.md` — design document (with step breakdown)
+- (split as needed; update this index after splitting)
 
-## 当前阶段
+## Current Phase
 
-{阶段名}（{进行中 | 已完成}）
+{phase-name} (in_progress | done)
 
-## 当前步骤
+## Current Step
 
 Step N | —
 
-## 需求阶段
+## Requirements Phase
 
-- 状态: done | in_progress | pending
-- 记录:
-  - [由 AI 根据对话上下文自动组织，如 "需求初稿完成" / "待确认非功能需求" 等]
+- status: done | in_progress | pending
+- notes:
+  - [AI-organized summary based on conversation context, e.g. "initial draft complete" / "non-functional requirements pending"]
 
-## 设计阶段
+## Design Phase
 
-- 状态: done | in_progress | pending
-- 记录:
-  - [由 AI 根据对话上下文自动组织，如 "整体架构确认" / "待完成 Step 3 设计" 等]
+- status: done | in_progress | pending
+- notes:
+  - [AI-organized summary based on conversation context, e.g. "architecture confirmed" / "Step 3 design pending"]
 
-## 实现阶段
+## Implementation Phase
 
-- 状态: done | in_progress | pending
+- status: done | in_progress | pending
 
-### Step 1: {步骤标题}
+### Step 1: {step-title}
 
-- 状态: done
-- Commit: feat(step-1): {步骤标题} | —
+- status: done
+- Commit: {type}(step-1): {step-title} | —
 - Date: 2024-01-15 14:23 | —
-- 自动验收: 通过 | 未通过 | —
-- 人工验收: 通过 | 未通过 | —
+- auto-check: passed | failed | —
+- manual-check: passed | failed | —
 
-### Step 2: {步骤标题}
+### Step 2: {step-title}
 
-- 状态: in_progress
-- 备注: [仅 in_progress 时存在，由 AI 根据上下文总结，人确认；步骤完成后自动清除]
+- status: in_progress
+- notes: [present only when in_progress; AI-summarized and user-confirmed; cleared on completion]
 - Commit: —
 - Date: —
-- 自动验收: —
-- 人工验收: —
+- auto-check: —
+- manual-check: —
 
-### Step 3: {步骤标题}
+### Step 3: {step-title}
 
-- 状态: pending
+- status: pending
 - Commit: —
 - Date: —
-- 自动验收: —
-- 人工验收: —
+- auto-check: —
+- manual-check: —

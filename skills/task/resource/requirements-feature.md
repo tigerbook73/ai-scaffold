@@ -1,27 +1,27 @@
-# 需求：{task-name}
+# Requirements: {task-name}
 
-## 目标
+## Goal
 
-_描述本功能要达成什么，以及为什么需要它。_
+_Describe what this feature achieves and why it is needed._
 
-## 背景与动机
+## Background and Motivation
 
-_如果内容比较少，或和目标基本重复，可以省略或合并到目标中。_
+_If this overlaps significantly with the Goal, merge or omit this section._
 
-- _触发本功能的原因：用户痛点、业务诉求、竞品压力等。_
+- _What triggered this feature: user pain points, business needs, competitive pressure, etc._
 
-## 功能需求
+## Functional Requirements
 
-- _列举每项可交付的行为或能力变化（用户可感知、API 契约、系统间交互均可）。_
+- _List each deliverable behavior or capability change (user-visible, API contract, or system interaction)._
 
-## 非功能需求
+## Non-Functional Requirements
 
-- _性能、安全、兼容性或其他质量约束（如无可省略）。_
+- _Performance, security, compatibility, or other quality constraints (omit if none)._
 
-## 范围外
+## Out of Scope
 
-- _明确列出本任务不处理的内容（如：相关功能点、边界条件、后续迭代项等）。_
+- _Explicitly list what this task will NOT address (related features, edge cases, future iterations, etc.)._
 
-## 验收标准
+## Acceptance Criteria
 
-- _可测试的、明确的完成条件。_
+- _Testable, unambiguous conditions for completion._

@@ -25,27 +25,27 @@ Auto/manual/fast/full logic is identical to verify-task; the difference is scope
 
 ### Resolve target step
 
-If `step-N` is provided, use it. Otherwise read `当前步骤` from `task-state.md`.
-If `当前步骤` is `—` (not in implementation phase), prompt the user to specify a step and stop.
+If `step-N` is provided, use it. Otherwise read `Current Step` from `task-state.md`.
+If `Current Step` is `—` (not in implementation phase), prompt the user to specify a step and stop.
 
 ### auto mode
 
-**Fast mode** (default): First check `task-state.md` — if this step's `自动验收` is already
-`通过`, skip all conditions and report pass immediately. Otherwise, if this session already ran
+**Fast mode** (default): First check `task-state.md` — if this step's `auto-check` is already
+`passed`, skip all conditions and report pass immediately. Otherwise, if this session already ran
 verify-step or verify-task for this step and has results in context, skip conditions that
 previously passed and re-run only those that failed or were not yet run. If no prior session
 context exists, fall back to full mode.
 
 **Full mode** (`--full`): Run all `(auto)` conditions for the step regardless of prior results.
 
-1. Read `(auto)` conditions for the target step from the design documents.
+1. Read `(auto)` conditions from the **Auto Verification** section of the target step in the design documents.
 2. Execute each condition's command and record the result (pass / fail).
-3. If all pass: update `自动验收: 通过` for the step in `task-state.md`.
-   If any fail: update `自动验收: 未通过`, report which commands failed.
+3. If all pass: update `auto-check: passed` for the step in `task-state.md`.
+   If any fail: update `auto-check: failed`, report which commands failed.
 
 ### manual mode
 
-1. Read `(manual)` conditions for the target step from the design documents.
+1. Read `(manual)` conditions from the **Manual Verification** section of the target step in the design documents.
 2. Present each condition to the user and ask for confirmation.
-3. If the user confirms all pass: update `人工验收: 通过` for the step in `task-state.md`.
-   If any are declined: update `人工验收: 未通过`, note which items failed.
+3. If the user confirms all pass: update `manual-check: passed` for the step in `task-state.md`.
+   If any are declined: update `manual-check: failed`, note which items failed.

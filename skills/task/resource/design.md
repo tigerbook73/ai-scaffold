@@ -1,15 +1,19 @@
 # Design: {task-name}
 
-## Step 1: {步骤标题}
+## Step 1: {step-title}
 
-**目标**: 简述本步骤要达成什么。
+**Goal**: Briefly describe what this step achieves.
 
-**主要变更**:
+**Key Changes**:
 
-- `path/to/file.ts`: 说明变更内容
+- `path/to/file.ts`: describe the change
 
-**验收条件**:
+**Auto Verification**:
 
-- (auto) `npm test` 通过
-- (manual) 在浏览器中验证 X 功能正常
-- (superseded) 临时验证项（后续步骤完成后失效）
+- (auto) `npm test`
+
+**Manual Verification**:
+
+- (manual) verify X feature works correctly in the browser
+
+> `(superseded)` can replace any condition in either section when it is no longer valid.

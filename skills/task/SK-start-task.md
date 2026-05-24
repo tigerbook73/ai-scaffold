@@ -19,5 +19,5 @@ Enter task work mode for the current session.
    - None found → prompt user to run create-task first, stop
    - Multiple found → error; ask user to specify which directory, stop
    - Exactly one found → continue
-3. Read `task-state.md` and all documents listed in its document index (requirements and design files).
+3. Read `task-state.md` and all documents listed in its Document Index (requirements and design files).
 4. Output task summary: current phase, key progress, and pending items.

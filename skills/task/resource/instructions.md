@@ -1,90 +1,90 @@
-# Task 使用指南
+# Task Usage Guide
 
-面向开发者的实操建议，说明任务推进过程中的常见场景和处理方式。
-
----
-
-## 一、基本原则
-
-**design.md 是步骤的定义，task-state.md 是执行的记录。**
-
-两者必须保持同步——不能只改代码不改文档，否则下次进入任务工作模式时 AI 读到的是错误的上下文。
-
-git log 是辅助线索，不是状态真相。步骤是否完成，以 task-state.md 为准。
+Practical guidance for common scenarios during task execution.
 
 ---
 
-## 二、步骤状态管理
+## 1. Core Principle
 
-### 多步骤同时进行
+**`design.md` defines the steps; `task-state.md` records the execution.**
 
-两个步骤同时处于 `in_progress` 是允许的，例如 step-2 开始后发现 step-1 有遗漏，退回去补。
+Both must stay in sync — never change code without updating the documents. Otherwise, the AI will read incorrect context when re-entering task work mode.
 
-此时需要**明确告知 AI 当前聚焦哪个步骤**，例如：
-
-> "切换到 step-1，修改 xxx 问题"
-
-AI 无法自动判断焦点，需要人主动指示。
-
-### 步骤退回
-
-将已完成的步骤退回 `in_progress`：
-
-1. 告知 AI 原因（"step-1 有遗漏，需要返回修改"）
-2. AI 更新 task-state.md：step-1 状态 → `in_progress`，原验收条件视情况清除或标 `(superseded)`
-3. 修复后重新提交，AI 将状态改回 `done`
+`git log` is a supplementary reference, not the source of truth. Step completion status is determined by `task-state.md`.
 
 ---
 
-## 三、发现设计缺陷
+## 2. Step Status Management
 
-### 情况一：可以向前修复
+### Multiple steps in progress simultaneously
 
-后续步骤能补救前面步骤的遗漏，且不破坏已完成的内容。
+Two steps being `in_progress` at the same time is allowed — for example, if step-2 has started and a gap in step-1 is discovered, it's valid to go back and fix it.
 
-处理方式：
+In this case, **explicitly tell the AI which step you are currently focused on**, e.g.:
 
-- 在当前步骤或后续步骤的 design.md 中加入修复内容
-- 将 step-1 中已失效的验收条件标为 `(superseded)`
-- step-1 保持 `done` 不动
+> "Switch to step-1, fix the xxx issue"
 
-这是代价最低的路径，优先考虑。
+The AI cannot infer focus automatically — the user must direct it.
 
-### 情况二：必须回到原步骤修复
+### Rolling back a step
 
-前面步骤的实现在语义上就是错的，后续步骤无法绕过。
+To roll a completed step back to `in_progress`:
 
-处理方式：
-
-1. 更新 design.md — 修改对应步骤的描述和验收条件
-2. 更新 task-state.md — 步骤状态退回 `in_progress`，失效的验收条件标 `(superseded)`
-3. 实现修复，重新提交（`feat(step-N): fix xxx`）
-4. 重跑验收，状态改回 `done`
-5. 评估后续步骤是否受影响，按需更新
-
-### 情况三：架构级缺陷，影响多个步骤
-
-处理方式：
-
-1. 暂停实现，先将 design.md 整体修订完
-2. 逐一评估哪些已完成的步骤需要返工，哪些可以 `(superseded)` 处理
-3. 在 task-state.md 设计阶段的"记录"字段注明变更原因
-4. 重新推进实现
+1. Tell the AI the reason (e.g. "step-1 has a gap, need to go back and fix it")
+2. AI updates `task-state.md`: step-1 status → `in_progress`; invalidated acceptance conditions marked `(superseded)` or cleared
+3. After fixing, commit again; AI sets status back to `done`
 
 ---
 
-## 四、Commit 规范
+## 3. Handling Design Flaws
 
-**Step 提交**：`{type}(step-N): {step-title}`
+### Case 1: Can be fixed going forward
 
-- feature 分支用 `feat`，refactor 分支用 `refactor`
-- 一个步骤可以有多次提交（中间结果、返工修复均可）
+A later step can compensate for the gap in an earlier step without breaking completed work.
 
-**非 Step 提交**：标准 conventional commits 格式，不带 step scope
+Approach:
+
+- Add the fix to the current or a later step's `design.md`
+- Mark the invalidated acceptance conditions in step-1 as `(superseded)`
+- Leave step-1 as `done`
+
+This is the lowest-cost path — prefer it.
+
+### Case 2: Must go back to the original step
+
+The earlier step's implementation is semantically wrong and cannot be worked around by later steps.
+
+Approach:
+
+1. Update `design.md` — revise that step's description and acceptance conditions
+2. Update `task-state.md` — roll step status back to `in_progress`; mark invalidated conditions as `(superseded)`
+3. Implement the fix and commit (`{type}(step-N): fix xxx`)
+4. Re-run verification; set status back to `done`
+5. Assess whether subsequent steps are affected; update as needed
+
+### Case 3: Architectural flaw affecting multiple steps
+
+Approach:
+
+1. Pause implementation; revise `design.md` as a whole first
+2. Evaluate which completed steps need rework and which can be handled with `(superseded)`
+3. Note the reason for the change in the Design Phase `notes` field of `task-state.md`
+4. Resume implementation
+
+---
+
+## 4. Commit Convention
+
+**Step commits**: `{type}(step-N): {step-title}`
+
+- Use `feat` for feature branches, `refactor` for refactor branches
+- A step may have multiple commits (intermediate results, rework fixes, etc.)
+
+**Non-step commits**: standard conventional commits format, no step scope
 
 ```
 feat(step-1): add search API endpoint
-feat(step-1): fix missing validation      ← step-1 的补充提交
+feat(step-1): fix missing validation      <- additional commit for step-1
 feat(step-2): integrate search UI
 docs: update task requirements
 fix: resolve null pointer in parser
@@ -92,12 +92,12 @@ fix: resolve null pointer in parser
 
 ---
 
-## 五、AI 的局限
+## 5. AI Limitations
 
-以下情况 AI 无法自动识别，需要人主动告知：
+The following situations cannot be detected automatically — the user must inform the AI explicitly:
 
-- 步骤退回（AI 不会主动将 `done` 改回 `in_progress`）
-- 当前聚焦哪个步骤（多步骤同时 in_progress 时）
-- 设计变更的影响范围（需要人判断哪些步骤受牵连）
+- Step rollback (AI will not change `done` back to `in_progress` on its own)
+- Which step is currently in focus (when multiple steps are `in_progress`)
+- Scope of impact from a design change (user must judge which steps are affected)
 
-遇到这些情况，直接用自然语言描述给 AI，AI 会更新 task-state.md 并继续推进。
+In these situations, describe the scenario in natural language; the AI will update `task-state.md` and continue.

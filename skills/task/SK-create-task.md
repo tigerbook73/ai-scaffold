@@ -1,6 +1,6 @@
 # create-task
 
-Initialize a new Task: create branch, scaffold task documents, and enter work mode.
+Initialize a new task: create branch, scaffold task documents, and enter work mode.
 
 ---
 
@@ -41,13 +41,13 @@ Initialize a new Task: create branch, scaffold task documents, and enter work mo
 
 8. Create `docs/tasks/{name}/task-state.md` from `{repo}/skills/task/resource/task-state.md`,
    replacing `{task-name}` and setting initial values:
-   - 元信息 类型: the `task-type` argument (`feature` or `refactor`)
-   - 元信息 状态: `in_progress`
-   - current phase: `requirements（进行中）`
-   - current step: `—`
-   - requirements phase: `in_progress` — "任务刚创建，需求待规划"
-   - design / implementation phases: `pending`, no step entries
-   - document index: `requirements.md`, `design.md`
+   - Metadata `type`: the `task-type` argument (`feature` or `refactor`)
+   - Metadata `status`: `in_progress`
+   - Current Phase: `requirements (in_progress)`
+   - Current Step: `—`
+   - Requirements Phase: `status: in_progress` — "task just created, requirements pending"
+   - Design / Implementation phases: `status: pending`, no step entries
+   - Document Index: `requirements.md`, `design.md`
 
 9. Stage and commit: `git add docs/tasks/{name}/` then `git commit -m "chore: init task {name}"`
 

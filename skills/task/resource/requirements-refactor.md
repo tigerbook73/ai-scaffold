@@ -1,25 +1,25 @@
-# 需求：{task-name}
+# Requirements: {task-name}
 
-## 目标
+## Goal
 
-_描述本次重构要改善什么，以及为什么现在需要做。_
+_Describe what this refactor improves and why it needs to happen now._
 
-## 背景与动机
+## Background and Motivation
 
-- _当前的痛点：性能瓶颈、代码可读性差、测试难以维护、依赖过时、架构耦合等。_
+- _Current pain points: performance bottlenecks, poor readability, hard-to-maintain tests, outdated dependencies, architectural coupling, etc._
 
-## 范围
+## Scope
 
-- _本次重构涉及的模块、文件或子系统。_
+- _Modules, files, or subsystems involved in this refactor._
 
-## 范围外
+## Out of Scope
 
-- _明确列出本任务不变更的内容（如：暂不优化的模块、保持稳定的对外接口、下次迭代的清理项等）。_
+- _Explicitly list what will NOT change (e.g. modules not being optimized, stable public interfaces, cleanup deferred to next iteration)._
 
-## 约束
+## Constraints
 
-- _必须保留的行为契约（如公共 API、数据格式、测试覆盖率）。_
+- _Behavioral contracts that must be preserved (e.g. public APIs, data formats, test coverage thresholds)._
 
-## 验收标准
+## Acceptance Criteria
 
-- _可测试的、明确的完成条件——包含"行为未改变"的检查。_
+- _Testable, unambiguous conditions for completion — including checks that behavior is unchanged._
