@@ -1,8 +1,9 @@
 # Dependencies
 node_modules/
 
-# Claude
-.claude/
+# Claude — ignore personal settings, but commit project rules
+.claude/settings.local.json
+.claude/commands/aisk
 
 # TypeScript build artifacts (if tsc is run manually without outDir)
 scripts/**/*.js

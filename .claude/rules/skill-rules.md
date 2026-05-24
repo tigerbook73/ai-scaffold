@@ -1,8 +1,15 @@
-<!-- AUTO-GENERATED — Do not edit manually.
-     Source: .claude/rules/skill-rules.md
-     To regenerate: npm run build -->
+---
+paths:
+  - "skills/**/SK-*.md"
+---
 
-# Skill Format Specification
+# Skill File Conventions
+
+## Placement
+
+SK files must be placed directly under `skills/*/` (one level deep). Files at `skills/SK-*.md` or `skills/*/resource/SK-*.md` are misplacements — flag and do not treat as valid skill commands.
+
+<!-- EXTRACT:skill-format:start -->
 
 ## Mandatory Rules
 
@@ -79,3 +86,5 @@ One-sentence description.
 
 - ... (omit this section if not needed)
 ```
+
+<!-- EXTRACT:skill-format:end -->
