@@ -34,15 +34,15 @@ Initialize a new task: create branch, scaffold task documents, and enter work mo
 5. Create `docs/tasks/{name}/.claude/CLAUDE.md` from `{repo}/skills/task/resource/task-context.md`,
    replacing `{task-name}` and `{task-type}` placeholders.
 
-5b. Create `docs/tasks/{name}/AGENTS.md` from `{repo}/skills/task/resource/task-context.md`,
-replacing `{task-name}` and `{task-type}` placeholders.
+6. Create `docs/tasks/{name}/AGENTS.md` from `{repo}/skills/task/resource/task-context.md`,
+   replacing `{task-name}` and `{task-type}` placeholders.
 
-6. Create `docs/tasks/{name}/requirements.md` from `{repo}/skills/task/resource/requirements-{task-type}.md`,
+7. Create `docs/tasks/{name}/requirements.md` from `{repo}/skills/task/resource/requirements-{task-type}.md`,
    replacing `{task-name}` placeholder.
 
-7. Create `docs/tasks/{name}/design.md` — title only: `# Design: {task-name}`
+8. Create `docs/tasks/{name}/design.md` — title only: `# Design: {task-name}`
 
-8. Create `docs/tasks/{name}/task-state.md` from `{repo}/skills/task/resource/task-state.md`,
+9. Create `docs/tasks/{name}/task-state.md` from `{repo}/skills/task/resource/task-state.md`,
    replacing `{task-name}` and setting initial values:
    - Metadata `type`: the `task-type` argument (`feature` or `refactor`)
    - Metadata `status`: `in_progress`
@@ -52,7 +52,7 @@ replacing `{task-name}` and `{task-type}` placeholders.
    - Design / Implementation phases: `status: pending`, no step entries
    - Document Index: `requirements.md`, `design.md`
 
-9. Stage and commit: `git add docs/tasks/{name}/` then `git commit -m "chore: init task {name}"`
+10. Stage and commit: `git add docs/tasks/{name}/` then `git commit -m "chore: init task {name}"`
 
-10. Enter task work mode (equivalent to start-task): read task-state.md, confirm .claude/CLAUDE.md
+11. Enter task work mode (equivalent to start-task): read task-state.md, confirm .claude/CLAUDE.md
     is loaded, output task summary, and prompt user to start planning requirements.
