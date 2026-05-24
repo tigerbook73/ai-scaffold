@@ -5,6 +5,8 @@ paths:
 
 # Skill File Conventions
 
+Canonical source-format rules live in `docs/SKILL-SOURCE-FORMAT.md`. Keep this Claude rule file aligned with that document.
+
 ## Placement
 
 SK files must be placed directly under `skills/*/` (one level deep). Files at `skills/SK-*.md` or `skills/*/resource/SK-*.md` are misplacements — flag and do not treat as valid skill commands.
@@ -24,7 +26,7 @@ SK files must be placed directly under `skills/*/` (one level deep). Files at `s
 
 | Tier           | When to use                                                               |
 | -------------- | ------------------------------------------------------------------------- |
-| **Compact**    | Steps ≤ 5 AND each step ≤ 3 lines AND no sub-modes                        |
+| **Compact**    | Steps <= 5 AND each step <= 3 lines AND no sub-modes                      |
 | **Structured** | Steps > 5, OR any step > 3 lines, OR multiple sub-modes (Mode 1 / Mode 2) |
 
 ## Compact Template
@@ -40,8 +42,8 @@ One-sentence description.
 
 **Input** (`$path`, optional)
 
-- No argument → ...
-- Path (e.g. `src/`) → ...
+- No argument -> ...
+- Path (e.g. `src/`) -> ...
 
 **Steps**
 
@@ -66,8 +68,8 @@ One-sentence description.
 
 ## Input
 
-- No argument → ...
-- Path → ...
+- No argument -> ...
+- Path -> ...
 
 ## Steps
 

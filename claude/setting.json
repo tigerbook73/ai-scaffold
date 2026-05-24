@@ -16,7 +16,7 @@
     {
       "src": "create-skill/SK-create-skill.md",
       "dst": ".claude/commands/aisk/create-skill.md",
-      "description": "Promote a skill to the global repository so it can be distributed to any project via `/aisk/sync`.",
+      "description": "Promote a skill to the global repository so it can be applied globally with `pnpm register`.",
       "category": "create-skill"
     },
     {

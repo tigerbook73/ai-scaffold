@@ -1,9 +1,10 @@
 {
   "name": "ai-skills",
   "version": "3.0.0",
-  "description": "Local AI skill library — install all skills globally with npm run register",
+  "description": "Local AI skill library — install all skills globally with pnpm register",
   "scripts": {
     "register": "node --import tsx scripts/setup.ts",
+    "register:claude": "node --import tsx scripts/setup-claude.ts",
     "build": "node --import tsx scripts/build.ts",
     "create-skill": "node --import tsx skills/create-skill/resource/create-skill.ts",
     "lint": "pnpm lint:fix",

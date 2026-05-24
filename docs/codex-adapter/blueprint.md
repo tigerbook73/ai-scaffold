@@ -122,13 +122,13 @@ This makes installer responsibilities obvious and reduces future ambiguity aroun
 
 Current convention in the repository is `skills/{category}/SK-{command}.md`.
 
-`skills/create-skill/resource/create-skill.ts` currently writes to:
+Earlier `create-skill` behavior wrote to:
 
 ```text
 skills/{name}/{name}.md
 ```
 
-That conflicts with the current scanner and documentation convention. Fix this before adding Codex support so both targets inherit one naming rule.
+That conflicted with the current scanner and documentation convention. Normalize this before adding Codex support so both targets inherit one naming rule.
 
 Recommended target:
 
@@ -208,7 +208,7 @@ skills/task/resource/resource-codex.md
 
 ### 7. Reconcile Stale Documentation and Missing Commands
 
-The docs and skill text mention `/aisk/sync`, but no current `sync` skill exists in `skills/`.
+Older docs and skill text mentioned `/aisk/sync`, but no current `sync` skill exists in `skills/`.
 
 Before expanding to Codex, either:
 

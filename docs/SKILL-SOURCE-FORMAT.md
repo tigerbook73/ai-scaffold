@@ -1,8 +1,12 @@
-<!-- AUTO-GENERATED — Do not edit manually.
-     Source: docs/SKILL-SOURCE-FORMAT.md
-     To regenerate: pnpm build -->
+# Skill Source Format
 
-# Skill Format Specification
+This document defines the canonical source format for repository skill files. Agent-specific rule files may refer to this document, but this document is the source of truth for generated skill format resources.
+
+## Placement
+
+SK files must be placed directly under `skills/*/` (one level deep). Files at `skills/SK-*.md` or `skills/*/resource/SK-*.md` are misplacements and should not be treated as valid skill commands.
+
+<!-- EXTRACT:skill-format:start -->
 
 ## Mandatory Rules
 
@@ -79,3 +83,5 @@ One-sentence description.
 
 - ... (omit this section if not needed)
 ```
+
+<!-- EXTRACT:skill-format:end -->

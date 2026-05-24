@@ -26,7 +26,7 @@ class SkillCreator {
     cli
       .command("[file]", "Promote a skill file to the global repository")
       .option("--name <name>", "Skill name (target filename without .md)")
-      .option("--description <desc>", "Skill description (overrides the first-line heading)")
+      .option("--description <desc>", "Manifest description override")
       .option("--cleanup", "Delete the source file after copying (use when source is a temp file)")
       .option("--force", "Skip all confirmation prompts (source-in-repo and overwrite)")
       .action(async (file: string | undefined, options: Options) => {
@@ -36,9 +36,12 @@ class SkillCreator {
             process.exit(0);
           }
 
-          const configFile = join(homedir(), ".ai-skills", "config.json");
+          const aiSkillsHome = process.env.AI_SKILLS_HOME
+            ? resolve(process.env.AI_SKILLS_HOME)
+            : join(homedir(), ".ai-skills");
+          const configFile = join(aiSkillsHome, "config.json");
           if (!existsSync(configFile)) {
-            console.error("Error: ~/.ai-skills/config.json not found. Run npm run register first.");
+            console.error("Error: ~/.ai-skills/config.json not found. Run pnpm register first.");
             process.exit(1);
           }
 
@@ -51,8 +54,9 @@ class SkillCreator {
           }
 
           const srcInRepo = srcPath.startsWith(join(repo, "skills"));
-          const name = options.name ?? basename(srcPath, ".md");
-          const dstPath = join(repo, "skills", name, `${name}.md`);
+          const rawName = options.name ?? basename(srcPath, ".md");
+          const name = rawName.startsWith("SK-") ? rawName.slice(3) : rawName;
+          const dstPath = join(repo, "skills", name, `SK-${name}.md`);
 
           if (srcInRepo && !options.force) {
             const ok = await this.confirm(
@@ -65,7 +69,7 @@ class SkillCreator {
           }
 
           if (existsSync(dstPath) && !options.force) {
-            const ok = await this.confirm(`Skill ${name}.md already exists. Overwrite? (y/N) `);
+            const ok = await this.confirm(`Skill SK-${name}.md already exists. Overwrite? (y/N) `);
             if (!ok) {
               console.log("Cancelled");
               process.exit(0);
@@ -77,13 +81,13 @@ class SkillCreator {
           if (options.cleanup) unlinkSync(srcPath);
           console.log(`Skill written to: ${dstPath}`);
 
-          execSync("npm run build", { cwd: repo, stdio: "inherit" });
+          execSync("pnpm build", { cwd: repo, stdio: "inherit" });
 
           if (options.description) {
             const settingFile = join(repo, "claude", "setting.json");
             const setting = JSON.parse(readFileSync(settingFile, "utf-8"));
             const entry = setting.files.find(
-              (f: { src: string }) => f.src === `${name}/${name}.md`,
+              (f: { src: string }) => f.src === `${name}/SK-${name}.md`,
             );
             if (entry) {
               entry.description = options.description;
@@ -91,9 +95,7 @@ class SkillCreator {
             }
           }
 
-          console.log(
-            "\nRun git commit to persist, then use /aisk/sync to distribute to projects.",
-          );
+          console.log("\nRun git commit to persist, then use pnpm register to apply globally.");
         } catch (err) {
           console.error((err as Error).message);
           process.exit(1);
