@@ -96,7 +96,9 @@ Before displaying any group G{N}, check whether `{cwd}/.ai-skills/walkthrough/{s
 3. For each directory containing a changed file, check for `README.md`, `types.ts`, or `index.ts`; read any that are present and relevant to understanding the module boundary.
 4. Read `{repo}/skills/walkthrough/resource/strategy.md` if not already in context.
 5. Generate the full walkthrough content for G{N} following the Presentation Format from `strategy.md`.
-6. Write the result to `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md` via the Write tool.
+6. Write the result to `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md` via the Write tool — **silently, without narrating**.
+
+After writing, the generated content is already in context — **do not re-read the file**. Output the content directly and append the lookahead prompt.
 
 ## Command execution
 
@@ -104,9 +106,9 @@ Before displaying any group G{N}, check whether `{cwd}/.ai-skills/walkthrough/{s
 
 1. Determine `nextN = currentGroup + 1`.
 2. If `nextN > totalGroups` → enter completion flow.
-3. If `g{nextN}.md` does not exist → run the on-demand generation procedure for G{nextN}.
-4. Run `state next --key {stateKey}`.
-5. Read `{cwd}/.ai-skills/walkthrough/{stateKey}/g{nextN}.md` and output its content, then append the lookahead prompt.
+3. Run `state next --key {stateKey}`.
+4. If `g{nextN}.md` does not exist → run the on-demand generation procedure for G{nextN}; its procedure outputs the content directly — skip step 5.
+5. (File already existed) Read `{cwd}/.ai-skills/walkthrough/{stateKey}/g{nextN}.md` and output its content, then append the lookahead prompt.
 
 **prev**
 
@@ -119,8 +121,8 @@ Before displaying any group G{N}, check whether `{cwd}/.ai-skills/walkthrough/{s
 
 1. Run `state goto --n {N} --key {stateKey}`.
    - exit 1 (N out of range) → report valid range `1..{totalGroups}`
-2. If `g{N}.md` does not exist → run the on-demand generation procedure for G{N}.
-3. Read `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md` and output its content, then append the lookahead prompt.
+2. If `g{N}.md` does not exist → run the on-demand generation procedure for G{N}; its procedure outputs the content directly — skip step 3.
+3. (File already existed) Read `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md` and output its content, then append the lookahead prompt.
 
 **list**
 
