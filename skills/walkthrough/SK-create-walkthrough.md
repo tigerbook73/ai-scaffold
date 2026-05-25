@@ -18,14 +18,13 @@ Create a new walkthrough: checkout the target version, analyze all changes in on
 
 ## Input
 
-`$ARGUMENTS`: `[<range>]` (optional)
+`$ARGUMENTS`: `[<range>]` (optional — if provided, used as the walkthrough target range directly)
 
-| Form        | Target                | Baseline       | Checkout needed            |
-| ----------- | --------------------- | -------------- | -------------------------- |
-| _(omitted)_ | inferred (see Step 2) | HEAD or HEAD~1 | only if clean tree         |
-| `C1`        | C1                    | C1~1           | yes                        |
-| `C1..`      | current worktree      | C1             | no                         |
-| `C1..C5`    | C5                    | C1             | yes (if not already at C5) |
+Collected via a guided selection chain in Step 2:
+
+1. **Target**: if dirty → confirm-only (uncommitted changes including untracked); if clean → numbered options (latest commit or commit-to-current range)
+2. **Intent**: numbered choice — `learning` (understand why) or `review` (assess risk)
+3. **Reference materials**: numbered choice — skip or provide file paths / free text
 
 ## Steps
 
@@ -47,23 +46,64 @@ Check for existing state: `state read --key {stateKey}`.
   - Yes → `state delete --key {stateKey}`, continue
   - No → stop
 
-### Step 2 — Confirm target and baseline
+### Step 2 — Collect input
 
-**No argument**:
-Run `git status --porcelain`.
+#### Phase 1 — Walkthrough target
 
-- Output non-empty → suggest: "Walk through all uncommitted changes (target=working tree, baseline=HEAD)"
-- Empty (clean) → suggest: "Walk through the latest commit (target=HEAD, baseline=HEAD~1)"
-  Present suggestion; wait for confirmation. Allow free-text override.
+If `$ARGUMENTS` was provided, skip detection; use it as `{targetRef}` and confirm with the user before proceeding.
 
-**Single ref `C1`** (no `..`):
-Confirm: "Walk through changes introduced by C1 (baseline=C1~1)?" then wait.
+Otherwise, run `git status --porcelain` and `git ls-files --others --exclude-standard | wc -l` silently, then branch:
 
-**`C1..`**:
-Confirm: "Walk through all changes from C1 to the current working tree?" then wait.
+**Dirty working tree** (has uncommitted changes or untracked files):
 
-**`C1..C5`**:
-Confirm: "Walk through cumulative changes from C1 to C5?" then wait.
+No options — only one valid target. Present for confirmation:
+
+```
+Walkthrough target:
+  Current working tree — uncommitted changes including untracked (N files)
+  Confirm? (Y/n)
+```
+
+- User confirms → `{target}` = working tree, `{baseline}` = HEAD, `{targetRef}` = working tree, checkout not needed
+- User declines → stop
+
+**Clean working tree**:
+
+Present numbered options (default = 1):
+
+```
+Walkthrough target:
+  1. Latest commit (HEAD)  ← default
+  2. From a specific commit to current version (enter starting commit)
+```
+
+- User picks 1 or presses Enter → `{target}` = HEAD, `{baseline}` = HEAD~1, `{targetRef}` = HEAD, checkout needed
+- User picks 2 → ask: "Starting commit (e.g. abc1234 or HEAD~3):" → `{target}` = current worktree, `{baseline}` = given commit, `{targetRef}` = working tree, checkout not needed
+
+#### Phase 2 — Walkthrough intent
+
+Present options:
+
+```
+Walkthrough intent:
+  1. learning — understand design rationale; group by concept/feature; actively cite reference materials
+  2. review   — assess correctness and risk; group by impact/risk area; cite references on demand
+```
+
+Wait for the user to pick 1 or 2. Store as `{walkIntent}`.
+
+#### Phase 3 — Reference materials (optional)
+
+Present options:
+
+```
+Reference materials (optional):
+  1. Skip
+  2. Provide file paths or free-text description...
+```
+
+- User picks 1 → set `{references}` to empty
+- User picks 2 → ask for input; if file paths are given, read their contents now; store as `{references}`
 
 ### Step 3 — Checkout (if needed)
 
@@ -122,11 +162,17 @@ git diff -U15                               # unstaged changes (staged vs unstag
 
 Read `{repo}/skills/walkthrough/resource/strategy.md` if not already loaded.
 
-Using the diff and context documents, produce:
+Using the diff, context documents, `{walkIntent}`, and `{references}`, produce:
 
 1. **Change intent**: 1–3 sentences describing what this change achieves and why.
-2. **Groups**: apply the Grouping Strategy from `strategy.md`. Each group must include: label, list of files, optional `designStep` reference, and done=false.
-3. **G1 content only**: write the complete walkthrough prose for **G1 only** following the Presentation Format from `strategy.md`. G2..GN will be generated on demand when the user navigates to them — do not generate them now.
+2. **Groups**: apply grouping strategy based on `{walkIntent}`:
+   - `learning`: group by concept or feature module; order to build mental model progressively
+   - `review`: group by risk or impact area; order from highest-risk to lowest
+     Each group must include: label, list of files, optional `designStep` reference, and done=false.
+3. **G1 content only**: write the complete walkthrough prose for **G1 only** following the Presentation Format from `strategy.md`, adapted to `{walkIntent}`:
+   - `learning`: explain "why" behind each change; cite `{references}` where relevant to explain design rationale
+   - `review`: highlight potential issues, edge cases, and impact on existing code; cite `{references}` to verify requirement alignment
+     G2..GN will be generated on demand when the user navigates to them — do not generate them now.
 
 ### Step 7 — Write state
 
@@ -142,6 +188,8 @@ Using the diff and context documents, produce:
   "targetHash": "{targetHash}",
   "checkedOut": true/false,
   "intent": "{1-3 sentence summary}",
+  "walkIntent": "learning|review",
+  "references": "{references or empty string}",
   "created": "{YYYY-MM-DD}",
   "totalGroups": N,
   "currentGroup": 1,
