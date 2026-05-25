@@ -165,14 +165,12 @@ Read `{repo}/skills/walkthrough/resource/strategy.md` if not already loaded.
 Using the diff, context documents, `{walkIntent}`, and `{references}`, produce:
 
 1. **Change intent**: 1–3 sentences describing what this change achieves and why.
-2. **Groups**: apply grouping strategy based on `{walkIntent}`:
+2. **Groups**: apply grouping strategy based on `{walkIntent}`. Each group must include: label, list of files, optional `designStep` reference, and done=false.
    - `learning`: group by concept or feature module; order to build mental model progressively
    - `review`: group by risk or impact area; order from highest-risk to lowest
-     Each group must include: label, list of files, optional `designStep` reference, and done=false.
-3. **G1 content only**: write the complete walkthrough prose for **G1 only** following the Presentation Format from `strategy.md`, adapted to `{walkIntent}`:
+3. **G1 content only**: write the complete walkthrough prose for **G1 only** following the Presentation Format from `strategy.md`, adapted to `{walkIntent}`. G2..GN will be generated on demand — do not generate them now.
    - `learning`: explain "why" behind each change; cite `{references}` where relevant to explain design rationale
    - `review`: highlight potential issues, edge cases, and impact on existing code; cite `{references}` to verify requirement alignment
-     G2..GN will be generated on demand when the user navigates to them — do not generate them now.
 
 ### Step 7 — Write state
 
