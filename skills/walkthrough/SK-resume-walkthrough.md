@@ -2,9 +2,7 @@
 
 Alias for `start-walkthrough` — resume a walkthrough from the state file.
 
----
-
-## Constraints
+**Constraints**
 
 - An active (non-completed) state record must exist; if not found or already completed, prompt user to run `create-walkthrough` first
 - Context is session-scoped; re-run at the start of each new session to restore walkthrough state
@@ -13,6 +11,6 @@ Alias for `start-walkthrough` — resume a walkthrough from the state file.
   `{repo}/node_modules/.bin/tsx {repo}/skills/walkthrough/resource/walkthrough-state.ts <cmd> [--options]`
 - **Group files**: read `g{N}.md` directly via the Read tool from `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md`
 
-## Steps
+**Steps**
 
 Follow the same steps as `start-walkthrough`.
