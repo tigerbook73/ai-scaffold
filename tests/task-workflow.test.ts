@@ -44,11 +44,17 @@ test("task-context.md contains core subcommand keywords", () => {
   }
 });
 
-test("SK-create-task.md references task-context.md for both CLAUDE.md and AGENTS.md", () => {
+test("SK-create-task.md creates AGENTS.md from task-context.md and CLAUDE.md as an include", () => {
   const src = readFileSync(join(repoRoot, "skills", "task", "SK-create-task.md"), "utf-8");
   assert.match(src, /task-context\.md/, "must reference task-context.md");
   assert.match(src, /AGENTS\.md/, "must reference AGENTS.md creation");
   assert.match(src, /\.claude\/CLAUDE\.md/, "must reference .claude/CLAUDE.md creation");
+  assert.match(src, /@..\/AGENTS\.md/, "CLAUDE.md must include the generated AGENTS.md");
+  assert.doesNotMatch(
+    src,
+    /\.claude\/CLAUDE\.md` from .*task-context\.md/s,
+    "CLAUDE.md must not duplicate task-context.md",
+  );
   assert.doesNotMatch(src, /resource-claude\.md/, "must not reference removed resource-claude.md");
   assert.doesNotMatch(src, /resource-codex\.md/, "must not reference removed resource-codex.md");
 });
