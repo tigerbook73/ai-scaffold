@@ -42,8 +42,7 @@ Initialize a new task: create branch, scaffold task documents, and enter work mo
 7. Create `docs/tasks/{name}/.claude/CLAUDE.md` as a thin Claude Code entrypoint with this content:
    `@../AGENTS.md`
 
-8. Create `docs/tasks/{name}/requirements.md` from `{repo}/skills/task/resource/requirements-{task-type}.md`,
-   replacing `{task-name}` placeholder.
+8. Create `docs/tasks/{name}/requirements.md` — title only: `# Requirements: {task-name}`
 
 9. Create `docs/tasks/{name}/design.md` — title only: `# Design: {task-name}`
 

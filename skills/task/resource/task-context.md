@@ -9,12 +9,16 @@ Current task directory. Natural language instructions in this session default to
 - `task-state.md` — single source of truth for document list and task progress (not splittable)
 - All other files are listed in the task-state.md Document Index (requirements/design documents may be split)
 
+## task-state.md Update Rule
+
+All writes to `task-state.md` must be **silent**: do not display the file content or diff after writing. Only output a single confirmation line, e.g. `task-state.md updated: Step 2 → done`. Exception: verification results must be displayed to the user before being written.
+
 ## Available Subcommands
 
 The following natural language instructions are valid in task work mode:
 
-- **plan requirements / refresh requirements** — fill in or update the requirements document; sync task-state.md Requirements Phase status
-- **plan design / refresh design** — generate design document from requirements (with step breakdown and acceptance conditions); sync task-state.md
+- **plan requirements / refresh requirements** — fill in or update `requirements.md`; required sections for `feature` tasks: Goal, Background and Motivation, Functional Requirements, Non-Functional Requirements _(omit if none)_, Out of Scope, Acceptance Criteria; for `refactor` tasks: Goal, Background and Motivation, Scope, Out of Scope, Constraints, Acceptance Criteria; when refreshing an existing document, preserve user-written content and only fill in missing sections or incorporate changes discussed in conversation; sync task-state.md Requirements Phase status
+- **plan design / refresh design** — generate or update `design.md` from requirements; must break work into numbered steps; each step must include goal description and key changes; each step must include Auto Verification and Manual Verification sections — omit a section only if no conditions of that type apply to that step; sync task-state.md: Design Phase status → `in_progress`, Current Phase → `design (in_progress)`
 - **start implementation / implement step N** — begin coding for Step N per the design document; update task-state.md Current Step
 - **commit** — generate a conventional commit message; update task-state.md for the completed step (record commit hash, set status to done)
   - Step commit format: `{type}(step-N): {step-title}` (type matches branch type: feat / refactor)
