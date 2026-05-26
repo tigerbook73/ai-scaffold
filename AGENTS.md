@@ -24,6 +24,12 @@ pnpm verify                   # Run lint:check, typecheck, test, and build
 pnpm format                   # Prettier format all supported files
 ```
 
+To run a single test file:
+
+```bash
+node --import tsx --test --test-concurrency=1 --test-reporter=spec tests/<file>.test.ts
+```
+
 After modifying skill files or scripts, run `pnpm verify` before committing.
 No manual manifest step needed — installers scan `skills/` directly.
 
@@ -48,7 +54,7 @@ Skills default to both Claude Code and Codex targets. Add `---\ntargets: [claude
 
 - `scripts/scan-skills.ts`: scans `skills/` and infers all target metadata from SK-\*.md frontmatter and H1.
 - `skills/skill-format.md`: canonical skill source format (human-maintained, synced to Claude rules by `pnpm build`).
-- `scripts/build.ts`: syncs `skills/skill-format.md` → `.claude/rules/skill-rules.md`.
+- `scripts/build.ts`: syncs `skills/skill-format.md` → `.claude/rules/skill-rules.md`. The sync copies the section between `<!-- EXTRACT:skill-format:start -->` and `<!-- EXTRACT:skill-format:end -->` markers. Run `pnpm build` after editing `skills/skill-format.md`.
 - `scripts/setup.ts`: unified installer entry point — runs Claude Code + Codex setup (`pnpm register`).
 - `scripts/setup-claude.ts`: Claude installer — scans skills and installs to `~/.claude/commands/aisk/`.
 - `scripts/setup-codex.ts`: Codex installer — scans skills and installs to `~/.codex/skills/aisk-*/`.
