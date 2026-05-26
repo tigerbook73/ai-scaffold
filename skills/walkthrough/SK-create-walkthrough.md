@@ -1,6 +1,6 @@
 # create-walkthrough
 
-Create a new walkthrough: checkout the target version, analyze all changes in one pass, pre-generate group content, then present group by group.
+Create a new walkthrough: checkout the target version, analyze all changes in one pass, group the changes, present a global overview, then walk through group by group on demand.
 
 **Usage**: `/aisk/create-walkthrough [<range>]`
 
@@ -168,9 +168,8 @@ Using the diff, context documents, `{walkIntent}`, and `{references}`, produce:
 2. **Groups**: apply grouping strategy based on `{walkIntent}`. Each group must include: label, list of files, optional `designStep` reference, and done=false.
    - `learning`: group by concept or feature module; order to build mental model progressively
    - `review`: group by risk or impact area; order from highest-risk to lowest
-3. **G1 content only**: write the complete walkthrough prose for **G1 only** following the Presentation Format from `strategy.md`, adapted to `{walkIntent}`. G2..GN will be generated on demand — do not generate them now.
-   - `learning`: explain "why" behind each change; cite `{references}` where relevant to explain design rationale
-   - `review`: highlight potential issues, edge cases, and impact on existing code; cite `{references}` to verify requirement alignment
+
+Do **not** generate prose for any group here. All group files (G1..GN) are generated on demand during navigation.
 
 ### Step 7 — Write state
 
@@ -199,11 +198,7 @@ Using the diff, context documents, `{walkIntent}`, and `{references}`, produce:
 }
 ```
 
-**Group files** — write only G1's content via Write tool:
-
-- `{cwd}/.ai-skills/walkthrough/{stateKey}/g1.md`
-
-G2..GN files are generated on demand during navigation; do not create them here.
+**Group files** — do not pre-write any group files. All group files (G1..GN) are generated on demand during navigation.
 
 ### Step 8 — Present global overview
 
@@ -224,12 +219,12 @@ If the user confirms the grouping (any affirmative response), proceed to Step 9.
 If the user requests adjustments (merge, split, rename groups):
 
 1. Apply the adjustment.
-2. Regenerate the affected `g{N}.md` files via Write tool.
-3. Update `index.json` via `state update --key {stateKey} --index '<json>'`.
+2. Update `index.json` via `state update --key {stateKey} --index '<json>'`.
+3. Delete any already-generated `g{N}.md` files whose group was changed (using Bash `rm`), so they are regenerated on first visit with the updated grouping.
 4. Re-output the updated overview, then STOP and wait again.
 
 ### Step 9 — Enter walkthrough loop
 
 Read `{repo}/skills/walkthrough/resource/walkthrough-loop.md`.
 Follow its instructions starting from "Display current group".
-(walkthrough-loop reads and outputs g1.md itself — no need to repeat it here)
+(walkthrough-loop generates and outputs g1.md on demand — no need to repeat it here)

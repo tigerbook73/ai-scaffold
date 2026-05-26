@@ -48,15 +48,13 @@ Installers scan `skills/` at install time — no intermediate manifests. Skills 
 │   ├── task/
 │   │   ├── SK-create-task.md
 │   │   ├── SK-start-task.md
-│   │   ├── SK-resume-task.md
 │   │   ├── SK-verify-step.md
 │   │   ├── SK-verify-task.md
 │   │   ├── SK-complete-task.md
 │   │   └── resource/              ← task document templates
 │   └── walkthrough/
 │       ├── SK-create-walkthrough.md
-│       ├── SK-start-walkthrough.md
-│       └── SK-resume-walkthrough.md
+│       └── SK-start-walkthrough.md
 ├── scripts/
 │   ├── setup.ts                   ← pnpm register (runs Claude + Codex setup)
 │   ├── setup-claude.ts            ← Claude installer

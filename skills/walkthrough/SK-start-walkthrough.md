@@ -2,8 +2,6 @@
 
 Resume a walkthrough from the state file.
 
-`resume-walkthrough` is an alias with identical behavior.
-
 ---
 
 ## Constraints

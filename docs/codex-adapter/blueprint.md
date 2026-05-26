@@ -273,13 +273,11 @@ These are mostly procedural workflows over project files and shell commands.
 
 - `task/SK-create-task.md`
 - `task/SK-start-task.md`
-- `task/SK-resume-task.md`
 - `task/SK-verify-step.md`
 - `task/SK-verify-task.md`
 - `task/SK-complete-task.md`
 - `walkthrough/SK-create-walkthrough.md`
 - `walkthrough/SK-start-walkthrough.md`
-- `walkthrough/SK-resume-walkthrough.md`
 
 These use reusable project-state documents and can work in Codex, but the task-mode auto-loading story must be changed.
 
@@ -718,7 +716,6 @@ Include after task-context adaptation:
 
 - `task/SK-create-task.md`
 - `task/SK-start-task.md`
-- `task/SK-resume-task.md`
 - `task/SK-verify-step.md`
 - `task/SK-verify-task.md`
 - `task/SK-complete-task.md`

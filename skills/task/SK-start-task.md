@@ -2,8 +2,6 @@
 
 Enter task work mode for the current session.
 
-`resume-task` is an alias with identical behavior.
-
 ---
 
 ## Constraints

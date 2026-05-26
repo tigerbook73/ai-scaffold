@@ -1,12 +1,12 @@
 # walkthrough Skill Group
 
-Structured code walkthrough: analyzes all changes in a single pass, pre-generates group content, presents a global overview, then walks through group by group.
+Structured code walkthrough: analyzes all changes in a single pass, groups the changes, presents a global overview, then walks through group by group on demand.
 
 ## Skills
 
-**`create-walkthrough`** — Create a new walkthrough. Confirms target range, checks out the target version if needed, reads all diffs and context documents in one pass, groups the changes, pre-generates walkthrough content, shows a global overview, then enters the interactive loop.
+**`create-walkthrough`** — Create a new walkthrough. Confirms target range, checks out the target version if needed, reads all diffs and context documents in one pass, groups the changes, shows a global overview, then enters the interactive loop. Group content is generated on demand during navigation.
 
-**`start-walkthrough`** (`resume-walkthrough` is an alias) — Resume a walkthrough from the state file. Re-run at the start of each new session to restore progress.
+**`start-walkthrough`** — Resume a walkthrough from the state file. Re-run at the start of each new session to restore progress.
 
 ## Input format
 
@@ -33,8 +33,8 @@ wtgroup finish    # finish and optionally delete state
 ```
 {cwd}/.ai-skills/walkthrough/{stateKey}/
   index.json   ← progress metadata (managed by walkthrough-state.ts)
-  g1.md        ← pre-generated walkthrough content for group 1
-  g2.md        ← pre-generated walkthrough content for group 2
+  g1.md        ← walkthrough content for group 1 (generated on first visit)
+  g2.md        ← walkthrough content for group 2 (generated on first visit)
   ...
 ```
 

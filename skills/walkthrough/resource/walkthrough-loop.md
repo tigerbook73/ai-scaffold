@@ -85,7 +85,7 @@ Answer the user's question normally, then append at the end:
 
 ## On-demand group generation
 
-Groups are generated lazily — only G1 is pre-written; G2..GN are created when first visited.
+All groups are generated lazily — no group files are pre-written; each G{N} is created on first visit.
 
 Before displaying any group G{N}, check whether `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md` exists (attempt to Read it). If it does not exist, run the generation procedure below, then write the result via the Write tool.
 

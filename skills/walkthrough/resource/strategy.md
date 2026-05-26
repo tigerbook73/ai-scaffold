@@ -68,7 +68,10 @@ Break into one `###` subsection per meaningful change (type, function, config en
 
 ### {item name}
 
-Before/after code snippet extracted directly from the diff (omit if the item is purely additive and the addition itself is self-explanatory).
+Before/after code snippet extracted directly from the diff.
+
+- **Modified items**: show the relevant changed lines from the diff; omit unchanged surrounding context beyond what aids understanding.
+- **New items (purely additive)**: do not reproduce the full addition. Show only the core section — primary entry point, key function/class signature, or central algorithm — targeting 10–30 lines. Omit boilerplate, imports, and obvious scaffolding. Readers can open the file directly for the full content.
 
 Explain what changed AND why — inline in the same paragraph. Do not separate "what" from "why".
 
