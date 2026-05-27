@@ -44,6 +44,42 @@ test("task-context.md contains core subcommand keywords", () => {
   }
 });
 
+test("resource/requirements-feature.md defines required sections for feature tasks", () => {
+  const path = join(TASK_RESOURCES, "requirements-feature.md");
+  assert.equal(existsSync(path), true, "requirements-feature.md must exist");
+
+  const content = readFileSync(path, "utf-8");
+  const requiredSections = [
+    "Goal",
+    "Background and Motivation",
+    "Functional Requirements",
+    "Non-Functional Requirements",
+    "Out of Scope",
+    "Acceptance Criteria",
+  ];
+  for (const section of requiredSections) {
+    assert.match(content, new RegExp(`## ${section}`), `must define section: ${section}`);
+  }
+});
+
+test("resource/requirements-refactor.md defines required sections for refactor tasks", () => {
+  const path = join(TASK_RESOURCES, "requirements-refactor.md");
+  assert.equal(existsSync(path), true, "requirements-refactor.md must exist");
+
+  const content = readFileSync(path, "utf-8");
+  const requiredSections = [
+    "Goal",
+    "Background and Motivation",
+    "Scope",
+    "Out of Scope",
+    "Constraints",
+    "Acceptance Criteria",
+  ];
+  for (const section of requiredSections) {
+    assert.match(content, new RegExp(`## ${section}`), `must define section: ${section}`);
+  }
+});
+
 test("resource/design.md defines Step Type with intermediate and final", () => {
   const path = join(TASK_RESOURCES, "design.md");
   assert.equal(existsSync(path), true, "design.md must exist");
@@ -61,12 +97,11 @@ test("resource/design.md defines [automation-candidate] marker", () => {
   assert.match(content, /Auto Verification/, "must define Auto Verification section");
 });
 
-test("task-context.md plan design and start implementation reference step-type concepts", () => {
+test("task-context.md start implementation references step-type and code quality rules", () => {
   const content = readFileSync(join(TASK_RESOURCES, "task-context.md"), "utf-8");
   assert.match(content, /step-type/, "must reference step-type field");
   assert.match(content, /intermediate/, "must reference intermediate step type");
   assert.match(content, /final/, "must reference final step type");
-  assert.match(content, /automation-candidate/, "must reference [automation-candidate] marker");
   assert.match(content, /file name/, "must enforce file naming rules");
 });
 

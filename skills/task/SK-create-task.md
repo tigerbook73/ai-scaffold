@@ -37,7 +37,7 @@ Initialize a new task: create branch, scaffold task documents, and enter work mo
    - Only report a concise summary after all scaffold files are created.
 
 6. Create `docs/tasks/{name}/AGENTS.md` from `{repo}/skills/task/resource/task-context.md`,
-   replacing `{task-name}` and `{task-type}` placeholders.
+   replacing `{task-name}`, `{task-type}`, and `{repo}` placeholders.
 
 7. Create `docs/tasks/{name}/.claude/CLAUDE.md` as a thin Claude Code entrypoint with this content:
    `@../AGENTS.md`
