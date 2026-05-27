@@ -19,15 +19,14 @@ Does not run acceptance tests — use verify-task for that.
 
 1. Run `git status`. If the working tree is not clean (staged, modified, or untracked files),
    stop and prompt the user to commit or stash changes first.
-2. Read `task-state.md` Document Index; load all design documents.
-3. For each step listed in the design documents, verify in `task-state.md`:
+2. For each step in `task-state.md` Implementation Phase, verify:
    - Status is `done`
    - A commit hash is recorded (not `—`)
-4. Verify that every step's `auto-check` field in `task-state.md` is `passed`.
-5. Verify that every step's `manual-check` field in `task-state.md` is `passed`.
-6. Verify that the Task Acceptance `auto-check` field in `task-state.md` is `passed`.
-7. Verify that the Task Acceptance `manual-check` field in `task-state.md` is `passed`.
-8. If any check fails, list all failing items and stop. Prompt the user to resolve them
+3. Verify that every step's `auto-check` field in `task-state.md` is `passed`.
+4. Verify that every step's `manual-check` field in `task-state.md` is `passed`.
+5. Verify that the Task Acceptance `auto-check` field in `task-state.md` is `passed`.
+6. Verify that the Task Acceptance `manual-check` field in `task-state.md` is `passed`.
+7. If any check fails, list all failing items and stop. Prompt the user to resolve them
    (e.g., run verify-step / verify-task, complete the missing step, or commit pending changes).
 
 ### Phase 2 — Cleanup
