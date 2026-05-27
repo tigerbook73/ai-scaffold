@@ -37,6 +37,7 @@ Step N | —
 
 ### Step 1: {step-title}
 
+- step-type: final | intermediate
 - status: done
 - Commit: {type}(step-1): {step-title} | —
 - Date: 2024-01-15 14:23 | —
@@ -45,6 +46,7 @@ Step N | —
 
 ### Step 2: {step-title}
 
+- step-type: final | intermediate
 - status: in_progress
 - notes: [present only when in_progress; AI-summarized and user-confirmed; cleared on completion]
 - Commit: —
@@ -54,6 +56,7 @@ Step N | —
 
 ### Step 3: {step-title}
 
+- step-type: final | intermediate
 - status: pending
 - Commit: —
 - Date: —

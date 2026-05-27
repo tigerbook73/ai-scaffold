@@ -44,6 +44,32 @@ test("task-context.md contains core subcommand keywords", () => {
   }
 });
 
+test("resource/design.md defines Step Type with intermediate and final", () => {
+  const path = join(TASK_RESOURCES, "design.md");
+  assert.equal(existsSync(path), true, "design.md must exist");
+
+  const content = readFileSync(path, "utf-8");
+  assert.match(content, /Step Type/, "must define Step Type section");
+  assert.match(content, /intermediate/, "must define intermediate step type");
+  assert.match(content, /final/, "must define final step type");
+});
+
+test("resource/design.md defines [automation-candidate] marker", () => {
+  const content = readFileSync(join(TASK_RESOURCES, "design.md"), "utf-8");
+  assert.match(content, /automation-candidate/, "must document [automation-candidate] marker");
+  assert.match(content, /Manual Verification/, "must define Manual Verification section");
+  assert.match(content, /Auto Verification/, "must define Auto Verification section");
+});
+
+test("task-context.md plan design and start implementation reference step-type concepts", () => {
+  const content = readFileSync(join(TASK_RESOURCES, "task-context.md"), "utf-8");
+  assert.match(content, /step-type/, "must reference step-type field");
+  assert.match(content, /intermediate/, "must reference intermediate step type");
+  assert.match(content, /final/, "must reference final step type");
+  assert.match(content, /automation-candidate/, "must reference [automation-candidate] marker");
+  assert.match(content, /file name/, "must enforce file naming rules");
+});
+
 test("SK-create-task.md creates AGENTS.md from task-context.md and CLAUDE.md as an include", () => {
   const src = readFileSync(join(repoRoot, "skills", "task", "SK-create-task.md"), "utf-8");
   assert.match(src, /task-context\.md/, "must reference task-context.md");

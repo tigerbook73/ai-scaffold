@@ -52,4 +52,4 @@ Templates used by `create-task` to scaffold task documents:
 
 - `resource/task-context.md` — task work mode context template (installed as both CLAUDE.md and AGENTS.md)
 - `resource/task-state.md` — task-state.md format template
-- `resource/design.md` — design document step format reference
+- `resource/design.md` — required sections format spec for design step documents (Step Type, Auto/Manual Verification); referenced by `plan design` in task-context.md
