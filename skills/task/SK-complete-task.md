@@ -25,8 +25,10 @@ Does not run acceptance tests — use verify-task for that.
    - A commit hash is recorded (not `—`)
 4. Verify that every step's `auto-check` field in `task-state.md` is `passed`.
 5. Verify that every step's `manual-check` field in `task-state.md` is `passed`.
-6. If any check fails, list all failing items and stop. Prompt the user to resolve them
-   (e.g., run verify-task, complete the missing step, or commit pending changes).
+6. Verify that the Task Acceptance `auto-check` field in `task-state.md` is `passed`.
+7. Verify that the Task Acceptance `manual-check` field in `task-state.md` is `passed`.
+8. If any check fails, list all failing items and stop. Prompt the user to resolve them
+   (e.g., run verify-step / verify-task, complete the missing step, or commit pending changes).
 
 ### Phase 2 — Cleanup
 

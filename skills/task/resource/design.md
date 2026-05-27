@@ -43,3 +43,17 @@ Human-confirmed items for checks that cannot be automated cost-effectively.
 
 Use `[automation-candidate]` when the item is currently too costly to automate but could be
 automated with reasonable effort later.
+
+---
+
+## Task Acceptance
+
+Conditions that verify the task as a whole meets the requirements' Acceptance Criteria.
+This section appears once, at the end of the design document (or in the last design file if split).
+Verified by `verify-task`, not `verify-step`.
+
+Each Acceptance Criterion in `requirements.md` must map to at least one condition here.
+
+- `(auto)` `<command>` — executed directly; must exit 0
+- `(manual)` <description>
+- `(superseded)` replaces any condition that is no longer valid

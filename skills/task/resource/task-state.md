@@ -60,3 +60,8 @@ Step N | —
 - Date: —
 - auto-check: —
 - manual-check: —
+
+## Task Acceptance
+
+- auto-check: passed | failed | —
+- manual-check: passed | failed | —
