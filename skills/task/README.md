@@ -2,17 +2,30 @@
 
 Skills for managing structured development tasks with branch-per-task workflow, document scaffolding, and step-by-step acceptance verification.
 
+## Workflow Model
+
+Each task maps to one branch and one PR. The workflow enforces this one-to-one relationship:
+
+- **One task at a time** — only one task directory is allowed under `docs/tasks/` at any time.
+  A new task can only be created from main/master with a clean working tree.
+- **Process documents stay off main** — task documents (`requirements.md`, `design.md`, etc.)
+  live on the task branch and are deleted before the PR is merged. They capture thinking in
+  progress, not permanent project knowledge.
+- **Distill before closing** — before deleting the task documents, extract any architecture
+  decisions or significant design choices into the project's permanent documentation.
+  `complete-task` prompts for this step explicitly.
+
 ## Skills
 
 **`create-task`** — Initialize a new task: create a dedicated branch (`feature/*` or `refactor/*`), scaffold task documents under `docs/tasks/{name}/`, and enter task work mode. Only runs on main/master with a clean working tree.
 
-**`start-task`** — Enter task work mode for the current session. Reads `task-state.md` and all indexed documents, then outputs a task summary. Re-run at the start of each new session.
+**`start-task`** — Restore task context for the current session. Reads `task-state.md` and all indexed documents, then outputs a task summary. Re-run at the start of each new session.
 
 **`verify-step`** — Run acceptance checks for a single step (defaults to current step). Supports `auto` (shell commands) and `manual` (human confirmation) modes, with fast and full variants.
 
-**`verify-task`** — Run acceptance checks across all steps. Same auto/manual/fast/full logic as verify-step, applied to every step in the implementation phase.
+**`verify-task`** — Run acceptance checks for the task as a whole against the Task Acceptance conditions in the design document. Supports `auto` (shell commands) and `manual` (human confirmation) modes.
 
-**`complete-task`** — Verify all steps are done and accepted, then (with confirmation) delete the task directory and commit the cleanup. Prompts the user to create a PR.
+**`complete-task`** — Verify all steps and task-level acceptance are done, then (with confirmation) delete the task directory and commit the cleanup. Prompts the user to create a PR.
 
 ## Typical workflow
 

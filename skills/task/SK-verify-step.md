@@ -2,8 +2,6 @@
 
 Run acceptance checks for a single step. Defaults to the current step.
 
-Auto/manual/fast/full logic is identical to verify-task; the difference is scope — one step instead of all steps.
-
 ---
 
 ## Constraints

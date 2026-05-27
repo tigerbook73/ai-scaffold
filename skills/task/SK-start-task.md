@@ -1,21 +1,10 @@
 # start-task
 
-Enter task work mode for the current session.
+Restore task context for the current session.
 
----
+**Steps**
 
-## Constraints
-
-- Current branch must be a task branch (not main/master)
-- Context is session-scoped; re-run at the start of each new session
-
-## Steps
-
-1. Read the current branch name. If it is `main` or `master`, stop and prompt the user to
-   switch to a task branch first.
-2. Search `docs/tasks/` for directories containing `task-state.md`:
-   - None found → prompt user to run create-task first, stop
-   - Multiple found → error; ask user to specify which directory, stop
-   - Exactly one found → continue
-3. Read `task-state.md` and all documents listed in its Document Index (requirements and design files).
-4. Output task summary: current phase, key progress, and pending items.
+1. Check if `task-state.md` exists in the current directory.
+   If not found, prompt the user to switch to the task branch or run create-task first, then stop.
+2. Read `task-state.md` and all documents listed in its Document Index (requirements and design files).
+3. Output task summary: current phase, key progress, and pending items.
