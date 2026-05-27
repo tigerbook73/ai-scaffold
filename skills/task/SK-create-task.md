@@ -42,12 +42,8 @@ Initialize a new task: create branch, scaffold task documents, and enter work mo
 7. Create `docs/tasks/{name}/.claude/CLAUDE.md` as a thin Claude Code entrypoint with this content:
    `@../AGENTS.md`
 
-8. Create `docs/tasks/{name}/requirements.md` — title only: `# Requirements: {task-name}`
-
-9. Create `docs/tasks/{name}/design.md` — title only: `# Design: {task-name}`
-
-10. Create `docs/tasks/{name}/task-state.md` from `{repo}/skills/task/resource/task-state.md`,
-    replacing `{task-name}` and setting initial values:
+8. Create `docs/tasks/{name}/task-state.md` from `{repo}/skills/task/resource/task-state.md`,
+   replacing `{task-name}` and setting initial values:
 
 - Metadata `type`: the `task-type` argument (`feature` or `refactor`)
 - Metadata `status`: `in_progress`
@@ -55,9 +51,9 @@ Initialize a new task: create branch, scaffold task documents, and enter work mo
 - Current Step: `—`
 - Requirements Phase: `status: in_progress` — "task just created, requirements pending"
 - Design / Implementation phases: `status: pending`, no step entries
-- Document Index: `requirements.md`, `design.md`
+- Document Index: empty (documents are added here as they are created during plan phases)
 
-11. Stage and commit: `git add docs/tasks/{name}/` then `git commit -m "chore: init task {name}"`
+9. Stage and commit: `git add docs/tasks/{name}/` then `git commit -m "chore: init task {name}"`
 
-12. Enter task work mode (equivalent to start-task): read task-state.md, confirm .claude/CLAUDE.md
+10. Enter task work mode (equivalent to start-task): read task-state.md, confirm .claude/CLAUDE.md
     is loaded, output task summary, and prompt user to start planning requirements.

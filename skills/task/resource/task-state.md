@@ -7,9 +7,7 @@
 
 ## Document Index
 
-- `requirements.md` — requirements document
-- `design.md` — design document (with step breakdown)
-- (split as needed; update this index after splitting)
+- (no documents yet; entries added here as requirements and design documents are created)
 
 ## Current Phase
 
