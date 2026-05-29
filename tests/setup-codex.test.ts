@@ -1,3 +1,9 @@
+/**
+ * @test-file   setup-codex
+ * @description Verifies that CodexSetup correctly installs skills and transforms content for the Codex format
+ * @ai-generated
+ * @reviewed-by Shengtian Liao @ [1]
+ */
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -9,6 +15,20 @@ import { CodexSetup, transformCodexSkill } from "../scripts/setup-codex";
 
 const repoRoot = process.cwd();
 
+/**
+ * @test-suite  CodexSetup installation
+ * @target      Validate that skills are installed with correct Codex SKILL.md format and stale entries removed
+ * @strategy    Integration — uses isolated temp directory, real skill scan, no network
+ * @cases
+ *   - [PASS] config.json written with correct repo path
+ *   - [PASS] all Codex-targeted skills installed with SKILL.md
+ *   - [PASS] installed SKILL.md has aisk- prefixed name in frontmatter
+ *   - [PASS] installed SKILL.md has description and short-description fields
+ *   - [PASS] installed SKILL.md references source path
+ *   - [PASS] slash-command usage lines absent from installed SKILL.md
+ *   - [PASS] stale aisk- skill directory removed
+ *   - [PASS] third-party skill directory preserved
+ */
 test("codex setup installs skills into an isolated home", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "aisk-codex-setup-"));
 
@@ -52,6 +72,15 @@ test("codex setup installs skills into an isolated home", () => {
   }
 });
 
+/**
+ * @test-suite  transformCodexSkill output
+ * @target      Validate that Claude slash-command references are correctly replaced in transformed output
+ * @strategy    Unit — pure function, no file system access
+ * @cases
+ *   - [PASS] output contains aisk- prefixed name frontmatter
+ *   - [PASS] **Usage**: /aisk/ line removed from output
+ *   - [PASS] inline /aisk/ references replaced with aisk- format
+ */
 test("codex transform removes Claude slash-command usage lines", () => {
   const output = transformCodexSkill(
     "# example\n\nExample skill.\n\n**Usage**: `/aisk/example <path>`\n\nRun `/aisk/check-arch` after changes.\n",

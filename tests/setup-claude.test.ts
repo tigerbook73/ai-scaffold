@@ -1,3 +1,9 @@
+/**
+ * @test-file   setup-claude
+ * @description Verifies that ClaudeSetup correctly installs skills into an isolated Claude commands directory
+ * @ai-generated
+ * @reviewed-by Shengtian Liao @ [1]
+ */
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -9,6 +15,19 @@ import { ClaudeSetup } from "../scripts/setup-claude";
 
 const repoRoot = process.cwd();
 
+/**
+ * @test-suite  ClaudeSetup installation
+ * @target      Validate that skills are installed, stale commands removed, and config written correctly
+ * @strategy    Integration — uses isolated temp directory, real skill scan, no network
+ * @cases
+ *   - [PASS] config.json written with correct repo path
+ *   - [PASS] all Claude-targeted skills installed as .md files
+ *   - [PASS] stale .md command removed from target directory
+ *   - [PASS] non-.md files preserved in commands directory
+ *   - [PASS] installed skill file has description frontmatter header
+ *   - [PASS] double frontmatter block absent from installed skill
+ *   - [PASS] set-claude-permission source targets field does not appear in installed file
+ */
 test("claude setup installs commands into an isolated home", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "aisk-claude-setup-"));
 

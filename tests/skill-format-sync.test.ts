@@ -1,3 +1,9 @@
+/**
+ * @test-file   skill-format-sync
+ * @description Verifies that pnpm build keeps skill-rules.md in sync with the canonical skill-format.md source
+ * @ai-generated
+ * @reviewed-by Shengtian Liao @ [1]
+ */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -22,6 +28,13 @@ function extractMarkedContent(content: string, path: string): string {
   return content.slice(startIdx + startMarker.length, endIdx).trim();
 }
 
+/**
+ * @test-suite  skill format synchronization
+ * @target      Validate that extracted content between markers is identical in source and generated file
+ * @strategy    Unit — reads two files and compares extracted sections, no mocks
+ * @cases
+ *   - [PASS] extracted content between markers is identical in skill-format.md and skill-rules.md
+ */
 test("skill format source is synchronized to generated resources", () => {
   const sourceContent = extractMarkedContent(
     readRepoFile("skills/skill-format.md"),
