@@ -8,7 +8,7 @@ const HOOK_MARKER = "# aisk:test-review-check";
 const HOOK_SNIPPET = `
 ${HOOK_MARKER}
 AISK_ROOT=$(node -e "process.stdout.write(require(require('os').homedir()+'/.ai-skills/config.json').repo)")
-node --import tsx "$AISK_ROOT/scripts/test-review-check.ts"
+cd "$AISK_ROOT" && node --import tsx "$AISK_ROOT/scripts/test-review-check.ts"
 `;
 
 export class SetupTestReview {

@@ -15,5 +15,5 @@ pre-commit hook entry that blocks commits where test files lack a human `@review
 1. Confirm `.git/` exists in the current directory. If not, stop with: "Not a git repository."
 2. Confirm `~/.ai-skills/config.json` exists. If not, stop with: "Run `pnpm register` in the ai-scaffold repo first."
 3. Read the `repo` field from `~/.ai-skills/config.json` to obtain `$AISK_ROOT`.
-4. Run: `node --import tsx "$AISK_ROOT/scripts/setup-test-review.ts"`
+4. Run: `cd "$AISK_ROOT" && node --import tsx "$AISK_ROOT/scripts/setup-test-review.ts"`
 5. Report what was written (the script prints each file path).
