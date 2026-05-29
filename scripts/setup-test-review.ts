@@ -11,7 +11,9 @@ AISK_ROOT=$(node -e "process.stdout.write(require(require('os').homedir()+'/.ai-
 node --import tsx "$AISK_ROOT/scripts/test-review-check.ts"
 `;
 
-class SetupTestReview {
+export class SetupTestReview {
+  constructor(private cwd = process.cwd()) {}
+
   run(): void {
     this.writeRules();
     this.updateHook();
@@ -28,7 +30,7 @@ class SetupTestReview {
       "test-review.md",
     );
     const content = readFileSync(templatePath, "utf-8");
-    const rulesDir = join(process.cwd(), ".claude", "rules");
+    const rulesDir = join(this.cwd, ".claude", "rules");
     mkdirSync(rulesDir, { recursive: true });
     const rulesPath = join(rulesDir, "test-review.md");
     writeFileSync(rulesPath, content);
@@ -37,9 +39,9 @@ class SetupTestReview {
 
   // Appends the test-review-check call to .git/hooks/pre-commit; creates the hook if absent.
   private updateHook(): void {
-    const hookPath = join(process.cwd(), ".git", "hooks", "pre-commit");
+    const hookPath = join(this.cwd, ".git", "hooks", "pre-commit");
 
-    if (!existsSync(join(process.cwd(), ".git"))) {
+    if (!existsSync(join(this.cwd, ".git"))) {
       console.error("Not a git repository.");
       process.exit(1);
     }
@@ -61,4 +63,6 @@ class SetupTestReview {
   }
 }
 
-new SetupTestReview().run();
+if (require.main === module) {
+  new SetupTestReview().run();
+}

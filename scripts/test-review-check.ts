@@ -59,4 +59,6 @@ class TestReviewCheck {
   }
 }
 
-new TestReviewCheck().run();
+if (require.main === module) {
+  new TestReviewCheck().run();
+}

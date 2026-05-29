@@ -1,0 +1,125 @@
+/**
+ * @test-file   test-review-check
+ * @description Verifies that the pre-commit check correctly validates @reviewed-by in staged test files
+ * @ai-generated
+ * @reviewed-by Shengtian Liao @ [1]
+ */
+import assert from "node:assert/strict";
+import { execSync, spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import test from "node:test";
+
+const repoRoot = resolve(__dirname, "..");
+const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
+const scriptPath = join(repoRoot, "scripts", "test-review-check.ts");
+
+function initRepo(dir: string): void {
+  execSync("git init", { cwd: dir });
+  execSync('git config user.email "test@test.com"', { cwd: dir });
+  execSync('git config user.name "Tester"', { cwd: dir });
+}
+
+function runCheck(cwd: string) {
+  return spawnSync(tsxBin, [scriptPath], { cwd });
+}
+
+/**
+ * @test-suite  no staged test files
+ * @target      Validate that the check exits 0 when no test files are staged
+ * @strategy    Integration — uses isolated temp git repo
+ * @cases
+ *   - [PASS] exits with code 0 when only non-test files are staged
+ */
+test("exits 0 when no test files are staged", () => {
+  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+  try {
+    initRepo(dir);
+    writeFileSync(join(dir, "utils.ts"), "export {}");
+    execSync("git add .", { cwd: dir });
+    assert.equal(runCheck(dir).status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * @test-suite  new test file without @reviewed-by
+ * @target      Validate that the check blocks a new test file lacking @reviewed-by
+ * @strategy    Integration — uses isolated temp git repo
+ * @cases
+ *   - [FAIL] exits with code 1 when new test file is staged without @reviewed-by
+ */
+test("exits 1 when new test file is staged without @reviewed-by", () => {
+  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+  try {
+    initRepo(dir);
+    writeFileSync(join(dir, "service.test.ts"), "// no annotation");
+    execSync("git add .", { cwd: dir });
+    assert.equal(runCheck(dir).status, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * @test-suite  new test file with valid @reviewed-by
+ * @target      Validate that the check passes a new test file with a valid @reviewed-by
+ * @strategy    Integration — uses isolated temp git repo
+ * @cases
+ *   - [PASS] exits with code 0 when new test file is staged with @reviewed-by Name @ [1]
+ */
+test("exits 0 when new test file is staged with valid @reviewed-by", () => {
+  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+  try {
+    initRepo(dir);
+    writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by Tom @ [1]");
+    execSync("git add .", { cwd: dir });
+    assert.equal(runCheck(dir).status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * @test-suite  modified test file with stale version
+ * @target      Validate that the check blocks a modified test file with an unchanged version number
+ * @strategy    Integration — uses isolated temp git repo with initial commit
+ * @cases
+ *   - [FAIL] exits with code 1 when modified test file is staged with the same version number
+ */
+test("exits 1 when modified test file is staged with unchanged @reviewed-by version", () => {
+  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+  try {
+    initRepo(dir);
+    writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by Tom @ [1]");
+    execSync("git add . && git commit -m init", { cwd: dir });
+    writeFileSync(join(dir, "service.test.ts"), "// updated\n// @reviewed-by Tom @ [1]");
+    execSync("git add .", { cwd: dir });
+    assert.equal(runCheck(dir).status, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * @test-suite  modified test file with incremented version
+ * @target      Validate that the check passes a modified test file with an incremented version number
+ * @strategy    Integration — uses isolated temp git repo with initial commit
+ * @cases
+ *   - [PASS] exits with code 0 when modified test file is staged with an incremented version number
+ */
+test("exits 0 when modified test file is staged with incremented @reviewed-by version", () => {
+  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+  try {
+    initRepo(dir);
+    writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by Tom @ [1]");
+    execSync("git add . && git commit -m init", { cwd: dir });
+    writeFileSync(join(dir, "service.test.ts"), "// updated\n// @reviewed-by Tom @ [2]");
+    execSync("git add .", { cwd: dir });
+    assert.equal(runCheck(dir).status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
