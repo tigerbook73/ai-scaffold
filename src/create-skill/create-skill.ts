@@ -1,6 +1,5 @@
-import { readFileSync, copyFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
 import { join, basename, resolve, dirname } from "path";
-import { homedir } from "os";
 import { execSync } from "child_process";
 import { createInterface } from "readline";
 import { cac } from "cac";
@@ -34,16 +33,7 @@ class SkillCreator {
             process.exit(0);
           }
 
-          const aiSkillsHome = process.env.AI_SKILLS_HOME
-            ? resolve(process.env.AI_SKILLS_HOME)
-            : join(homedir(), ".ai-skills");
-          const configFile = join(aiSkillsHome, "config.json");
-          if (!existsSync(configFile)) {
-            console.error("Error: ~/.ai-skills/config.json not found. Run pnpm register first.");
-            process.exit(1);
-          }
-
-          const { repo } = JSON.parse(readFileSync(configFile, "utf-8")) as { repo: string };
+          const repo = resolve(__dirname, "..", "..");
           const srcPath = resolve(file);
 
           if (!existsSync(srcPath)) {

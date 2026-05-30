@@ -2,7 +2,7 @@
  * @test-file   setup-codex
  * @description Verifies that CodexSetup correctly installs skills and transforms content for the Codex format
  * @ai-generated
- * @reviewed-by Shengtian Liao @ [1]
+ * @reviewed-by Shengtian Liao @ [2]
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -20,7 +20,6 @@ const repoRoot = process.cwd();
  * @target      Validate that skills are installed with correct Codex SKILL.md format and stale entries removed
  * @strategy    Integration — uses isolated temp directory, real skill scan, no network
  * @cases
- *   - [PASS] config.json written with correct repo path
  *   - [PASS] all Codex-targeted skills installed with SKILL.md
  *   - [PASS] installed SKILL.md has aisk- prefixed name in frontmatter
  *   - [PASS] installed SKILL.md has description and short-description fields
@@ -33,7 +32,6 @@ test("codex setup installs skills into an isolated home", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "aisk-codex-setup-"));
 
   try {
-    const aiSkillsHome = join(tempRoot, ".ai-skills");
     const codexHome = join(tempRoot, ".codex");
     const skillsDir = join(codexHome, "skills");
 
@@ -42,12 +40,7 @@ test("codex setup installs skills into an isolated home", () => {
     mkdirSync(join(skillsDir, "third-party"), { recursive: true });
     writeFileSync(join(skillsDir, "third-party", "SKILL.md"), "keep");
 
-    new CodexSetup({ repoPath: repoRoot, aiSkillsHome, codexHome }).run();
-
-    const config = JSON.parse(readFileSync(join(aiSkillsHome, "config.json"), "utf-8")) as {
-      repo: string;
-    };
-    assert.equal(config.repo, repoRoot);
+    new CodexSetup({ repoPath: repoRoot, codexHome }).run();
 
     const entries = scanSkills(repoRoot).filter((e) => e.targets.codex);
     for (const entry of entries) {

@@ -1,8 +1,8 @@
 /**
- * @test-file   test-review-check
- * @description Verifies that the pre-commit check correctly validates @reviewed-by in staged test files
+ * @test-file   test-rules-check
+ * @description Verifies that the pre-commit check correctly validates @reviewed-by in staged test files, including renamed files
  * @ai-generated
- * @reviewed-by Shengtian Liao @ [1]
+ * @reviewed-by Shengtian Liao @ [2]
  */
 import assert from "node:assert/strict";
 import { execSync, spawnSync } from "node:child_process";
@@ -13,7 +13,7 @@ import test from "node:test";
 
 const repoRoot = resolve(__dirname, "..");
 const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
-const scriptPath = join(repoRoot, "scripts", "test-review-check.ts");
+const scriptPath = join(repoRoot, "src", "test-rules", "test-rules-check.ts");
 
 function initRepo(dir: string): void {
   execSync("git init", { cwd: dir });
@@ -117,6 +117,54 @@ test("exits 0 when modified test file is staged with incremented @reviewed-by ve
     writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by Tom @ [1]");
     execSync("git add . && git commit -m init", { cwd: dir });
     writeFileSync(join(dir, "service.test.ts"), "// updated\n// @reviewed-by Tom @ [2]");
+    execSync("git add .", { cwd: dir });
+    assert.equal(runCheck(dir).status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * @test-suite  renamed test file — counter not incremented
+ * @target      Validate that a renamed test file with unchanged @reviewed-by version is blocked
+ * @strategy    Integration — uses isolated temp git repo with initial commit and git mv
+ * @cases
+ *   - [FAIL] exits 1 when renamed test file is staged with the same version as the old file
+ */
+test("exits 1 when renamed test file is staged with unchanged @reviewed-by version", () => {
+  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+  // Files need enough content for git's rename detection to trigger (small files are ignored)
+  const filler = "// filler\n".repeat(5);
+  try {
+    initRepo(dir);
+    writeFileSync(join(dir, "old.test.ts"), filler + "// @reviewed-by Tom @ [3]");
+    execSync("git add . && git commit -m init", { cwd: dir });
+    execSync("git mv old.test.ts new.test.ts", { cwd: dir });
+    writeFileSync(join(dir, "new.test.ts"), filler + "// updated\n// @reviewed-by Tom @ [3]");
+    execSync("git add .", { cwd: dir });
+    assert.equal(runCheck(dir).status, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * @test-suite  renamed test file — counter incremented
+ * @target      Validate that a renamed test file with incremented @reviewed-by version passes
+ * @strategy    Integration — uses isolated temp git repo with initial commit and git mv
+ * @cases
+ *   - [PASS] exits 0 when renamed test file is staged with an incremented version number
+ */
+test("exits 0 when renamed test file is staged with incremented @reviewed-by version", () => {
+  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+  // Files need enough content for git's rename detection to trigger (small files are ignored)
+  const filler = "// filler\n".repeat(5);
+  try {
+    initRepo(dir);
+    writeFileSync(join(dir, "old.test.ts"), filler + "// @reviewed-by Tom @ [3]");
+    execSync("git add . && git commit -m init", { cwd: dir });
+    execSync("git mv old.test.ts new.test.ts", { cwd: dir });
+    writeFileSync(join(dir, "new.test.ts"), filler + "// updated\n// @reviewed-by Tom @ [4]");
     execSync("git add .", { cwd: dir });
     assert.equal(runCheck(dir).status, 0);
   } finally {
