@@ -12,10 +12,9 @@ Configure a new project to work with globally installed aisk skills.
 
 ## Steps
 
-### Step 1 — Read config
+### Step 1 — Check installation
 
-Read `~/.ai-skills/config.json` to get the `{repo}` path.
-If the file does not exist, prompt the user to run `pnpm register` first, then stop.
+Confirm `~/.sk-skills/` exists. If not, stop with: "Run `pnpm register` in the ai-scaffold repo first."
 
 ### Step 2 — Update .gitignore
 
@@ -37,8 +36,8 @@ Read `.claude/settings.local.json`. If it does not exist, create it with `{"perm
 
 In `permissions.allow`, append the following entries if not already present (including coverage by a broader existing permission):
 
-- `Read(~/.ai-skills/*)` — allow reading global config and resource files
-- `Bash(pnpm --dir {repo} run *)` — allow all pnpm scripts scoped to the aisk repo (replace `{repo}` with the actual path from Step 1); skip if an existing permission already covers this (e.g. `Bash(pnpm *)`)
+- `Read(~/.sk-skills/*)` — allow reading installed runtime files
+- `Bash(node ~/.sk-skills/out/*)` — allow running installed skill scripts
 
 Use `settings.local.json` because these entries contain machine-specific absolute paths and should not be committed.
 

@@ -6,7 +6,6 @@ import { scanSkills, stripFrontmatter } from "./scan-skills";
 
 interface ClaudeSetupOptions {
   repoPath?: string;
-  aiSkillsHome?: string;
   claudeHome?: string;
 }
 
@@ -16,8 +15,6 @@ function resolveHomePath(envName: string, fallbackPath: string): string {
 
 export class ClaudeSetup {
   private repoPath: string;
-  private configDir: string;
-  private configFile: string;
   private globalCmdsDir: string;
 
   constructor(options: ClaudeSetupOptions = {}) {
@@ -25,18 +22,12 @@ export class ClaudeSetup {
       options.repoPath ?? process.env.AISK_REPO_ROOT ?? join(__dirname, ".."),
     );
 
-    const aiSkillsHome = resolveHomePath("AI_SKILLS_HOME", join(homedir(), ".ai-skills"));
     const claudeHome = resolveHomePath("CLAUDE_HOME", join(homedir(), ".claude"));
-
-    this.configDir = resolve(options.aiSkillsHome ?? aiSkillsHome);
-    this.configFile = join(this.configDir, "config.json");
     this.globalCmdsDir = join(resolve(options.claudeHome ?? claudeHome), "commands", "aisk");
   }
 
   run(): void {
-    mkdirSync(this.configDir, { recursive: true });
     mkdirSync(this.globalCmdsDir, { recursive: true });
-    writeFileSync(this.configFile, JSON.stringify({ repo: this.repoPath }, null, 2) + "\n");
 
     const entries = scanSkills(this.repoPath).filter((e) => e.targets.claude);
 
@@ -59,7 +50,6 @@ export class ClaudeSetup {
     }
 
     console.log("Claude initialization complete:");
-    console.log(`  Config: ${this.configFile}`);
     console.log(`  Repository: ${this.repoPath}`);
     console.log(`  Installed ${installed.size} global skill(s):`);
     for (const name of [...installed].sort()) {

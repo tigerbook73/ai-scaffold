@@ -2,7 +2,7 @@
  * @test-file   setup-claude
  * @description Verifies that ClaudeSetup correctly installs skills into an isolated Claude commands directory
  * @ai-generated
- * @reviewed-by Shengtian Liao @ [1]
+ * @reviewed-by Shengtian Liao @ [2]
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -20,7 +20,6 @@ const repoRoot = process.cwd();
  * @target      Validate that skills are installed, stale commands removed, and config written correctly
  * @strategy    Integration — uses isolated temp directory, real skill scan, no network
  * @cases
- *   - [PASS] config.json written with correct repo path
  *   - [PASS] all Claude-targeted skills installed as .md files
  *   - [PASS] stale .md command removed from target directory
  *   - [PASS] non-.md files preserved in commands directory
@@ -32,7 +31,6 @@ test("claude setup installs commands into an isolated home", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "aisk-claude-setup-"));
 
   try {
-    const aiSkillsHome = join(tempRoot, ".ai-skills");
     const claudeHome = join(tempRoot, ".claude");
     const commandsDir = join(claudeHome, "commands", "aisk");
 
@@ -40,12 +38,7 @@ test("claude setup installs commands into an isolated home", () => {
     writeFileSync(join(commandsDir, "stale.md"), "stale");
     writeFileSync(join(commandsDir, "keep.txt"), "not a command");
 
-    new ClaudeSetup({ repoPath: repoRoot, aiSkillsHome, claudeHome }).run();
-
-    const config = JSON.parse(readFileSync(join(aiSkillsHome, "config.json"), "utf-8")) as {
-      repo: string;
-    };
-    assert.equal(config.repo, repoRoot);
+    new ClaudeSetup({ repoPath: repoRoot, claudeHome }).run();
 
     const entries = scanSkills(repoRoot).filter((e) => e.targets.claude);
     for (const entry of entries) {

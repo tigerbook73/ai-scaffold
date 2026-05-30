@@ -5,9 +5,8 @@ node_modules/
 .claude/settings.local.json
 .claude/commands/aisk
 
-# TypeScript build artifacts (if tsc is run manually without outDir)
-scripts/**/*.js
-scripts/**/*.d.ts
+# Compiled output
+out/
 *.tsbuildinfo
 
 # Environment variables

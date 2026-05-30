@@ -3,9 +3,15 @@ import { execFileSync, execSync } from "child_process";
 
 const REVIEWED_BY_RE = /@reviewed-by\s+.+@\s+\[(\d+)\]/;
 
-class TestReviewCheck {
+class TestRulesCheck {
   // Reads staged test files and validates @reviewed-by; exits with code 1 if any fail.
   run(): void {
+    const renames = new Map<string, string>();
+    for (const line of execSync("git diff --cached --name-status").toString().split("\n")) {
+      const m = line.match(/^R\d*\t(.+)\t(.+)/);
+      if (m) renames.set(m[2], m[1]); // new name → old name
+    }
+
     const changedFiles = execSync("git diff --cached --name-only")
       .toString()
       .split("\n")
@@ -27,9 +33,10 @@ class TestReviewCheck {
 
       let prev: string | null = null;
       try {
-        prev = execFileSync("git", ["show", `HEAD:${file}`]).toString();
+        const oldName = renames.get(file) ?? file;
+        prev = execFileSync("git", ["show", `HEAD:${oldName}`]).toString();
       } catch {
-        // file is new
+        // file is new (no previous version under any name)
       }
 
       if (prev === null) {
@@ -60,5 +67,5 @@ class TestReviewCheck {
 }
 
 if (require.main === module) {
-  new TestReviewCheck().run();
+  new TestRulesCheck().run();
 }

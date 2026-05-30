@@ -1,17 +1,16 @@
-// Installs the AI test review convention into the current project:
-// writes .claude/rules/test-review.md and appends a pre-commit hook entry.
+// Installs the AI test rules convention into the current project:
+// writes .claude/rules/test-rules.md and appends a pre-commit hook entry.
 import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "fs";
 import { join } from "path";
 
-const HOOK_MARKER = "# aisk:test-review-check";
+const HOOK_MARKER = "# aisk:test-rules-check";
 
 const HOOK_SNIPPET = `
 ${HOOK_MARKER}
-AISK_ROOT=$(node -e "process.stdout.write(require(require('os').homedir()+'/.ai-skills/config.json').repo)")
-cd "$AISK_ROOT" && node --import tsx "$AISK_ROOT/scripts/test-review-check.ts"
+node "$HOME/.sk-skills/out/test-rules/test-rules-check.js"
 `;
 
-export class SetupTestReview {
+export class SetupTestRules {
   constructor(private cwd = process.cwd()) {}
 
   run(): void {
@@ -24,20 +23,21 @@ export class SetupTestReview {
     const templatePath = join(
       __dirname,
       "..",
+      "..",
       "skills",
-      "setup-test-review",
+      "setup-test-rules",
       "resource",
-      "test-review.md",
+      "test-rules.md",
     );
     const content = readFileSync(templatePath, "utf-8");
     const rulesDir = join(this.cwd, ".claude", "rules");
     mkdirSync(rulesDir, { recursive: true });
-    const rulesPath = join(rulesDir, "test-review.md");
+    const rulesPath = join(rulesDir, "test-rules.md");
     writeFileSync(rulesPath, content);
     console.log(`  Wrote: ${rulesPath}`);
   }
 
-  // Appends the test-review-check call to .git/hooks/pre-commit; creates the hook if absent.
+  // Writes the test-rules-check call to .git/hooks/pre-commit; replaces any existing entry.
   private updateHook(): void {
     const hookPath = join(this.cwd, ".git", "hooks", "pre-commit");
 
@@ -46,16 +46,9 @@ export class SetupTestReview {
       process.exit(1);
     }
 
-    let existing = "";
-    if (existsSync(hookPath)) {
-      existing = readFileSync(hookPath, "utf-8");
-      if (existing.includes(HOOK_MARKER)) {
-        console.log(`  Hook already installed: ${hookPath}`);
-        return;
-      }
-    } else {
-      existing = "#!/bin/sh\n";
-    }
+    let existing = existsSync(hookPath) ? readFileSync(hookPath, "utf-8") : "#!/bin/sh\n";
+    // Remove any previous marker entry before re-appending the latest snippet.
+    existing = existing.replace(/\n# aisk:test-rules-check\n[^\n]*\n?/g, "");
 
     writeFileSync(hookPath, existing + HOOK_SNIPPET);
     chmodSync(hookPath, 0o755);
@@ -64,5 +57,5 @@ export class SetupTestReview {
 }
 
 if (require.main === module) {
-  new SetupTestReview().run();
+  new SetupTestRules().run();
 }
