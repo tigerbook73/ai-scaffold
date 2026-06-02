@@ -3,7 +3,7 @@ import { execFileSync, execSync } from "child_process";
 
 const REVIEWED_BY_RE = /@reviewed-by\s+.+@\s+\[(\d+)\]/;
 
-class TestRulesCheck {
+class TestReviewRulesCheck {
   // Reads staged test files and validates @reviewed-by; exits with code 1 if any fail.
   run(): void {
     const renames = new Map<string, string>();
@@ -67,5 +67,5 @@ class TestRulesCheck {
 }
 
 if (require.main === module) {
-  new TestRulesCheck().run();
+  new TestReviewRulesCheck().run();
 }

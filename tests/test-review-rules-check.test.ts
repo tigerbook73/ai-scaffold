@@ -1,5 +1,5 @@
 /**
- * @test-file   test-rules-check
+ * @test-file   test-review-rules-check
  * @description Verifies that the pre-commit check correctly validates @reviewed-by in staged test files, including renamed files
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [2]
@@ -13,7 +13,7 @@ import test from "node:test";
 
 const repoRoot = resolve(__dirname, "..");
 const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
-const scriptPath = join(repoRoot, "src", "test-rules", "test-rules-check.ts");
+const scriptPath = join(repoRoot, "src", "test-review-rules", "test-review-rules-check.ts");
 
 function initRepo(dir: string): void {
   execSync("git init", { cwd: dir });

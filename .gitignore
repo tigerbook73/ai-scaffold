@@ -4,6 +4,7 @@ node_modules/
 # Claude — ignore personal settings, but commit project rules
 .claude/settings.local.json
 .claude/commands/aisk
+.claude/rules/test-review-rules.md
 
 # Compiled output
 out/
