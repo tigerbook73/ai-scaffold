@@ -1,14 +1,14 @@
 # setup-precommit
 
-Configure a git pre-commit hook for the current Node.js project using lint-staged.
+Configure a git pre-commit hook for the current Node.js project using husky and lint-staged.
 
 ---
 
 ## Constraints
 
-- [Write operation] Writes to `package.json` (adds `lint-staged` config) and `.git/hooks/pre-commit`
+- [Write operation] Writes to `package.json` (adds `lint-staged` config and `prepare` script) and `.husky/pre-commit`
 - Node.js projects only; stops if `package.json` is not found in the project root
-- Does not overwrite an existing pre-commit hook without user confirmation
+- Does not overwrite an existing `.husky/pre-commit` without user confirmation
 
 ## Steps
 
@@ -19,8 +19,8 @@ Configure a git pre-commit hook for the current Node.js project using lint-stage
    > This skill is for Node.js projects only. No `package.json` found.
    > Then stop.
 
-2. Check whether `.git/hooks/pre-commit` already exists.
-   - If it exists: read and display its content; ask "A pre-commit hook already exists. Overwrite it?"
+2. Check whether `.husky/pre-commit` already exists.
+   - If it exists: read and display its content; ask "A husky pre-commit hook already exists. Overwrite it?"
      Wait for confirmation; stop if declined.
 
 ### Step 2 — Detect toolchain
@@ -57,40 +57,40 @@ Show a combined preview of the changes before writing anything:
 lint-staged config to be added to package.json:
 { "*.{ts,tsx,js,jsx}": ["eslint --fix", "prettier --write"], ... }
 
-.git/hooks/pre-commit:
-#!/bin/sh
+.husky/pre-commit:
 npx lint-staged
 ```
 
 Wait for user confirmation.
 
-### Step 5 — Install lint-staged
+### Step 5 — Install husky and lint-staged
 
-Check if `lint-staged` already appears in `devDependencies`. If not, run the appropriate command:
+Check `devDependencies` and install any missing packages using the detected package manager:
 
-- pnpm: `pnpm add -D lint-staged`
-- yarn: `yarn add -D lint-staged`
-- npm: `npm install --save-dev lint-staged`
+- pnpm: `pnpm add -D husky lint-staged`
+- yarn: `yarn add -D husky lint-staged`
+- npm: `npm install --save-dev husky lint-staged`
 
-### Step 6 — Write
+Skip packages already present in `devDependencies`.
 
-1. Add the `lint-staged` object to `package.json`, preserving all existing fields.
-2. Create `.git/hooks/pre-commit`:
+### Step 6 — Initialize husky and write hook
+
+1. Run `npx husky init` — this creates the `.husky/` directory and adds `"prepare": "husky"` to `package.json`.
+2. Add the `lint-staged` object to `package.json`, preserving all existing fields.
+3. Overwrite `.husky/pre-commit` with:
    ```sh
-   #!/bin/sh
    npx lint-staged
    ```
-3. Run `chmod +x .git/hooks/pre-commit`.
 
 ### Step 7 — Verify
 
-Run `ls -la .git/hooks/pre-commit` to confirm the file is executable, then output a one-line
+Run `ls -la .husky/pre-commit` to confirm the file exists, then output a one-line
 summary of what was configured.
 
 ---
 
 ## Notes
 
-- The hook calls `npx lint-staged`, so no global install of lint-staged is required
+- `.husky/pre-commit` is committed to git — all team members get the hook automatically after `npm install`
 - To test without committing: run `npx lint-staged` in the project root
 - If ESLint or Prettier is added to the project later, re-run this skill to update the config

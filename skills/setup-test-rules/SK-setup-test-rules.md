@@ -7,12 +7,14 @@ pre-commit hook entry that blocks commits where test files lack a human `@review
 
 **Constraints**
 
-- [Write operation] Always overwrites `.claude/rules/test-rules.md`; always replaces the hook entry in `.git/hooks/pre-commit` even if already present
+- [Write operation] Always overwrites `.claude/rules/test-rules.md`; always replaces the hook entry in `.husky/pre-commit` even if already present
 - Node.js projects only; requires `~/.sk-skills/out/test-rules/setup-test-rules.js` to exist (run `pnpm register` first)
+- Requires husky to be initialized in the project (`.husky/` directory must exist)
 
 **Steps**
 
 1. Confirm `.git/` exists in the current directory. If not, stop with: "Not a git repository."
 2. Confirm `~/.sk-skills/out/test-rules/setup-test-rules.js` exists. If not, stop with: "Run `pnpm register` first."
 3. Run: `node ~/.sk-skills/out/test-rules/setup-test-rules.js`
+   - If the script exits with code **2**, husky is not set up. Run `/aisk/setup-precommit` first, then repeat this step.
 4. Report what was written (the script prints each file path).
