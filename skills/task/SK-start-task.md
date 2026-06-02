@@ -1,11 +1,11 @@
 # start-task
 
-Restore task context for the current session.
+为当前 session 恢复任务上下文。
 
-**Steps**
+**步骤**
 
-1. Check if a `task-state.md` exists under `docs/tasks/*/` in the repository root.
-   If none is found, prompt the user to run create-task first, then stop.
-   If multiple are found, ask the user which task to restore.
-2. Read `task-state.md` and all documents listed in its Document Index (requirements and design files).
-3. Output task summary: current phase, key progress, and pending items.
+1. 检查代码库根目录下 `docs/tasks/*/` 中是否存在 `task-state.md`。
+   若未找到，提示用户先运行 create-task，然后停止。
+   若找到多个，询问用户要恢复哪个任务。
+2. 读取 `task-state.md` 以及其 Document Index 中列出的所有文档（需求和设计文件）。
+3. 输出任务摘要：当前阶段、关键进展和待办事项。

@@ -1,44 +1,44 @@
 # refresh-arch
 
-Scan the codebase and generate or refresh `.ai-skills/architecture.md`, recording architecture decisions that should not be broken during code changes.
+扫描代码库，生成或刷新 `.ai-skills/architecture.md`，记录代码变更期间不应被破坏的架构决策。
 
 ---
 
-## Constraints
+## 约束
 
-- [Write operation] Only writes to `.ai-skills/architecture.md`; no other files are modified
-- Shows a diff before writing; writes only after user confirmation
+- [写操作] 仅写入 `.ai-skills/architecture.md`；不修改其他文件
+- 写入前先展示 diff；仅在用户确认后才写入
 
-## Input
+## 输入
 
-`$ARGUMENTS` (optional)
+`$ARGUMENTS`（可选）
 
-- No argument → auto-detect: if working tree has changes (staged/unstaged/untracked) → same as `changes`; otherwise → same as `commit 1`
-- `help` → list all available modes, then stop
-- `ALL` → full project file tree (intelligently ignores auto-generated code)
-- `changes` → all working tree changes: `git diff` (unstaged) + `git diff --cached` (staged) + untracked new files (`git ls-files --others --exclude-standard`)
-- `commit [N|hash]` → files changed between that point and current worktree:
-  - `commit` or `commit 1` → HEAD~1 to current (`git diff HEAD~1`)
-  - `commit N` → HEAD~N to current (`git diff HEAD~N`)
-  - `commit <hash>` → `<hash>` to current (`git diff <hash>`)
-- `<path>` → current content of files under that directory/file
+- 无参数 → 自动检测：若工作树有变更（staged/unstaged/untracked）→ 等同 `changes`；否则 → 等同 `commit 1`
+- `help` → 列出所有可用模式，然后停止
+- `ALL` → 完整项目文件树（智能忽略自动生成代码）
+- `changes` → 所有工作树变更：`git diff`（未暂存）+ `git diff --cached`（已暂存）+ 未跟踪新文件（`git ls-files --others --exclude-standard`）
+- `commit [N|hash]` → 该点到当前工作树之间发生变更的文件：
+  - `commit` 或 `commit 1` → HEAD~1 到当前（`git diff HEAD~1`）
+  - `commit N` → HEAD~N 到当前（`git diff HEAD~N`）
+  - `commit <hash>` → `<hash>` 到当前（`git diff <hash>`）
+- `<path>` → 该目录/文件下文件的当前内容
 
-## Steps
+## 步骤
 
-1. Read the current `.ai-skills/architecture.md` (if it exists)
+1. 读取当前 `.ai-skills/architecture.md`（若存在）
 
-2. Parse `$ARGUMENTS` and determine the review scope; retrieve the corresponding files or diff content
+2. 解析 `$ARGUMENTS` 并确定审查范围；获取对应文件或 diff 内容
 
-3. Scan the retrieved content and extract or refresh architecture decision entries according to the following criteria:
+3. 扫描获取的内容，按以下标准提取或刷新架构决策条目：
 
-   Each entry must simultaneously satisfy:
-   1. It is a violable choice — there is a clear "what not to do"
-   2. There is no immediate signal when violated — tools do not report it, behavior appears normal;
-      impact may only surface in other modules, be exposed with a delay,
-      or silently accumulate as a quality hazard
-   3. Understanding "why it was designed this way" requires reading multiple files
+   每条条目必须同时满足：
+   1. 这是一个可违反的选择 —— 有明确的"不该做什么"
+   2. 违反时没有即时信号 —— 工具不会报告，行为表现正常；
+      影响可能仅在其他模块中显现、延迟暴露，
+      或悄悄积累为质量隐患
+   3. 理解"为何这样设计"需要阅读多个文件
 
-   Format for each entry:
+   每条条目格式：
 
    ```
    **[Decision title]**
@@ -47,22 +47,22 @@ Scan the codebase and generate or refresh `.ai-skills/architecture.md`, recordin
    Consequence: what happens if violated
    ```
 
-   Do not include:
-   - Standard usage of the tech stack
-   - Descriptive content without a clear counter-example ("the system uses X" is not a decision)
+   不包含：
+   - 技术栈的标准用法
+   - 无明确反例的描述性内容（"系统使用 X"不构成决策）
 
-   When refreshing:
-   - Do not duplicate decisions already covered by existing entries; when two entries cover the same decision from different angles, keep the existing one
-   - New entries must clearly satisfy all three criteria above; when in doubt, do not add — err on the side of fewer
-   - Remove existing entries that no longer meet the criteria or whose corresponding design has changed
+   刷新时：
+   - 不重复已有条目涵盖的决策；若两条条目从不同角度覆盖同一决策，保留已有条目
+   - 新条目必须明确满足以上三个标准；有疑问时不添加 —— 宁少勿多
+   - 删除不再满足标准或其对应设计已变更的已有条目
 
-4. Show the diff; wait for user confirmation
+4. 展示 diff；等待用户确认
 
-5. After user confirmation, write to `.ai-skills/architecture.md` (create the directory if it does not exist)
+5. 用户确认后，写入 `.ai-skills/architecture.md`（若目录不存在则创建）
 
-   If `.ai-skills/` was just created for the first time, remind the user to add `.ai-skills/` to `.gitignore`.
+   若 `.ai-skills/` 是首次创建，提醒用户将 `.ai-skills/` 添加到 `.gitignore`。
 
-   Output a one-line scope summary, for example:
+   输出一行范围摘要，例如：
 
    ```
    Scope: changes (2 modified, 1 staged, 1 untracked) | Entries added: 2, updated: 1, removed: 0

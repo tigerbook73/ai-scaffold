@@ -1,59 +1,57 @@
-# Design Step Format: Required Sections
+# 设计步骤格式：必要章节
 
-This document defines the required sections for each step in a design document.
-Design documents may be split across multiple files (listed in `task-state.md` Document Index);
-these format constraints apply to every step regardless of which file it appears in.
-All other step content (goals, architecture notes, key changes, rationale) is free-form.
+本文档定义设计文档中每个步骤的必要章节。
+设计文档可以拆分为多个文件（列于 `task-state.md` Document Index 中）；
+无论步骤位于哪个文件，格式约束均适用。
+所有其他步骤内容（目标、架构说明、关键变更、设计理由）为自由格式。
 
 ---
 
 ## Step Type
 
-**Step Type**: `intermediate` | `final`
+**Step Type**：`intermediate` | `final`
 
-- `intermediate` — code produced is transitional; a later step finalizes or replaces it.
-  Full tests are not required; note in the step which later step finalizes the code.
-- `final` — code produced is production-quality. Tests must be written in this step,
-  or explicitly delegated to a named later step with a note here.
+- `intermediate` —— 此步骤产出的代码是过渡性的；后续步骤将完成或替换它。
+  不强制要求完整测试；在步骤中注明哪个后续步骤会最终完成该代码。
+- `final` —— 此步骤产出的代码达到生产质量。测试必须在此步骤中编写，
+  或明确委托给某个后续步骤并在此处注明。
 
 ---
 
 ## Auto Verification
 
-Commands run automatically to verify the step's output.
+自动运行的命令，用于验证步骤的输出。
 
-- `(auto)` `<command>` — executed directly; must exit 0
-- `(superseded)` replaces any condition that is no longer valid
+- `(auto)` `<command>` —— 直接执行；必须退出码为 0
+- `(superseded)` 替换任何已不再有效的条件
 
-**Guidelines for `final` steps**: include at least one functional test command that exercises
-the new behavior (e.g., a targeted test filter or a new test file) — not just the full existing
-suite. Keep commands cheap and fast; high-cost checks belong in Manual Verification.
+**`final` 步骤的指导原则**：至少包含一个能执行新行为的功能测试命令
+（如针对性测试过滤器或新测试文件）—— 而不仅仅是运行全部现有测试套件。
+保持命令低代价、快速；高代价检查应放入 Manual Verification。
 
-**Guidelines for `intermediate` steps**: auto conditions are optional; include only what is
-meaningful for the transitional state.
+**`intermediate` 步骤的指导原则**：auto 条件为可选；仅包含对过渡状态有意义的条件。
 
 ---
 
 ## Manual Verification
 
-Human-confirmed items for checks that cannot be automated cost-effectively.
+无法以合理代价自动化的检查项，需人工确认。
 
-- `(manual)` <description>
-- `(manual) [automation-candidate]` <description> — marks items worth automating in the future
+- `(manual)` <描述>
+- `(manual) [automation-candidate]` <描述> —— 标记未来值得自动化的项目
 
-Use `[automation-candidate]` when the item is currently too costly to automate but could be
-automated with reasonable effort later.
+当某个项目目前自动化成本过高但未来可以合理实现时，使用 `[automation-candidate]`。
 
 ---
 
 ## Task Acceptance
 
-Conditions that verify the task as a whole meets the requirements' Acceptance Criteria.
-This section appears once, at the end of the design document (or in the last design file if split).
-Verified by `verify-task`, not `verify-step`.
+验证整个任务是否满足需求验收标准的条件。
+此章节出现一次，位于设计文档末尾（若文档已拆分则在最后一个设计文件中）。
+由 `verify-task` 验证，而非 `verify-step`。
 
-Each Acceptance Criterion in `requirements.md` must map to at least one condition here.
+`requirements.md` 中的每条验收标准必须在此处至少对应一个条件。
 
-- `(auto)` `<command>` — executed directly; must exit 0
-- `(manual)` <description>
-- `(superseded)` replaces any condition that is no longer valid
+- `(auto)` `<command>` —— 直接执行；必须退出码为 0
+- `(manual)` <描述>
+- `(superseded)` 替换任何已不再有效的条件

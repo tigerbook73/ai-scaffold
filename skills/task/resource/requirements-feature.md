@@ -1,32 +1,31 @@
-# Requirements Format: Feature Tasks
+# 需求格式：Feature 任务
 
-This document defines the required sections for feature requirements documents.
-All section content is free-form. Sections may be merged when there is significant overlap.
+本文档定义 feature 需求文档的必要章节。所有章节内容均为自由格式。各章节在重叠内容较多时可合并。
 
 ---
 
-## Goal
+## 目标
 
-What this feature achieves and why it is needed.
+此功能实现了什么，以及为何需要它。
 
-## Background and Motivation
+## 背景与动机
 
-What triggered this feature: user pain points, business needs, competitive pressure, etc.
-May be merged with Goal if there is significant overlap.
+触发此功能的原因：用户痛点、业务需求、竞争压力等。
+与目标重叠较多时可合并。
 
-## Functional Requirements
+## 功能需求
 
-Each deliverable behavior or capability change — user-visible, API contract, or system interaction.
+每一项可交付的行为或能力变化 —— 用户可见、API 契约或系统交互。
 
-## Non-Functional Requirements
+## 非功能性需求
 
-Performance, security, compatibility, or other quality constraints.
-Omit this section if none apply.
+性能、安全性、兼容性或其他质量约束。
+若无则省略此章节。
 
-## Out of Scope
+## 范围外
 
-What this task will NOT address: related features, edge cases, future iterations, etc.
+本任务**不会**处理的内容：相关功能、边界情况、未来迭代等。
 
-## Acceptance Criteria
+## 验收标准
 
-Testable, unambiguous conditions for completion.
+可测试、无歧义的完成条件。

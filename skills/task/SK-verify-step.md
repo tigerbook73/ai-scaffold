@@ -1,49 +1,48 @@
 # verify-step
 
-Run acceptance checks for a single step. Defaults to the current step.
+对单个步骤运行验收检查，默认为当前步骤。
 
 ---
 
-## Constraints
+## 约束
 
-- Must be in task work mode (start-task executed in current session)
-- [Write operation] Updates the specified step's verification fields in `task-state.md`
+- 必须处于任务工作模式（当前 session 已执行 start-task）
+- [写操作] 更新 `task-state.md` 中指定步骤的验证字段
 
-## Input
+## 输入
 
-`$ARGUMENTS`: `[step-N] [auto [--full] | manual]` (optional)
+`$ARGUMENTS`：`[step-N] [auto [--full] | manual]`（可选）
 
-- `step-N` — target step (e.g. `step-2`); omit to use the current step from `task-state.md`
-- `auto` — run auto-type conditions (default: fast mode)
-- `auto --full` — run all auto-type conditions from scratch
-- `manual` — present manual-type conditions for human confirmation
-- _(all omitted)_ — use current step, prompt user to choose auto or manual
+- `step-N` —— 目标步骤（如 `step-2`）；省略则使用 `task-state.md` 中的当前步骤
+- `auto` —— 运行 auto 类型条件（默认：快速模式）
+- `auto --full` —— 从头运行所有 auto 类型条件
+- `manual` —— 向用户展示 manual 类型条件，等待人工确认
+- _（全部省略）_ —— 使用当前步骤，提示用户选择 auto 或 manual
 
-## Steps
+## 步骤
 
-### Resolve target step
+### 确定目标步骤
 
-If `step-N` is provided, use it. Otherwise read `Current Step` from `task-state.md`.
-If `Current Step` is `—` (not in implementation phase), prompt the user to specify a step and stop.
+若提供了 `step-N`，使用该步骤。否则从 `task-state.md` 读取 `Current Step`。
+若 `Current Step` 为 `—`（未处于实现阶段），提示用户指定步骤，然后停止。
 
-### auto mode
+### auto 模式
 
-**Fast mode** (default): First check `task-state.md` — if this step's `auto-check` is already
-`passed`, skip all conditions and report pass immediately. Otherwise, if this session already ran
-verify-step or verify-task for this step and has results in context, skip conditions that
-previously passed and re-run only those that failed or were not yet run. If no prior session
-context exists, fall back to full mode.
+**快速模式**（默认）：先检查 `task-state.md` —— 若该步骤的 `auto-check` 已为
+`passed`，跳过所有条件直接报告通过。否则，若当前 session 已为该步骤运行过
+verify-step 或 verify-task 且上下文中有结果，跳过之前通过的条件，仅重新运行失败或
+尚未运行的条件。若无先前 session 上下文，退回至完整模式。
 
-**Full mode** (`--full`): Run all `(auto)` conditions for the step regardless of prior results.
+**完整模式**（`--full`）：无论先前结果如何，运行该步骤的所有 `(auto)` 条件。
 
-1. Read `(auto)` conditions from the **Auto Verification** section of the target step in the design documents.
-2. Execute each condition's command and record the result (pass / fail).
-3. If all pass: update `auto-check: passed` for the step in `task-state.md`.
-   If any fail: update `auto-check: failed`, report which commands failed.
+1. 从设计文档中该步骤的 **Auto Verification** 部分读取 `(auto)` 条件。
+2. 执行每个条件的命令并记录结果（pass / fail）。
+3. 若全部通过：在 `task-state.md` 中更新该步骤的 `auto-check: passed`。
+   若有失败：更新 `auto-check: failed`，报告哪些命令失败。
 
-### manual mode
+### manual 模式
 
-1. Read `(manual)` conditions from the **Manual Verification** section of the target step in the design documents.
-2. Present each condition to the user and ask for confirmation.
-3. If the user confirms all pass: update `manual-check: passed` for the step in `task-state.md`.
-   If any are declined: update `manual-check: failed`, note which items failed.
+1. 从设计文档中该步骤的 **Manual Verification** 部分读取 `(manual)` 条件。
+2. 向用户逐一展示每个条件并请求确认。
+3. 若用户确认全部通过：在 `task-state.md` 中更新该步骤的 `manual-check: passed`。
+   若有拒绝：更新 `manual-check: failed`，记录哪些项目失败。

@@ -26,7 +26,7 @@ function makeProjectDir(): string {
  * @cases
  *   - [PASS] .claude/rules/test-rules.md exists after run
  *   - [PASS] file contains paths frontmatter with test file globs
- *   - [PASS] file contains AI Test Review Rules heading
+ *   - [PASS] file contains AI test review rules heading
  */
 test("writes .claude/rules/test-rules.md with template content when run in a project", () => {
   const dir = makeProjectDir();
@@ -37,7 +37,7 @@ test("writes .claude/rules/test-rules.md with template content when run in a pro
     const content = readFileSync(rulesPath, "utf-8");
     assert.match(content, /paths:/);
     assert.match(content, /\*\*\/\*\.test\.ts/);
-    assert.match(content, /AI Test Review Rules/);
+    assert.match(content, /AI 测试审查规则/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -1,80 +1,80 @@
 # create-skill
 
-Capture a skill intent, refine it into a spec, and add it to the global repository.
+捕获 skill 意图，将其精炼为规范，并添加到全局代码库。
 
-**Usage**: `/aisk/create-skill [$ARGUMENTS]`
+**用法**：`/aisk/create-skill [$ARGUMENTS]`
 
 ---
 
-## Constraints
+## 约束
 
-- Writes to `{repo}/skills/{name}/SK-{name}.md`
-- Triggers `pnpm build` which syncs `.claude/rules/skill-rules.md`
+- 写入 `{repo}/skills/{name}/SK-{name}.md`
+- 触发 `pnpm build`，同步 `.claude/rules/skill-rules.md`
 
-## Input
+## 输入
 
-- No argument → prompt the user to describe the skill they want
-- Any argument → treat the entire argument as the raw skill intent
+- 无参数 → 提示用户描述他们想要的 skill
+- 任何参数 → 将整个参数视为原始 skill 意图
 
-## Steps
+## 步骤
 
-### Step 1 — Collect intent
+### 第一步 — 收集意图
 
-Read `~/.ai-skills/config.json` to get `{repo}`. If missing, tell the user to run `pnpm register` first and stop.
+读取 `~/.ai-skills/config.json` 获取 `{repo}`。若不存在，告知用户先运行 `pnpm register`，然后停止。
 
-Read `{repo}/skills/skill-format.md` for the format spec.
+读取 `{repo}/skills/skill-format.md` 了解格式规范。
 
-If an argument was provided, use it as the raw intent. Otherwise ask the user:
+若提供了参数，将其作为原始意图。否则询问用户：
 
-> What should this skill do? Describe the goal, trigger, and expected behavior.
+> 这个 skill 应该做什么？请描述目标、触发时机和预期行为。
 
-### Step 2 — Organize and confirm intent
+### 第二步 — 整理并确认意图
 
-Restate the intent in structured form:
+以结构化形式重新陈述意图：
 
-- **Goal**: what the skill achieves
-- **Trigger**: when and how it is used
-- **Core behavior**: key steps at a high level
-- **Constraints**: write scope, side effects, limits
-- **Out of scope**: what this skill explicitly does not do
+- **目标**：skill 实现了什么
+- **触发时机**：何时以及如何使用
+- **核心行为**：高层次的关键步骤
+- **约束**：写入范围、副作用、限制
+- **范围外**：本 skill 明确不做的事
 
-Ask the user to confirm or correct before proceeding.
+请用户确认或更正后再继续。
 
-### Step 3 — Generate skill draft
+### 第三步 — 生成 skill 草稿
 
-Based on the confirmed intent:
+基于已确认的意图：
 
-1. Choose Compact or Structured tier from the format spec
-2. Infer a kebab-case skill name
-3. Generate the full skill MD content in English following the chosen template
+1. 根据格式规范选择 Compact 或 Structured 等级
+2. 推断一个 kebab-case skill 名称
+3. 按所选模板生成完整的 skill MD 内容（使用模板对应的语言）
 
-Show the generated content to the user and wait for confirmation. If the user requests changes, apply them and re-show before proceeding.
+向用户展示生成内容并等待确认。若用户要求修改，应用修改后重新展示，再继续。
 
-### Step 4 — Write to repository
+### 第四步 — 写入代码库
 
-After the user confirms the content:
+用户确认内容后：
 
-1. Write the file to `{repo}/skills/{name}/SK-{name}.md` (create the `{name}/` directory if it does not exist)
-2. If the skill is Claude Code only (not Codex), prepend:
+1. 将文件写入 `{repo}/skills/{name}/SK-{name}.md`（若 `{name}/` 目录不存在则创建）
+2. 若 skill 仅适用于 Claude Code（不支持 Codex），在文件开头添加：
    ```
    ---
    targets: [claude]
    ---
    ```
-   Otherwise no action needed — skills default to both targets.
-3. Run:
+   否则无需操作 —— skill 默认支持两个目标。
+3. 运行：
    ```bash
    pnpm --dir {repo} build
    ```
 
-Output a confirmation and prompt the user to:
+输出确认信息，并提示用户：
 
-- Run `git commit` in the ai-skills repository to persist the change
-- Run `pnpm register` to apply globally (Claude Code + Codex)
+- 在 ai-skills 代码库中运行 `git commit` 以持久化变更
+- 运行 `pnpm register` 以全局应用（Claude Code + Codex）
 
 ---
 
-## Notes
+## 注意事项
 
-- All generated skill content must be in English
-- Default target is both Claude Code and Codex; ask the user only if the skill uses Claude-specific behaviors that Codex cannot support
+- 所有生成的SKILL，必须和本文件使用的语言一致
+- 默认目标为 Claude Code 和 Codex 两者；仅当 skill 使用 Codex 无法支持的 Claude 专属行为时，才询问用户

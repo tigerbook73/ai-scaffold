@@ -1,33 +1,29 @@
-# Requirements Format: Refactor Tasks
+# 需求格式：Refactor 任务
 
-This document defines the required sections for refactor requirements documents.
-All section content is free-form.
+本文档定义 refactor 需求文档的必要章节。所有章节内容均为自由格式。
 
 ---
 
-## Goal
+## 目标
 
-What this refactor improves and why it needs to happen now.
+此重构改善了什么，以及为何需要现在进行。
 
-## Background and Motivation
+## 背景与动机
 
-Current pain points: performance bottlenecks, poor readability, hard-to-maintain tests,
-outdated dependencies, architectural coupling, etc.
+当前痛点：性能瓶颈、可读性差、测试难以维护、依赖过时、架构耦合等。
 
-## Scope
+## 范围
 
-Modules, files, or subsystems involved in this refactor.
+参与此次重构的模块、文件或子系统。
 
-## Out of Scope
+## 范围外
 
-What will NOT change: modules not being optimized, stable public interfaces, cleanup
-deferred to a later iteration, etc.
+**不会**变更的内容：未被优化的模块、稳定的公共接口、推迟到后续迭代的清理工作等。
 
-## Constraints
+## 约束
 
-Behavioral contracts that must be preserved: public APIs, data formats, test coverage
-thresholds, etc.
+必须保留的行为契约：公共 API、数据格式、测试覆盖率阈值等。
 
-## Acceptance Criteria
+## 验收标准
 
-Testable, unambiguous conditions for completion — including checks that behavior is unchanged.
+可测试、无歧义的完成条件 —— 包括验证行为未发生变化的检查。

@@ -1,46 +1,46 @@
-# AI Skills — Project Overview
+# AI Skills —— 项目概览
 
-## What it is
+## 是什么
 
-AI Skills is a **local skill library** that installs reusable skills globally for Claude Code and Codex with a single `pnpm register` command.
+AI Skills 是一个**本地 skill 库**，通过一条 `pnpm register` 命令将可复用 skill 全局安装到 Claude Code 和 Codex。
 
-Core idea: skills are maintained centrally in a local repository — change once, use everywhere. New skills are promoted to the global library via `/aisk/create-skill`.
+核心理念：skill 集中维护在本地代码库中 —— 改一处，处处生效。新 skill 通过 `/aisk/create-skill` 晋升到全局库。
 
 ---
 
-## Overall Architecture
+## 整体架构
 
 ```
 Local skill repository/
-└── skills/              ← skill source files (SK-*.md with optional frontmatter)
+└── skills/              ← skill 源文件（SK-*.md，含可选 frontmatter）
 
   ↓ pnpm register
 
-~/.ai-skills/config.json          ← records the repository path
-~/.claude/commands/aisk/          ← Claude Code skill commands
-~/.codex/skills/aisk-*/           ← Codex skill directories
+~/.ai-skills/config.json          ← 记录代码库路径
+~/.claude/commands/aisk/          ← Claude Code skill 命令
+~/.codex/skills/aisk-*/           ← Codex skill 目录
 ```
 
-Installers scan `skills/` at install time — no intermediate manifests. Skills default to both Claude Code and Codex targets. A skill adds `targets: [claude]` frontmatter to opt out of Codex.
+安装器在安装时扫描 `skills/` —— 无中间 manifest。Skill 默认同时支持 Claude Code 和 Codex。Skill 可在 frontmatter 中添加 `targets: [claude]` 以退出 Codex 支持。
 
 ---
 
-## Repository Directory Structure
+## 代码库目录结构
 
 ```
 {repo}/
-├── skills/                        ← all skill files, organized by group
-│   ├── skill-format.md            ← canonical skill source format spec
+├── skills/                        ← 所有 skill 文件，按组组织
+│   ├── skill-format.md            ← skill 源文件格式规范
 │   ├── arch/
 │   │   ├── SK-refresh-arch.md
 │   │   └── SK-check-arch.md
 │   ├── create-skill/
 │   │   ├── SK-create-skill.md
-│   │   └── resource/              ← runtime resources (not installed as commands)
+│   │   └── resource/              ← 运行时资源（不作为命令安装）
 │   ├── init-project/
 │   │   └── SK-init-project.md
 │   ├── set-claude-permission/
-│   │   └── SK-set-claude-permission.md  ← has `targets: [claude]` frontmatter
+│   │   └── SK-set-claude-permission.md  ← 含 `targets: [claude]` frontmatter
 │   ├── setup-precommit/
 │   │   └── SK-setup-precommit.md
 │   ├── smart-review/
@@ -51,60 +51,60 @@ Installers scan `skills/` at install time — no intermediate manifests. Skills 
 │   │   ├── SK-verify-step.md
 │   │   ├── SK-verify-task.md
 │   │   ├── SK-complete-task.md
-│   │   └── resource/              ← task document templates
+│   │   └── resource/              ← 任务文档模板
 │   └── walkthrough/
 │       ├── SK-create-walkthrough.md
 │       └── SK-start-walkthrough.md
 ├── scripts/
-│   ├── setup.ts                   ← pnpm register (runs Claude + Codex setup)
-│   ├── setup-claude.ts            ← Claude installer
-│   ├── setup-codex.ts             ← Codex installer
-│   ├── scan-skills.ts             ← shared scanner: reads SK-*.md frontmatter + H1
-│   └── build.ts                   ← syncs skill-format.md and Claude rule files
+│   ├── setup.ts                   ← pnpm register（运行 Claude + Codex 安装）
+│   ├── setup-claude.ts            ← Claude 安装器
+│   ├── setup-codex.ts             ← Codex 安装器
+│   ├── scan-skills.ts             ← 共享扫描器：读取 SK-*.md frontmatter + H1
+│   └── build.ts                   ← 同步 skill-format.md 和 Claude 规则文件
 ├── package.json
 └── docs/
-    └── OVERVIEW.md                ← this document
+    └── OVERVIEW.md                ← 本文档
 ```
 
-> **Tech stack**: All scripts use TypeScript, invoked via `pnpm <script>`, executed with `node --import tsx`, with CLI argument parsing via CAC where needed.
+> **技术栈**：所有脚本使用 TypeScript，通过 `pnpm <script>` 调用，以 `node --import tsx` 执行；需要时通过 CAC 解析 CLI 参数。
 
 ---
 
-## Per-project Runtime Files
+## 项目运行时文件
 
-Skills may generate files in the project's `.ai-skills/` directory at runtime. These are **not** installed by `pnpm register` — they are created on demand by individual skills:
+Skill 可能在项目的 `.ai-skills/` 目录下运行时生成文件。这些文件**不**由 `pnpm register` 安装 —— 而是由各 skill 按需创建：
 
-- `.ai-skills/architecture.md` — written by `/aisk/refresh-arch`, records project-specific architecture decisions
+- `.ai-skills/architecture.md` —— 由 `/aisk/refresh-arch` 写入，记录项目专属的架构决策
 
-These files should be added to `.gitignore` (handled by `/aisk/init-project`).
-
----
-
-## pnpm Scripts Summary
-
-| Command             | Implementation                                 | Purpose                                                          |
-| ------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
-| `pnpm register`     | `scripts/setup.ts`                             | Install skills globally for Claude Code and Codex                |
-| `pnpm build`        | `scripts/build.ts`                             | Sync `skill-format.md` and Claude rule files                     |
-| `pnpm create-skill` | `skills/create-skill/resource/create-skill.ts` | Write a skill file to `skills/` (called by `/aisk/create-skill`) |
-| `pnpm verify`       | —                                              | lint:check + typecheck + test + build                            |
-
-> **Runtime dependency**: Scripts are executed as TypeScript via `node --import tsx`; CLI argument parsing uses CAC where needed.
+这些文件应添加到 `.gitignore`（由 `/aisk/init-project` 处理）。
 
 ---
 
-## Management Scripts
+## pnpm 脚本汇总
+
+| 命令                | 实现                                           | 用途                                                               |
+| ------------------- | ---------------------------------------------- | ------------------------------------------------------------------ |
+| `pnpm register`     | `scripts/setup.ts`                             | 为 Claude Code 和 Codex 全局安装 skill                             |
+| `pnpm build`        | `scripts/build.ts`                             | 同步 `skill-format.md` 和 Claude 规则文件                          |
+| `pnpm create-skill` | `skills/create-skill/resource/create-skill.ts` | 将 skill 文件写入 `skills/`（由 `/aisk/create-skill` 调用）        |
+| `pnpm verify`       | —                                              | lint:check + typecheck + test + build                              |
+
+> **运行时依赖**：脚本通过 `node --import tsx` 以 TypeScript 形式执行；需要时 CLI 参数解析使用 CAC。
+
+---
+
+## 管理脚本
 
 ### scripts/setup.ts
 
-**Purpose**: Install skills globally for both Claude Code and Codex. Run once on a new machine.
+**用途**：为 Claude Code 和 Codex 全局安装 skill。在新机器上运行一次。
 
-**Operations:**
+**操作：**
 
-1. Delegates to `ClaudeSetup` (installs to `~/.claude/commands/aisk/`)
-2. Delegates to `CodexSetup` (installs to `~/.codex/skills/aisk-*/`)
+1. 委托给 `ClaudeSetup`（安装至 `~/.claude/commands/aisk/`）
+2. 委托给 `CodexSetup`（安装至 `~/.codex/skills/aisk-*/`）
 
-**Invocation:**
+**调用：**
 
 ```bash
 pnpm register
@@ -114,87 +114,87 @@ pnpm register
 
 ### scripts/scan-skills.ts
 
-**Purpose**: Shared skill scanner used by both installers. Reads each `SK-*.md` file and returns structured `SkillEntry` objects.
+**用途**：两个安装器共用的 skill 扫描器。读取每个 `SK-*.md` 文件并返回结构化的 `SkillEntry` 对象。
 
-**For each skill, infers:**
+**为每个 skill 推断：**
 
-- `targets`: from optional YAML frontmatter (`targets: [claude]` for Claude-only; default is both)
-- `description`: first non-empty line after H1 (used as Claude slash-command description)
-- `codex.name`: `aisk-{skill-name}` (derived from filename)
-- `codex.description`: `"Use when the user wants to …"` (prefixed from H1 description)
-- `codex.shortDescription`: title-cased skill name
+- `targets`：来自可选的 YAML frontmatter（`targets: [claude]` 为仅 Claude；默认两者均支持）
+- `description`：H1 后的第一个非空行（用作 Claude 斜杠命令描述）
+- `codex.name`：`aisk-{skill-name}`（从文件名派生）
+- `codex.description`：`"Use when the user wants to …"`（从 H1 描述加前缀）
+- `codex.shortDescription`：skill 名称的首字母大写形式
 
 ---
 
 ### scripts/setup-claude.ts
 
-**Purpose**: Claude installer — scans skills and installs to `~/.claude/commands/aisk/`.
+**用途**：Claude 安装器 —— 扫描 skill 并安装至 `~/.claude/commands/aisk/`。
 
-**Operations:**
+**操作：**
 
-1. Write repository path to `~/.ai-skills/config.json`
-2. Scan `skills/` via `scanSkills()`, filter by `targets.claude`
-3. Install each skill as `{name}.md` with YAML `description` frontmatter
-4. Remove stale `.md` files in `~/.claude/commands/aisk/`
+1. 将代码库路径写入 `~/.ai-skills/config.json`
+2. 通过 `scanSkills()` 扫描 `skills/`，按 `targets.claude` 过滤
+3. 将每个 skill 以 `{name}.md` 形式安装，附带 YAML `description` frontmatter
+4. 删除 `~/.claude/commands/aisk/` 中的过期 `.md` 文件
 
 ---
 
 ### scripts/setup-codex.ts
 
-**Purpose**: Codex installer — scans skills and installs to `~/.codex/skills/aisk-*/SKILL.md`.
+**用途**：Codex 安装器 —— 扫描 skill 并安装至 `~/.codex/skills/aisk-*/SKILL.md`。
 
-**Operations:**
+**操作：**
 
-1. Write repository path to `~/.ai-skills/config.json`
-2. Scan `skills/` via `scanSkills()`, filter by `targets.codex`
-3. Transform each skill: strip Claude-specific `**Usage**` lines, replace `/aisk/x` → `aisk-x`, add YAML frontmatter and Codex Notes section
-4. Remove stale `aisk-*` Codex skill directories (preserves third-party skills)
+1. 将代码库路径写入 `~/.ai-skills/config.json`
+2. 通过 `scanSkills()` 扫描 `skills/`，按 `targets.codex` 过滤
+3. 转换每个 skill：去除 Claude 专属的 `**Usage**` 行，将 `/aisk/x` 替换为 `aisk-x`，添加 YAML frontmatter 和 Codex Notes 章节
+4. 删除过期的 `aisk-*` Codex skill 目录（保留第三方 skill）
 
 ---
 
 ### scripts/build.ts
 
-**Purpose**: Sync skill format rules from `skills/skill-format.md` into `.claude/rules/skill-rules.md`. Does not generate install manifests.
+**用途**：将 skill 格式规则从 `skills/skill-format.md` 同步到 `.claude/rules/skill-rules.md`。不生成安装 manifest。
 
-**Operations:**
+**操作：**
 
-1. Read `skills/skill-format.md` and extract content between EXTRACT markers
-2. Sync that content into `.claude/rules/skill-rules.md` (so Claude Code auto-loads format rules when editing SK-\*.md files)
+1. 读取 `skills/skill-format.md`，提取 EXTRACT 标记之间的内容
+2. 将该内容同步到 `.claude/rules/skill-rules.md`（使 Claude Code 在编辑 SK-\*.md 文件时自动加载格式规则）
 
-**Invocation:**
+**调用：**
 
 ```bash
 pnpm build
 ```
 
-Run after editing `skills/skill-format.md`.
+编辑 `skills/skill-format.md` 后运行。
 
 ---
 
 ### skills/create-skill/resource/create-skill.ts
 
-**Purpose**: Write a skill file to the global repository `skills/`.
+**用途**：将 skill 文件写入全局代码库的 `skills/`。
 
-**Parameters (via CAC):**
+**参数（通过 CAC）：**
 
 ```bash
 pnpm create-skill -- <file> [--name <n>] [--cleanup] [--force]
 ```
 
-| Parameter   | Description                                    | Default                    |
-| ----------- | ---------------------------------------------- | -------------------------- |
-| `<file>`    | Source file path (required)                    | —                          |
-| `--name`    | Skill name (target filename without `.md`)     | taken from source filename |
-| `--cleanup` | Delete the source file after copying           | false                      |
-| `--force`   | Skip conflict confirmation for duplicate names | false                      |
+| 参数        | 描述                                         | 默认值             |
+| ----------- | -------------------------------------------- | ------------------ |
+| `<file>`    | 源文件路径（必填）                           | —                  |
+| `--name`    | Skill 名称（目标文件名，不含 `.md`）         | 取自源文件名       |
+| `--cleanup` | 复制后删除源文件                             | false              |
+| `--force`   | 名称重复时跳过冲突确认                       | false              |
 
-**Called indirectly by the `/aisk/create-skill` command**; users do not typically run this directly.
+**由 `/aisk/create-skill` 命令间接调用**；用户通常不直接运行此脚本。
 
 ---
 
-## Skill Target Control
+## Skill 目标控制
 
-Installers read optional YAML frontmatter from each `SK-*.md` file:
+安装器从每个 `SK-*.md` 文件读取可选的 YAML frontmatter：
 
 ```yaml
 ---
@@ -202,89 +202,89 @@ targets: [claude]
 ---
 ```
 
-- No frontmatter → both Claude Code and Codex (default)
-- `targets: [claude]` → Claude Code only
-- Only one skill currently uses this: `set-claude-permission`
+- 无 frontmatter → Claude Code 和 Codex 均支持（默认）
+- `targets: [claude]` → 仅 Claude Code
+- 目前只有一个 skill 使用此配置：`set-claude-permission`
 
 ---
 
-## Skill Commands
+## Skill 命令
 
 ### /aisk/init-project
 
-**Invocation**: `/aisk/init-project` (no arguments)
+**调用**：`/aisk/init-project`（无参数）
 
-**Effect**: Configures a new project to work with globally installed aisk skills:
+**效果**：为当前项目配置全局安装的 aisk skill 的使用环境：
 
-1. Adds `.ai-skills/` to `.gitignore` (with confirmation)
-2. Adds `Read(~/.ai-skills/*)` and `Bash(pnpm --dir {repo} run *)` to `.claude/settings.json`
+1. 将 `.ai-skills/` 添加到 `.gitignore`（经确认）
+2. 在 `.claude/settings.json` 中添加 `Read(~/.ai-skills/*)` 和 `Bash(pnpm --dir {repo} run *)`
 
 ---
 
 ### /aisk/create-skill
 
-**Invocation**: `/aisk/create-skill <file-path>` or `/aisk/create-skill <skill-name>`
+**调用**：`/aisk/create-skill <file-path>` 或 `/aisk/create-skill <skill-name>`
 
-**Effect**: Promotes a skill to the global repository.
+**效果**：将 skill 晋升到全局代码库。
 
-| Mode       | Argument form                  | Behavior                                                                                                              |
-| ---------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| File path  | Path to an existing `.md` file | Passed to `create-skill.ts` for processing                                                                            |
-| Skill name | Plain name (e.g. `my-skill`)   | Claude generates content from conversation context, writes to `{repo}/skills/{name}/SK-{name}.md`, calls `pnpm build` |
+| 模式       | 参数形式                        | 行为                                                                                                                      |
+| ---------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 文件路径   | 已有 `.md` 文件的路径           | 传入 `create-skill.ts` 处理                                                                                               |
+| Skill 名称 | 普通名称（如 `my-skill`）        | Claude 根据对话上下文生成内容，写入 `{repo}/skills/{name}/SK-{name}.md`，调用 `pnpm build`                                |
 
-After execution, `git commit` in the ai-skills repository to persist, then `pnpm register` to apply globally.
+执行后，在 ai-skills 代码库中运行 `git commit` 以持久化，然后运行 `pnpm register` 全局应用。
 
 ---
 
-### /aisk/task/\* — Task workflow
+### /aisk/task/\* —— 任务工作流
 
-A group of skills for managing structured development tasks with branch-per-task workflow and step-by-step acceptance verification. See `skills/task/README.md` for the full workflow.
+一组 skill，用于管理带有分支独占工作流和逐步验收验证的结构化开发任务。完整工作流详见 `skills/task/README.md`。
 
-| Command         | Description                                                                    |
-| --------------- | ------------------------------------------------------------------------------ |
-| `create-task`   | Initialize a new task: create branch, scaffold task documents, enter work mode |
-| `start-task`    | Enter task work mode for the current session (re-run at each new session)      |
-| `verify-step`   | Run acceptance checks for a single step                                        |
-| `verify-task`   | Run acceptance checks across all steps                                         |
-| `complete-task` | Verify task completion, clean up task documents, and prompt to create a PR     |
+| 命令            | 描述                                                                   |
+| --------------- | ---------------------------------------------------------------------- |
+| `create-task`   | 初始化新任务：创建分支、搭建任务文档，并进入工作模式                   |
+| `start-task`    | 为当前 session 进入任务工作模式（每次新 session 开始时重新运行）       |
+| `verify-step`   | 对单个步骤运行验收检查                                                 |
+| `verify-task`   | 对所有步骤运行验收检查                                                 |
+| `complete-task` | 验证任务完成，清理任务文档，并提示创建 PR                              |
 
 ---
 
 ### /aisk/smart-review
 
-**Invocation**: `/aisk/smart-review <target-path> [focus description]`
+**调用**：`/aisk/smart-review <target-path> [focus description]`
 
-**Effect**: Iteratively reviews and fixes a target file, module, or directory. Runs up to 3 rounds; pauses on decisions that require user input.
+**效果**：对目标文件、模块或目录进行迭代式审查和修复。最多运行 3 轮；遇到需要用户输入的决策时暂停。
 
 ---
 
 ### /aisk/refresh-arch / /aisk/check-arch
 
-**`refresh-arch`**: Scans the codebase and generates or refreshes `.ai-skills/architecture.md` with architecture decisions.
+**`refresh-arch`**：扫描代码库，生成或刷新 `.ai-skills/architecture.md`，记录架构决策。
 
-**`check-arch`**: Checks whether code changes in a given scope align with the recorded architecture decisions.
+**`check-arch`**：检查给定范围内的代码变更是否与已记录的架构决策一致。
 
 ---
 
-## Typical Workflows
+## 典型工作流
 
-**Initialize on a new machine:**
+**在新机器上初始化：**
 
 ```
 git clone .../ai-skills ~/code/ai-skills
 cd ~/code/ai-skills && pnpm install && pnpm register
 ```
 
-**Configure a new project:**
+**配置新项目：**
 
 ```
 /aisk/init-project
 ```
 
-**Promote a temporary skill to a global skill:**
+**将临时 skill 晋升为全局 skill：**
 
 ```
 /aisk/create-skill .claude/commands/aisk/my-experiment.md
-# → git commit in the ai-skills repository
-# → pnpm register to apply globally
+# → 在 ai-skills 代码库中运行 git commit
+# → 运行 pnpm register 全局应用
 ```

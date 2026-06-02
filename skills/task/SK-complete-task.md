@@ -1,49 +1,47 @@
 # complete-task
 
-Verify task completion, clean up task documents, and prompt the user to create a PR.
+验证任务完成情况，清理任务文档，并提示用户创建 PR。
 
-Does not run acceptance tests — use verify-task for that.
+不运行验收测试 —— 请使用 verify-task 执行验收测试。
 
 ---
 
-## Constraints
+## 约束
 
-- Must be in task work mode (start-task executed in current session)
-- Working tree must be clean (no uncommitted changes, no untracked files)
-- Must be on a task branch (not main/master)
-- [Write operation] Phase 2 deletes `docs/tasks/{task-name}/` and creates a git commit — each action requires explicit user confirmation
+- 必须处于任务工作模式（当前 session 已执行 start-task）
+- 工作树必须干净（无未提交变更，无未跟踪文件）
+- 必须处于任务分支（非 main/master）
+- [写操作] 第二阶段删除 `docs/tasks/{task-name}/` 并创建 git commit —— 每项操作均需用户明确确认
 
-## Steps
+## 步骤
 
-### Phase 1 — Completeness Check
+### 第一阶段 — 完整性检查
 
-1. Run `git status`. If the working tree is not clean (staged, modified, or untracked files),
-   stop and prompt the user to commit or stash changes first.
-2. For each step in `task-state.md` Implementation Phase, verify:
-   - Status is `done`
-   - A commit hash is recorded (not `—`)
-3. Verify that every step's `auto-check` field in `task-state.md` is `passed`.
-4. Verify that every step's `manual-check` field in `task-state.md` is `passed`.
-5. Verify that the Task Acceptance `auto-check` field in `task-state.md` is `passed`.
-6. Verify that the Task Acceptance `manual-check` field in `task-state.md` is `passed`.
-7. If any check fails, list all failing items and stop. Prompt the user to resolve them
-   (e.g., run verify-step / verify-task, complete the missing step, or commit pending changes).
+1. 运行 `git status`。若工作树不干净（存在 staged、modified 或 untracked 文件），
+   停止并提示用户先提交或 stash 变更。
+2. 对 `task-state.md` Implementation Phase 中的每个步骤，验证：
+   - 状态为 `done`
+   - 已记录 commit hash（不为 `—`）
+3. 验证 `task-state.md` 中每个步骤的 `auto-check` 字段均为 `passed`。
+4. 验证 `task-state.md` 中每个步骤的 `manual-check` 字段均为 `passed`。
+5. 验证 `task-state.md` 中 Task Acceptance 的 `auto-check` 字段为 `passed`。
+6. 验证 `task-state.md` 中 Task Acceptance 的 `manual-check` 字段为 `passed`。
+7. 若任何检查失败，列出所有失败项并停止。提示用户解决（如运行 verify-step / verify-task、补全缺失步骤或提交待提交变更）。
 
-### Phase 2 — Cleanup
+### 第二阶段 — 清理
 
-Each action in this phase requires explicit user confirmation before proceeding.
+此阶段每项操作均需用户明确确认后才执行。
 
-7. Ask the user: "Have you distilled any decisions or architecture changes from this task into
-   the project's permanent documentation?" Accept yes/no/skip — any answer proceeds; this is a
-   reminder, not a gate.
+7. 询问用户："Have you distilled any decisions or architecture changes from this task into
+   the project's permanent documentation?" 接受 yes/no/skip —— 任何回答均可继续；这是提醒，不是门控。
 
-8. Display the full path of the task directory to be deleted (`docs/tasks/{task-name}/`).
-   Ask the user to confirm deletion.
-9. Upon confirmation:
-   - Delete the entire `docs/tasks/{task-name}/` directory (all files and subdirectories).
-   - Stage with `git add -A docs/tasks/{task-name}/`.
-   - Commit: `git commit -m "chore: complete task {task-name}"`.
-10. Prompt the user to create a PR. Do not create it automatically.
+8. 展示待删除任务目录的完整路径（`docs/tasks/{task-name}/`）。
+   请用户确认删除。
+9. 确认后：
+   - 删除整个 `docs/tasks/{task-name}/` 目录（含所有文件和子目录）。
+   - 暂存：`git add -A docs/tasks/{task-name}/`。
+   - 提交：`git commit -m "chore: complete task {task-name}"`。
+10. 提示用户创建 PR。不自动创建。
 
-> **Recovery**: If changes are needed after the PR is reviewed, restore the deleted documents
-> with: `git checkout <commit-before-deletion> -- docs/tasks/{task-name}/`
+> **恢复**：若 PR 审查后需要变更，可通过以下命令恢复已删除文档：
+> `git checkout <commit-before-deletion> -- docs/tasks/{task-name}/`

@@ -17,8 +17,8 @@ const repoRoot = process.cwd();
  * @strategy    Unit — reads file system directly, no mocks
  * @cases
  *   - [PASS] file exists at skills/skill-format.md
- *   - [PASS] contains ## Mandatory Rules section
- *   - [PASS] contains ## Format Tiers section
+ *   - [PASS] contains mandatory rules section
+ *   - [PASS] contains format tiers section
  *   - [PASS] contains EXTRACT:skill-format:start marker
  */
 test("exposes Mandatory Rules and Format Tiers when skill-format.md is present", () => {
@@ -26,8 +26,8 @@ test("exposes Mandatory Rules and Format Tiers when skill-format.md is present",
   assert.equal(existsSync(skillFormatPath), true, "skills/skill-format.md not found");
 
   const content = readFileSync(skillFormatPath, "utf-8");
-  assert.match(content, /## Mandatory Rules/);
-  assert.match(content, /## Format Tiers/);
+  assert.match(content, /## 强制规则/);
+  assert.match(content, /## 格式等级/);
   assert.match(content, /EXTRACT:skill-format:start/);
 });
 
@@ -37,14 +37,14 @@ test("exposes Mandatory Rules and Format Tiers when skill-format.md is present",
  * @strategy    Unit — reads file system directly, no mocks
  * @cases
  *   - [PASS] .claude/rules/skill-rules.md exists
- *   - [PASS] contains ## Mandatory Rules section
- *   - [PASS] contains ## Format Tiers section
+ *   - [PASS] contains mandatory rules section
+ *   - [PASS] contains format tiers section
  */
 test("contains extracted format spec when skill-rules.md is built", () => {
   const rulesPath = join(repoRoot, ".claude", "rules", "skill-rules.md");
   assert.equal(existsSync(rulesPath), true, "skill-rules.md not found");
 
   const content = readFileSync(rulesPath, "utf-8");
-  assert.match(content, /## Mandatory Rules/);
-  assert.match(content, /## Format Tiers/);
+  assert.match(content, /## 强制规则/);
+  assert.match(content, /## 格式等级/);
 });

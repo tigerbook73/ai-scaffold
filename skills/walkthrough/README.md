@@ -1,48 +1,48 @@
-# walkthrough Skill Group
+# walkthrough Skill 组
 
-Structured code walkthrough: analyzes all changes in a single pass, groups the changes, presents a global overview, then walks through group by group on demand.
+结构化代码走读：一次性分析所有变更，对变更进行分组，展示全局概览，然后按需逐组走读。
 
 ## Skills
 
-**`create-walkthrough`** — Create a new walkthrough. Confirms target range, checks out the target version if needed, reads all diffs and context documents in one pass, groups the changes, shows a global overview, then enters the interactive loop. Group content is generated on demand during navigation.
+**`create-walkthrough`** — 创建新的走读。确认目标范围，必要时签出目标版本，一次性读取所有 diff 和上下文文档，对变更分组，展示全局概览，然后进入交互式循环。组内容在导航过程中按需生成。
 
-**`start-walkthrough`** — Resume a walkthrough from the state file. Re-run at the start of each new session to restore progress.
+**`start-walkthrough`** — 从状态文件恢复走读。每次新 session 开始时重新运行以恢复进度。
 
-## Input format
-
-```
-/aisk/create-walkthrough              # all uncommitted changes, or latest commit if tree is clean
-/aisk/create-walkthrough C1           # changes introduced by commit C1 (vs C1~1)
-/aisk/create-walkthrough C1..         # from C1 to current worktree
-/aisk/create-walkthrough C1..C5       # from C1 to C5 (cumulative)
-```
-
-## Navigation (during walkthrough)
+## 输入格式
 
 ```
-wtgroup next      # advance to next group
-wtgroup prev      # go back to previous group
-wtgroup G3        # jump to group 3
-wtgroup list      # list all groups and completion status
-wtgroup overview  # re-display global overview
-wtgroup finish    # finish and optionally delete state
+/aisk/create-walkthrough              # 所有未提交变更；若工作树干净则为最新 commit
+/aisk/create-walkthrough C1           # commit C1 引入的变更（相对于 C1~1）
+/aisk/create-walkthrough C1..         # 从 C1 到当前工作树
+/aisk/create-walkthrough C1..C5       # 从 C1 到 C5（累计）
 ```
 
-## State layout
+## 导航命令（走读过程中）
+
+```
+wtgroup next      # 前进到下一组
+wtgroup prev      # 返回上一组
+wtgroup G3        # 跳转到第 3 组
+wtgroup list      # 列出所有组及完成状态
+wtgroup overview  # 重新显示全局概览
+wtgroup finish    # 结束走读
+```
+
+## 状态文件布局
 
 ```
 {cwd}/.ai-skills/walkthrough/{stateKey}/
-  index.json   ← progress metadata (managed by walkthrough-state.ts)
-  g1.md        ← walkthrough content for group 1 (generated on first visit)
-  g2.md        ← walkthrough content for group 2 (generated on first visit)
+  index.json   ← 进度元数据（由 walkthrough-state.ts 管理）
+  g1.md        ← 第 1 组的走读内容（首次访问时生成）
+  g2.md        ← 第 2 组的走读内容（首次访问时生成）
   ...
 ```
 
-`{stateKey}` = current branch name with `/` replaced by `-`.
+`{stateKey}` = 当前分支名，其中 `/` 替换为 `-`。
 
-## Resource files
+## 资源文件
 
-- `resource/strategy.md` — analysis, grouping, and presentation strategies (tune this without touching skill flow files)
-- `resource/walkthrough-loop.md` — shared interactive loop used by both `create-walkthrough` and `start-walkthrough`
-- `resource/walkthrough-state.ts` — CLI script for managing `index.json`
-- `resource/types.ts` — TypeScript types for the state index
+- `resource/strategy.md` — 分析、分组和展示策略（可独立调整，无需修改 skill 流程文件）
+- `resource/walkthrough-loop.md` — `create-walkthrough` 和 `start-walkthrough` 共用的交互式循环
+- `resource/walkthrough-state.ts` — 管理 `index.json` 的 CLI 脚本
+- `resource/types.ts` — 状态 index 的 TypeScript 类型定义

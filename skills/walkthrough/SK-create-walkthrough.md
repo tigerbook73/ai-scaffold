@@ -1,62 +1,62 @@
 # create-walkthrough
 
-Create a new walkthrough: checkout the target version, analyze all changes in one pass, group the changes, present a global overview, then walk through group by group on demand.
+创建新的走读：签出目标版本，一次性分析所有变更，对变更分组，展示全局概览，然后按需逐组走读。
 
-**Usage**: `/aisk/create-walkthrough [<range>]`
+**用法**：`/aisk/create-walkthrough [<range>]`
 
 ---
 
-## Constraints
+## 约束
 
-- Only one active walkthrough per state key (derived from the current branch); if one exists, prompt to resume or overwrite
-- Working tree must be clean before any checkout
-- **Silent preparation**: complete all setup steps without narrating; output text only when asking questions or presenting content
-- **State script**: read `~/.ai-skills/config.json` to get `{repo}`. Index operations go through:
+- 每个 state key（从当前分支派生）只允许一个活跃走读；若已存在，提示用户选择恢复或覆盖
+- 签出前工作树必须干净
+- **静默准备**：不作解说地完成所有设置步骤；仅在提问或展示内容时输出文本
+- **状态脚本**：读取 `~/.ai-skills/config.json` 获取 `{repo}`。Index 操作通过以下方式执行：
   `{repo}/node_modules/.bin/tsx {repo}/skills/walkthrough/resource/walkthrough-state.ts <cmd> [--options]`
-- **Group files**: write `g{N}.md` directly via the Write tool; read via the Read tool. Path: `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md`
-- **Strategy**: grouping and presentation rules are in `{repo}/skills/walkthrough/resource/strategy.md`; read it during Step 5
+- **组文件**：通过 Write 工具直接写入 `g{N}.md`；通过 Read 工具读取。路径：`{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md`
+- **策略**：分组和展示规则见 `{repo}/skills/walkthrough/resource/strategy.md`；在第五步时读取
 
-## Input
+## 输入
 
-`$ARGUMENTS`: `[<range>]` (optional — if provided, used as the walkthrough target range directly)
+`$ARGUMENTS`：`[<range>]`（可选 —— 若提供，直接作为走读目标范围使用）
 
-Collected via a guided selection chain in Step 2:
+通过第二步的引导式选择链收集：
 
-1. **Target**: if dirty → confirm-only (uncommitted changes including untracked); if clean → numbered options (latest commit or commit-to-current range)
-2. **Intent**: numbered choice — `learning` (understand why) or `review` (assess risk)
-3. **Reference materials**: numbered choice — skip or provide file paths / free text
+1. **目标**：若有未提交变更 → 仅供确认（含未跟踪文件的未提交变更）；若干净 → 编号选项（最新 commit 或 commit 到当前的范围）
+2. **意图**：编号选择 —— `learning`（理解原因）或 `review`（评估风险）
+3. **参考资料**：编号选择 —— 跳过或提供文件路径/自由文本
 
-## Steps
+## 步骤
 
-### Step 1 — Resolve state key
+### 第一步 — 解析 state key
 
-Read `~/.ai-skills/config.json` for `{repo}`.
+读取 `~/.ai-skills/config.json` 获取 `{repo}`。
 
-Get the current branch: `git branch --show-current`.
+获取当前分支：`git branch --show-current`。
 
-- Branch name returned → sanitize (replace `/` with `-`) → `{stateKey}`
-- Empty string (already in detached HEAD) → `git rev-parse HEAD` → `state find --hash <hash>`. If an active record is found, use its `stateKey`; otherwise generate a key from the short hash.
+- 返回分支名 → 清理（将 `/` 替换为 `-`）→ `{stateKey}`
+- 返回空字符串（已处于 detached HEAD）→ `git rev-parse HEAD` → `state find --hash <hash>`。若找到活跃记录，使用其 `stateKey`；否则从短 hash 生成 key。
 
-Check for existing state: `state read --key {stateKey}`.
+检查已有状态：`state read --key {stateKey}`。
 
-- State found and `status === "active"` → ask: resume or overwrite?
-  - Resume → stop (tell user to run `start-walkthrough`)
-  - Overwrite → `state delete --key {stateKey}`, continue
-- State found and `status === "completed"` → inform: "This walkthrough is already completed." Ask: start fresh?
-  - Yes → `state delete --key {stateKey}`, continue
-  - No → stop
+- 找到状态且 `status === "active"` → 询问：恢复还是覆盖？
+  - 恢复 → 停止（告知用户运行 `start-walkthrough`）
+  - 覆盖 → `state delete --key {stateKey}`，继续
+- 找到状态且 `status === "completed"` → 提示："此走读已完成。" 询问：重新开始？
+  - 是 → `state delete --key {stateKey}`，继续
+  - 否 → 停止
 
-### Step 2 — Collect input
+### 第二步 — 收集输入
 
-#### Phase 1 — Walkthrough target
+#### 阶段 1 —— 走读目标
 
-If `$ARGUMENTS` was provided, skip detection; use it as `{targetRef}` and confirm with the user before proceeding.
+若提供了 `$ARGUMENTS`，跳过检测；直接使用它作为 `{targetRef}` 并在继续前向用户确认。
 
-Otherwise, run `git status --porcelain` and `git ls-files --others --exclude-standard | wc -l` silently, then branch:
+否则，静默运行 `git status --porcelain` 和 `git ls-files --others --exclude-standard | wc -l`，然后分支：
 
-**Dirty working tree** (has uncommitted changes or untracked files):
+**工作树有变更**（存在未提交变更或未跟踪文件）：
 
-No options — only one valid target. Present for confirmation:
+无选项 —— 只有一个有效目标。展示供确认：
 
 ```
 Walkthrough target:
@@ -64,12 +64,12 @@ Walkthrough target:
   Confirm? (Y/n)
 ```
 
-- User confirms → `{target}` = working tree, `{baseline}` = HEAD, `{targetRef}` = working tree, checkout not needed
-- User declines → stop
+- 用户确认 → `{target}` = 工作树，`{baseline}` = HEAD，`{targetRef}` = 工作树，无需签出
+- 用户拒绝 → 停止
 
-**Clean working tree**:
+**工作树干净**：
 
-Present numbered options (default = 1):
+展示编号选项（默认 = 1）：
 
 ```
 Walkthrough target:
@@ -77,12 +77,12 @@ Walkthrough target:
   2. From a specific commit to current version (enter starting commit)
 ```
 
-- User picks 1 or presses Enter → `{target}` = HEAD, `{baseline}` = HEAD~1, `{targetRef}` = HEAD, checkout needed
-- User picks 2 → ask: "Starting commit (e.g. abc1234 or HEAD~3):" → `{target}` = current worktree, `{baseline}` = given commit, `{targetRef}` = working tree, checkout not needed
+- 用户选择 1 或按 Enter → `{target}` = HEAD，`{baseline}` = HEAD~1，`{targetRef}` = HEAD，需要签出
+- 用户选择 2 → 询问："Starting commit (e.g. abc1234 or HEAD~3):" → `{target}` = 当前工作树，`{baseline}` = 给定 commit，`{targetRef}` = 工作树，无需签出
 
-#### Phase 2 — Walkthrough intent
+#### 阶段 2 —— 走读意图
 
-Present options:
+展示选项：
 
 ```
 Walkthrough intent:
@@ -90,11 +90,11 @@ Walkthrough intent:
   2. review   — assess correctness and risk; group by impact/risk area; cite references on demand
 ```
 
-Wait for the user to pick 1 or 2. Store as `{walkIntent}`.
+等待用户选择 1 或 2。存储为 `{walkIntent}`。
 
-#### Phase 3 — Reference materials (optional)
+#### 阶段 3 —— 参考资料（可选）
 
-Present options:
+展示选项：
 
 ```
 Reference materials (optional):
@@ -102,78 +102,78 @@ Reference materials (optional):
   2. Provide file paths or free-text description...
 ```
 
-- User picks 1 → set `{references}` to empty
-- User picks 2 → ask for input; if file paths are given, read their contents now; store as `{references}`
+- 用户选择 1 → 将 `{references}` 设为空
+- 用户选择 2 → 请求输入；若提供文件路径，立即读取其内容；存储为 `{references}`
 
-### Step 3 — Checkout (if needed)
+### 第三步 — 签出（若需要）
 
-Skip this step when target = current worktree.
+当 target = 当前工作树时，跳过此步骤。
 
-1. Verify working tree is clean: `git status --porcelain`. If non-empty, stop and prompt user to commit or stash first.
-2. Record `originalBranch` = current branch name (from `git branch --show-current`).
-3. `git checkout {targetRef} && git rev-parse HEAD` → record the printed hash as `{targetHash}`.
-4. If `{targetRef}` is a commit hash (not a branch name): warn the user:
+1. 验证工作树干净：`git status --porcelain`。若非空，停止并提示用户先提交或 stash。
+2. 记录 `originalBranch` = 当前分支名（来自 `git branch --show-current`）。
+3. `git checkout {targetRef} && git rev-parse HEAD` → 将打印的 hash 记录为 `{targetHash}`。
+4. 若 `{targetRef}` 是 commit hash（非分支名）：警告用户：
    > Switched to `{targetRef}` (detached HEAD). Run `git checkout -` to return to the original branch when the walkthrough is done.
 
-When no checkout is performed: `git rev-parse HEAD` → `{targetHash}`; set `checkedOut = false`, `originalBranch` = current branch.
+未执行签出时：`git rev-parse HEAD` → `{targetHash}`；设置 `checkedOut = false`，`originalBranch` = 当前分支。
 
-### Step 4 — Volume check
+### 第四步 — 体量检查
 
 ```bash
 git diff {baseline} --stat
 ```
 
-When target = current worktree (no checkout performed in Step 3), also count untracked files:
+当 target = 当前工作树（第三步未执行签出）时，同时统计未跟踪文件：
 
 ```bash
 git ls-files --others --exclude-standard | wc -l
 ```
 
-Add this count to the tracked-file total when applying thresholds below.
+应用以下阈值时将此数量加到已跟踪文件总数中。
 
-| Condition                   | Action                                                                                            |
-| --------------------------- | ------------------------------------------------------------------------------------------------- |
-| Files ≤ 20 and lines ≤ 1000 | Silent pass                                                                                       |
-| Files > 20 or lines > 1000  | Report the numbers; suggest narrowing to a subdirectory or shorter range; ask whether to continue |
+| 条件                         | 操作                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| 文件数 ≤ 20 且行数 ≤ 1000    | 静默通过                                                                        |
+| 文件数 > 20 或行数 > 1000    | 报告数字；建议缩小到子目录或更短范围；询问是否继续                              |
 
-### Step 5 — Full read
+### 第五步 — 完整读取
 
-**Diff** (one pass — do not re-read files per group later):
+**Diff**（一次读取 —— 后续不再按组重新读取文件）：
 
 ```bash
 git diff {baseline} -U15
 ```
 
-When target = current worktree (no checkout performed in Step 3), also read:
+当 target = 当前工作树（第三步未执行签出）时，同时读取：
 
 ```bash
-git ls-files --others --exclude-standard    # untracked files; read each via Read tool
+git ls-files --others --exclude-standard    # 未跟踪文件；通过 Read 工具逐个读取
 ```
 
-When additionally `baseline = HEAD`, also run:
+当 `baseline = HEAD` 时，还需运行：
 
 ```bash
-git diff -U15                               # unstaged changes (staged vs unstaged breakdown)
+git diff -U15                               # 未暂存变更（staged vs unstaged 细分）
 ```
 
-**Context documents**: read `{repo}/skills/walkthrough/resource/strategy.md` now, then follow its Analysis Strategy section to determine which context documents to read and in what order.
+**上下文文档**：立即读取 `{repo}/skills/walkthrough/resource/strategy.md`，然后按其"分析策略"章节确定要读取哪些上下文文档及读取顺序。
 
-### Step 6 — Full analysis
+### 第六步 — 完整分析
 
-Read `{repo}/skills/walkthrough/resource/strategy.md` if not already loaded.
+若尚未加载，读取 `{repo}/skills/walkthrough/resource/strategy.md`。
 
-Using the diff, context documents, `{walkIntent}`, and `{references}`, produce:
+利用 diff、上下文文档、`{walkIntent}` 和 `{references}`，生成：
 
-1. **Change intent**: 1–3 sentences describing what this change achieves and why.
-2. **Groups**: apply grouping strategy based on `{walkIntent}`. Each group must include: label, list of files, optional `designStep` reference, and done=false.
-   - `learning`: group by concept or feature module; order to build mental model progressively
-   - `review`: group by risk or impact area; order from highest-risk to lowest
+1. **变更意图**：1–3 句话，描述此次变更实现了什么以及为何这样做。
+2. **分组**：根据 `{walkIntent}` 应用分组策略。每个组必须包含：标签、文件列表、可选的 `designStep` 引用，以及 done=false。
+   - `learning`：按概念或功能模块分组；排序以逐步建立心智模型
+   - `review`：按风险或影响区域分组；从最高风险到最低风险排序
 
-Do **not** generate prose for any group here. All group files (G1..GN) are generated on demand during navigation.
+**不要**在此处为任何组生成文字说明。所有组文件（G1..GN）均在导航过程中按需生成。
 
-### Step 7 — Write state
+### 第七步 — 写入状态
 
-**index.json** — run `state init --key {stateKey} --index '<json>'`:
+**index.json** —— 运行 `state init --key {stateKey} --index '<json>'`：
 
 ```json
 {
@@ -198,11 +198,11 @@ Do **not** generate prose for any group here. All group files (G1..GN) are gener
 }
 ```
 
-**Group files** — do not pre-write any group files. All group files (G1..GN) are generated on demand during navigation.
+**组文件** —— 不预先写入任何组文件。所有组文件（G1..GN）均在导航过程中按需生成。
 
-### Step 8 — Present global overview
+### 第八步 — 展示全局概览
 
-Output:
+输出：
 
 ```
 Change intent: {intent}
@@ -213,18 +213,18 @@ Change intent: {intent}
   ...
 ```
 
-**STOP here.** Do NOT output G1 content in this response. Wait for the user to reply.
+**在此停止。** 本次响应中**不要**输出 G1 内容。等待用户回复。
 
-If the user confirms the grouping (any affirmative response), proceed to Step 9.
-If the user requests adjustments (merge, split, rename groups):
+若用户确认分组（任何肯定回复），继续第九步。
+若用户要求调整（合并、拆分、重命名组）：
 
-1. Apply the adjustment.
-2. Update `index.json` via `state update --key {stateKey} --index '<json>'`.
-3. Delete any already-generated `g{N}.md` files whose group was changed (using Bash `rm`), so they are regenerated on first visit with the updated grouping.
-4. Re-output the updated overview, then STOP and wait again.
+1. 应用调整。
+2. 通过 `state update --key {stateKey} --index '<json>'` 更新 `index.json`。
+3. 删除分组已变更的已生成 `g{N}.md` 文件（使用 Bash `rm`），以便首次访问时按更新后的分组重新生成。
+4. 重新输出更新后的概览，然后停止并再次等待。
 
-### Step 9 — Enter walkthrough loop
+### 第九步 — 进入走读循环
 
-Read `{repo}/skills/walkthrough/resource/walkthrough-loop.md`.
-Follow its instructions starting from "Display current group".
-(walkthrough-loop generates and outputs g1.md on demand — no need to repeat it here)
+读取 `{repo}/skills/walkthrough/resource/walkthrough-loop.md`。
+从"显示当前组"处开始执行其中的指令。
+（walkthrough-loop 按需生成并输出 g1.md —— 此处无需重复）

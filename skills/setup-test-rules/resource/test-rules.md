@@ -6,16 +6,16 @@ paths:
   - "**/*.spec.js"
 ---
 
-# AI Test Review Rules
+# AI 测试审查规则
 
-When creating or modifying test files, you MUST follow these rules:
+创建或修改测试文件时，必须遵守以下规则：
 
-1. Update `@description` in the file header to reflect current coverage
-2. Generate or update `@cases` in every `@test-suite` block; each entry must match its `it()` name exactly
-3. Never fill in `@reviewed-by` — that is the human reviewer's responsibility
-4. Name every `it()` in "condition → expected behavior" form (e.g. "returns OUT_OF_STOCK when stock is 0"). Avoid vague names like "works" or "test order".
+1. 更新文件头中的 `@description`，使其反映当前覆盖范围
+2. 在每个 `@test-suite` 块中生成或更新 `@cases`；每条条目必须与其对应的 `it()` 名称完全一致
+3. 不得填写 `@reviewed-by` —— 这是人工审查者的职责
+4. 每个 `it()` 的命名须采用"条件 → 预期行为"格式（如 "returns OUT_OF_STOCK when stock is 0"）。避免使用含糊的名称如 "works" 或 "test order"。
 
-## File Header Template
+## 文件头模板
 
 ```
 /**
@@ -26,7 +26,7 @@ When creating or modifying test files, you MUST follow these rules:
  */
 ```
 
-## Test Suite Template
+## 测试套件模板
 
 ```
 /**

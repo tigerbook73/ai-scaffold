@@ -1,92 +1,92 @@
 # confirm-intent
 
-Confirm the user's intended outcome before acting, then wait for explicit final confirmation unless the user has clearly allowed direct execution.
+在执行前确认用户的预期结果，然后等待明确的最终确认，除非用户已明确允许直接执行。
 
 ---
 
-## Constraints
+## 约束
 
-- Do not execute the task until the final confirmed interpretation is summarized and the user explicitly confirms it.
-- Skip the final confirmation gate only when the user explicitly says to proceed without confirmation, execute directly, or continue after clarification without waiting.
-- Do not edit files, run destructive commands, deploy, migrate data, change credentials, or make broad architectural decisions until material ambiguity is resolved and final confirmation is received.
+- 在最终确认的解读被汇总并得到用户明确确认之前，不执行任务。
+- 仅当用户明确表示无需确认、直接执行，或在澄清后无需等待时，才跳过最终确认关卡。
+- 在实质性歧义得到解决且最终确认到位之前，不编辑文件、运行破坏性命令、部署、迁移数据、更改凭证或做出广泛的架构决策。
 
-## Scope
+## 作用范围
 
-- This skill applies only to the current user request and its clarification loop.
-- After the user confirms the final interpretation and the confirmed task is completed, immediately return to default agent behavior.
-- Do not apply this skill's final confirmation gate to unrelated later requests unless the user explicitly invokes this skill again.
-- If a later request is ambiguous but this skill was not invoked, follow the agent's normal clarification behavior instead of this skill's stricter confirmation gate.
-- Treat "exit confirm-intent", "确认模式结束", or equivalent wording as an explicit instruction to stop applying this skill.
+- 本 skill 仅适用于当前用户请求及其澄清循环。
+- 用户确认最终解读且已确认的任务完成后，立即恢复默认 agent 行为。
+- 除非用户再次明确调用本 skill，否则不对后续无关请求应用最终确认关卡。
+- 若后续请求存在歧义但未调用本 skill，遵循 agent 的正常澄清行为，而非本 skill 更严格的确认关卡。
+- 将 "exit confirm-intent"、"确认模式结束" 或同等表述视为停止应用本 skill 的明确指令。
 
-## Input
+## 输入
 
-`$ARGUMENTS`: optional natural language request or clarification focus.
+`$ARGUMENTS`：可选的自然语言请求或澄清重点。
 
-- No argument -> clarify the current user request using conversation context.
-- Request text -> clarify that request before implementation.
-- Focus hint -> prioritize that ambiguity area, such as scope, output format, risk, audience, or implementation approach.
+- 无参数 → 利用对话上下文澄清当前用户请求。
+- 请求文本 → 在执行前澄清该请求。
+- 重点提示 → 优先处理该歧义领域，如范围、输出格式、风险、受众或实现方式。
 
-## Steps
+## 步骤
 
-### Step 1 — Infer intent
+### 第一步 — 推断意图
 
-Read the user's request and relevant conversation context. State the likely intended outcome in concrete terms, including the deliverable or action the user appears to want.
+读取用户请求和相关对话上下文。以具体措辞陈述最可能的预期结果，包括用户希望得到的交付物或操作。
 
-### Step 2 — Identify assumptions
+### 第二步 — 识别假设
 
-List only assumptions that affect the result, such as scope, files, audience, platform, constraints, success criteria, or whether implementation should begin immediately.
+仅列出影响结果的假设，例如范围、文件、受众、平台、约束、成功标准，或是否应立即开始实现。
 
-### Step 3 — Surface material ambiguity
+### 第三步 — 暴露实质性歧义
 
-Call out ambiguity only when different interpretations would change the work, cost, risk, user experience, architecture, data, or external side effects.
+仅在不同解读会改变工作量、成本、风险、用户体验、架构、数据或外部副作用时才指出歧义。
 
-### Step 4 — Resolve material ambiguity
+### 第四步 — 解决实质性歧义
 
-- No material ambiguity -> continue to the final confirmation gate.
-- Materially ambiguous -> explicitly state the ambiguity, explain why it matters, ask concise clarification questions, and stop until the user answers.
-- Partial clarification -> update the working interpretation with resolved points, state what remains unresolved, and ask only about remaining material ambiguities.
+- 无实质性歧义 → 继续到最终确认关卡。
+- 存在实质性歧义 → 明确陈述歧义，解释为何重要，提出简洁的澄清问题，然后停止等待用户回答。
+- 部分澄清 → 用已解决的内容更新工作解读，陈述剩余未解决内容，仅就剩余实质性歧义提问。
 
-High-impact actions include destructive operations, broad refactors, database migrations, deployments, credential changes, payment or billing changes, public release actions, and changes with external side effects.
+高影响操作包括：破坏性操作、大范围重构、数据库迁移、部署、凭证变更、支付或计费变更、公开发布操作，以及具有外部副作用的变更。
 
-### Step 5 — Ask focused questions
+### 第五步 — 提出有针对性的问题
 
-Ask the fewest questions needed to avoid doing the wrong work. Prefer concrete options when useful, but do not force choices when the user needs to describe intent freely.
+提出避免做错事所需的最少问题。在有用时提供具体选项，但当用户需要自由描述意图时不强迫选择。
 
-### Step 6 — Final confirmation gate
+### 第六步 — 最终确认关卡
 
-After ambiguity is resolved, summarize the final clarified request, including scope, assumptions, exclusions, and intended next action. Ask the user to confirm before implementation.
+歧义解决后，总结最终澄清后的请求，包括范围、假设、排除项和预期的后续操作。在执行前请用户确认。
 
-Proceed only after the user explicitly confirms the full summarized interpretation, unless they already instructed the agent to skip confirmation or execute directly.
+仅在用户明确确认完整解读摘要后才继续，除非用户已指示跳过确认或直接执行。
 
 ---
 
-## Response Patterns
+## 回应模式
 
-When clarification is needed:
-
-```text
-I understand your goal as: ...
-I would proceed with these assumptions: ...
-The points that could change the result are: ...
-Please confirm: ...
-```
-
-When the clarified request is ready for final confirmation:
+需要澄清时：
 
 ```text
-Final interpretation:
-- Goal: ...
-- Scope: ...
-- Assumptions: ...
-- Exclusions: ...
-- Next action after confirmation: ...
-
-Please confirm this full interpretation before I proceed.
+我理解您的目标是：...
+我将基于以下假设进行：...
+可能影响结果的点是：...
+请确认：...
 ```
 
-## Notes
+澄清后的请求准备好最终确认时：
 
-- Do not over-explain obvious context.
-- Treat "go ahead", "confirmed", "yes, proceed", or equivalent wording as final confirmation when it clearly refers to the summarized interpretation.
-- Do not require the user to restate the full request after partial clarification; carry forward prior context and ask only about unresolved material ambiguity.
-- If the user explicitly asks only for clarification, stop after producing the clarified request unless they ask to implement.
+```text
+最终解读：
+- 目标：...
+- 范围：...
+- 假设：...
+- 排除项：...
+- 确认后的下一步操作：...
+
+请确认此完整解读后我再继续执行。
+```
+
+## 注意事项
+
+- 不要过度解释显而易见的上下文。
+- 当 "go ahead"、"confirmed"、"yes, proceed" 或同等表述明确指向已汇总的解读时，视为最终确认。
+- 部分澄清后不要求用户重新陈述完整请求；延续已有上下文，仅就剩余实质性歧义提问。
+- 若用户明确只想要澄清，在产出澄清后的请求后停止，除非用户要求实现。

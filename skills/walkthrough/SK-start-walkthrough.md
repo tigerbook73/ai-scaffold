@@ -1,57 +1,57 @@
 # start-walkthrough
 
-Resume a walkthrough from the state file.
+从状态文件恢复走读。
 
 ---
 
-## Constraints
+## 约束
 
-- An active (non-completed) state record must exist; if not found or already completed, prompt user to run `create-walkthrough` first
-- Context is session-scoped; re-run at the start of each new session to restore walkthrough state
-- **Silent preparation**: read and validate state without narrating; output text only for warnings or the resume summary
-- **State script**: read `~/.ai-skills/config.json` to get `{repo}`. Index operations go through:
+- 必须存在活跃（未完成）的状态记录；若未找到或已完成，提示用户先运行 `create-walkthrough`
+- 上下文作用范围为当前 session；每次新 session 开始时重新运行以恢复走读状态
+- **静默准备**：读取和验证状态时不作解说；仅在输出警告或恢复摘要时才输出文本
+- **状态脚本**：读取 `~/.ai-skills/config.json` 获取 `{repo}`。Index 操作通过以下方式执行：
   `{repo}/node_modules/.bin/tsx {repo}/skills/walkthrough/resource/walkthrough-state.ts <cmd> [--options]`
-- **Group files**: read `g{N}.md` directly via the Read tool from `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md`
+- **组文件**：通过 Read 工具直接读取 `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md`
 
-## Steps
+## 步骤
 
-### Step 1 — Locate state
+### 第一步 — 定位状态
 
-Read `~/.ai-skills/config.json` for `{repo}`.
+读取 `~/.ai-skills/config.json` 获取 `{repo}`。
 
-Determine state key:
+确定 state key：
 
-- `git branch --show-current` returns a branch name → sanitize (replace `/` with `-`) → `{stateKey}` → `state read --key {stateKey}`
-- Returns empty (detached HEAD) → `git rev-parse HEAD` → `state find --hash <hash>` → extract `stateKey` from result → `state read --key {stateKey}`
+- `git branch --show-current` 返回分支名 → 清理（将 `/` 替换为 `-`）→ `{stateKey}` → `state read --key {stateKey}`
+- 返回空（detached HEAD）→ `git rev-parse HEAD` → `state find --hash <hash>` → 从结果提取 `stateKey` → `state read --key {stateKey}`
 
-If no state found (exit 1) → tell the user to run `create-walkthrough` first, stop.
+若未找到状态（退出码 1）→ 告知用户先运行 `create-walkthrough`，停止。
 
-If state found and `index.status === "completed"` → warn:
+若找到状态且 `index.status === "completed"` → 警告：
 
 > This walkthrough is already completed (`{index.target}`). Run `create-walkthrough` to start a new one.
 > Stop.
 
-### Step 2 — Validate checkout position
+### 第二步 — 验证签出位置
 
-If `index.checkedOut = true`:
+若 `index.checkedOut = true`：
 
 1. `git rev-parse HEAD` → `{currentHash}`
-2. Compare with `index.targetHash`.
-3. Mismatch → warn and stop:
+2. 与 `index.targetHash` 对比。
+3. 不匹配 → 警告并停止：
    > Current position (`{currentHash}`) does not match the walkthrough target (`{index.targetHash}`).
    > Run `git checkout {index.targetRef}` first, then re-run `start-walkthrough`.
 
-### Step 3 — Resume summary
+### 第三步 — 恢复摘要
 
-Output:
+输出：
 
 ```
 Walkthrough target: {index.target} (baseline: {index.baseline})
 Progress: G{index.currentGroup} / {index.totalGroups}, {done count} group(s) done
 ```
 
-### Step 4 — Enter walkthrough loop
+### 第四步 — 进入走读循环
 
-Read `{repo}/skills/walkthrough/resource/walkthrough-loop.md`.
-Follow its instructions starting from "Display current group".
-(walkthrough-loop reads and outputs g{currentGroup}.md itself — no need to repeat it here)
+读取 `{repo}/skills/walkthrough/resource/walkthrough-loop.md`。
+从"显示当前组"处开始执行其中的指令。
+（walkthrough-loop 会自行读取并输出 g{currentGroup}.md —— 此处无需重复）

@@ -18,22 +18,22 @@ const TASK_RESOURCES = join(repoRoot, "skills", "task", "resource");
  * @strategy    Unit — reads file system, no mocks
  * @cases
  *   - [PASS] file exists at skills/task/resource/task-context.md
- *   - [PASS] starts with H1 "# Task Mode:"
+ *   - [PASS] starts with H1 containing task mode heading
  *   - [PASS] contains {task-name} placeholder
  *   - [PASS] contains {task-type} placeholder
  *   - [PASS] references task-state.md
- *   - [PASS] contains ## Available Subcommands section
+ *   - [PASS] contains subcommands section
  */
 test("task-context.md exists and has required structure", () => {
   const path = join(TASK_RESOURCES, "task-context.md");
   assert.equal(existsSync(path), true, "task-context.md must exist");
 
   const content = readFileSync(path, "utf-8");
-  assert.match(content, /^# Task Mode:/m, "must start with H1 Task Mode");
+  assert.match(content, /^# 任务模式：/m, "must start with H1 Task Mode");
   assert.match(content, /\{task-name\}/, "must contain {task-name} placeholder");
   assert.match(content, /\{task-type\}/, "must contain {task-type} placeholder");
   assert.match(content, /task-state\.md/, "must reference task-state.md");
-  assert.match(content, /## Available Subcommands/, "must have Subcommands section");
+  assert.match(content, /## 可用子命令/, "must have Subcommands section");
 });
 
 /**
@@ -88,12 +88,12 @@ test("task-context.md contains core subcommand keywords", () => {
  * @target      Validate that requirements-feature.md defines all required sections for feature tasks
  * @strategy    Unit — reads file system, no mocks
  * @cases
- *   - [PASS] contains ## Goal section
- *   - [PASS] contains ## Background and Motivation section
- *   - [PASS] contains ## Functional Requirements section
- *   - [PASS] contains ## Non-Functional Requirements section
- *   - [PASS] contains ## Out of Scope section
- *   - [PASS] contains ## Acceptance Criteria section
+ *   - [PASS] contains ## 目标 section
+ *   - [PASS] contains ## 背景与动机 section
+ *   - [PASS] contains ## 功能需求 section
+ *   - [PASS] contains ## 非功能性需求 section
+ *   - [PASS] contains ## 范围外 section
+ *   - [PASS] contains ## 验收标准 section
  */
 test("resource/requirements-feature.md defines required sections for feature tasks", () => {
   const path = join(TASK_RESOURCES, "requirements-feature.md");
@@ -101,12 +101,12 @@ test("resource/requirements-feature.md defines required sections for feature tas
 
   const content = readFileSync(path, "utf-8");
   const requiredSections = [
-    "Goal",
-    "Background and Motivation",
-    "Functional Requirements",
-    "Non-Functional Requirements",
-    "Out of Scope",
-    "Acceptance Criteria",
+    "目标",
+    "背景与动机",
+    "功能需求",
+    "非功能性需求",
+    "范围外",
+    "验收标准",
   ];
   for (const section of requiredSections) {
     assert.match(content, new RegExp(`## ${section}`), `must define section: ${section}`);
@@ -118,12 +118,12 @@ test("resource/requirements-feature.md defines required sections for feature tas
  * @target      Validate that requirements-refactor.md defines all required sections for refactor tasks
  * @strategy    Unit — reads file system, no mocks
  * @cases
- *   - [PASS] contains ## Goal section
- *   - [PASS] contains ## Background and Motivation section
- *   - [PASS] contains ## Scope section
- *   - [PASS] contains ## Out of Scope section
- *   - [PASS] contains ## Constraints section
- *   - [PASS] contains ## Acceptance Criteria section
+ *   - [PASS] contains ## 目标 section
+ *   - [PASS] contains ## 背景与动机 section
+ *   - [PASS] contains ## 范围 section
+ *   - [PASS] contains ## 范围外 section
+ *   - [PASS] contains ## 约束 section
+ *   - [PASS] contains ## 验收标准 section
  */
 test("resource/requirements-refactor.md defines required sections for refactor tasks", () => {
   const path = join(TASK_RESOURCES, "requirements-refactor.md");
@@ -131,12 +131,12 @@ test("resource/requirements-refactor.md defines required sections for refactor t
 
   const content = readFileSync(path, "utf-8");
   const requiredSections = [
-    "Goal",
-    "Background and Motivation",
-    "Scope",
-    "Out of Scope",
-    "Constraints",
-    "Acceptance Criteria",
+    "目标",
+    "背景与动机",
+    "范围",
+    "范围外",
+    "约束",
+    "验收标准",
   ];
   for (const section of requiredSections) {
     assert.match(content, new RegExp(`## ${section}`), `must define section: ${section}`);

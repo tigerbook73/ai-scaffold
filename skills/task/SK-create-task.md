@@ -1,59 +1,58 @@
 # create-task
 
-Initialize a new task: create branch, scaffold task documents, and enter work mode.
+初始化新任务：创建分支、搭建任务文档，并进入工作模式。
 
 ---
 
-## Constraints
+## 约束
 
-- Only allowed on main or master branch
-- Working tree must be clean (no uncommitted changes, no untracked files)
-- `docs/tasks/` must contain no existing task directory
-- [Write operation] Creates `docs/tasks/{name}/` with task documents and a git commit
+- 仅允许在 main 或 master 分支上运行
+- 工作树必须干净（无未提交变更，无未跟踪文件）
+- `docs/tasks/` 下不得已存在任务目录
+- [写操作] 在 `docs/tasks/{name}/` 下创建任务文档并提交一个 git commit
 
-## Input
+## 输入
 
-`$ARGUMENTS`: `<task-type> <task-name>`
+`$ARGUMENTS`：`<task-type> <task-name>`
 
-- `task-type`: `feature` | `refactor`
-- `task-name`: kebab-case string describing the task
+- `task-type`：`feature` | `refactor`
+- `task-name`：描述任务的 kebab-case 字符串
 
-## Steps
+## 步骤
 
-1. Read `~/.ai-skills/config.json` for `{repo}` path.
+1. 读取 `~/.ai-skills/config.json` 获取 `{repo}` 路径。
 
-2. Verify all preconditions; abort with a clear reason if any fail:
-   - `git status` shows no changes (staged, modified, or untracked)
-   - Current branch is main or master
-   - `docs/tasks/` has no subdirectory
+2. 验证所有前置条件；若任一失败则以明确原因中止：
+   - `git status` 显示无变更（staged、modified 或 untracked）
+   - 当前分支为 main 或 master
+   - `docs/tasks/` 下无子目录
 
-3. Create and switch to branch: `feature/{name}` or `refactor/{name}`
+3. 创建并切换到分支：`feature/{name}` 或 `refactor/{name}`
 
-4. Create directory `docs/tasks/{name}/`
+4. 创建目录 `docs/tasks/{name}/`
 
-5. Create scaffold files silently:
-   - Do not display generated file contents or template expansions to the user.
-   - Use quiet file-writing commands/tools where possible.
-   - Only report a concise summary after all scaffold files are created.
+5. 静默创建脚手架文件：
+   - 不向用户展示生成的文件内容或模板展开结果。
+   - 尽量使用静默写文件命令/工具。
+   - 所有脚手架文件创建完成后，仅输出简短摘要。
 
-6. Create `docs/tasks/{name}/AGENTS.md` from `{repo}/skills/task/resource/task-context.md`,
-   replacing `{task-name}`, `{task-type}`, and `{repo}` placeholders.
+6. 从 `{repo}/skills/task/resource/task-context.md` 创建 `docs/tasks/{name}/AGENTS.md`，
+   替换 `{task-name}`、`{task-type}` 和 `{repo}` 占位符。
 
-7. Create `docs/tasks/{name}/.claude/CLAUDE.md` as a thin Claude Code entrypoint with this content:
+7. 创建 `docs/tasks/{name}/.claude/CLAUDE.md` 作为精简的 Claude Code 入口文件，内容为：
    `@../AGENTS.md`
 
-8. Create `docs/tasks/{name}/task-state.md` from `{repo}/skills/task/resource/task-state.md`,
-   replacing `{task-name}` and setting initial values:
+8. 从 `{repo}/skills/task/resource/task-state.md` 创建 `docs/tasks/{name}/task-state.md`，
+   替换 `{task-name}` 并设置初始值：
 
-- Metadata `type`: the `task-type` argument (`feature` or `refactor`)
-- Metadata `status`: `in_progress`
-- Current Phase: `requirements (in_progress)`
-- Current Step: `—`
-- Requirements Phase: `status: in_progress` — "task just created, requirements pending"
-- Design / Implementation phases: `status: pending`, no step entries
-- Document Index: empty (documents are added here as they are created during plan phases)
+- Metadata `type`：`task-type` 参数值（`feature` 或 `refactor`）
+- Metadata `status`：`in_progress`
+- Current Phase：`requirements (in_progress)`
+- Current Step：`—`
+- Requirements Phase：`status: in_progress` —— "task just created, requirements pending"
+- Design / Implementation phases：`status: pending`，无步骤条目
+- Document Index：空（文档在计划阶段创建时逐步添加到此处）
 
-9. Stage and commit: `git add docs/tasks/{name}/` then `git commit -m "chore: init task {name}"`
+9. 暂存并提交：`git add docs/tasks/{name}/` 然后 `git commit -m "chore: init task {name}"`
 
-10. Enter task work mode (equivalent to start-task): read task-state.md, confirm .claude/CLAUDE.md
-    is loaded, output task summary, and prompt user to start planning requirements.
+10. 进入任务工作模式（等同于 start-task）：读取 task-state.md，确认 .claude/CLAUDE.md 已加载，输出任务摘要，并提示用户开始规划需求。

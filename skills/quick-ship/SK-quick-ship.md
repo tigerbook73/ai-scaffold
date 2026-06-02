@@ -1,59 +1,54 @@
 # quick-ship
 
-Review current workspace changes, infer intent, and if simple — create a private branch,
-commit, open a PR, squash merge, return to the original branch, and pull.
+审查当前工作区变更，推断意图，若变更简单 —— 创建私有分支、提交、开 PR、squash 合并、返回原分支并 pull。
 
 ---
 
-## Constraints
+## 约束
 
-- Creates a `<type>/<slug>` branch (type from Conventional Commits: feat/fix/docs/chore/refactor/style/test), commits all changes, opens and merges a PR via `gh`
-- Only one confirmation prompt, before executing git operations (Step 4)
-- Stops immediately on any error or merge conflict; does not resolve conflicts
+- 创建 `<type>/<slug>` 分支（type 来自 Conventional Commits：feat/fix/docs/chore/refactor/style/test），提交所有变更，通过 `gh` 开 PR 并合并
+- 只有一次确认提示，在执行 git 操作前（第四步）
+- 遇到任何错误或合并冲突立即停止；不解决冲突
 
-## Steps
+## 步骤
 
-### Step 1 — Read changes
+### 第一步 — 读取变更
 
-Run `git diff HEAD` and `git status` to capture all staged and unstaged changes.
+运行 `git diff HEAD` 和 `git status` 以获取所有 staged 和 unstaged 变更。
 
-### Step 2 — Infer intent
+### 第二步 — 推断意图
 
-Summarize the changes in one sentence: what was changed and why, inferred from the diff,
-file names, and recent commit history.
+用一句话概括变更：从 diff、文件名和近期 commit 历史中推断出改了什么、为何改。
 
-### Step 3 — Assess simplicity
+### 第三步 — 评估简单性
 
-Mark the change as **simple** if ALL of the following hold:
+满足以下**所有**条件时，将变更标记为**简单**：
 
-- No complex business logic introduced or modified
-- No new algorithms, data transformations, or non-trivial control flows
-- Either: no tests are needed (config, docs, style, minor wording), OR existing tests
-  already cover the changed paths
+- 未引入或修改复杂的业务逻辑
+- 无新算法、数据转换或非平凡控制流
+- 满足以下之一：无需测试（配置、文档、样式、微小措辞），或现有测试已覆盖变更路径
 
-If any condition fails, stop and explain which condition failed. Tell the user the changes
-are too complex for `quick-ship` and need manual handling.
+若任一条件不满足，停止并说明哪个条件未满足。告知用户变更过于复杂，不适合 `quick-ship`，需要手动处理。
 
-### Step 4 — Confirm and execute
+### 第四步 — 确认并执行
 
-Present to the user:
+向用户展示：
 
-- **Intent**: the one-sentence summary from Step 2
-- **Branch**: `<type>/<slug>` where `<type>` is the Conventional Commits type inferred from the change (feat/fix/docs/chore/refactor/style/test) and `<slug>` is a short kebab-case identifier from the intent
-- **Commit**: proposed commit message in Conventional Commits format
-- **Title**: the subject line of the commit message (verbatim, no rephrasing)
-- **Actions**: create branch → commit → push → create PR → squash merge → checkout
-  original branch → pull
+- **意图**：第二步的一句话摘要
+- **分支**：`<type>/<slug>`，其中 `<type>` 是从变更推断的 Conventional Commits 类型（feat/fix/docs/chore/refactor/style/test），`<slug>` 是从意图提取的简短 kebab-case 标识符
+- **提交**：Conventional Commits 格式的提交信息
+- **标题**：提交信息的主题行（原文，不改写）
+- **操作**：创建分支 → 提交 → push → 创建 PR → squash 合并 → checkout 原分支 → pull
 
-Wait for confirmation. On approval, run in sequence:
+等待确认。获批后按顺序执行：
 
-1. Record the current branch name as `<original>`
+1. 记录当前分支名为 `<original>`
 2. `git checkout -b <type>/<slug>`
 3. `git add -A && git commit -m "<message>"`
 4. `git push -u origin <type>/<slug>`
 5. `gh pr create --title "<commit-subject>" --body "<intent summary>" --base <original>`
-6. `gh pr merge --squash` (wait for completion)
+6. `gh pr merge --squash`（等待完成）
 7. `git checkout <original>`
 8. `git pull`
 
-Stop immediately and report the error if any step fails.
+任一步骤失败时立即停止并报告错误。

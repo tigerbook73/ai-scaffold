@@ -1,91 +1,91 @@
-# Walkthrough Strategy
+# 走读策略
 
-Three strategy sections referenced by the walkthrough skills. Update these independently without touching the skill flow files.
-
----
-
-## Analysis Strategy
-
-Read context documents in this priority order after obtaining the diff. Stop at the level that provides sufficient context for grouping.
-
-**Priority 1 — Design documents** (read if present, always):
-
-- Glob `docs/tasks/*/design*.md` — covers `design.md`, `design-step1.md`, `design-step2.md`, etc.
-- Read all matching files. These map the changes to design steps and drive grouping in Mode A.
-
-**Priority 2 — Project conventions** (always read):
-
-- `CLAUDE.md` in the project root.
-- If `CLAUDE.md` itself appears in the diff, use its pre-change content (the `-` lines in the diff) as the architectural baseline for analyzing other files. Use the post-change content to understand why the conventions changed.
-
-**Priority 3 — Anchor files** (read only when needed):
-
-- For each directory that contains changed files: check for `README.md`, `types.ts`, `index.ts`.
-- Read these only when the module's purpose or interface boundary is unclear from the diff alone, or when the directory has ≥ 3 changed files.
+走读 skill 引用的三个策略章节。可独立更新这些内容，无需修改 skill 流程文件。
 
 ---
 
-## Grouping Strategy
+## 分析策略
 
-Choose the mode based on whether design documents were found.
+获取 diff 后，按以下优先级顺序读取上下文文档。读取到能为分组提供充足上下文的层级后停止。
 
-### Mode A — With design documents
+**优先级 1 —— 设计文档**（若存在，始终读取）：
 
-- Map each changed file to its corresponding design step based on the step's "Key changes" section.
-- Create one group per design step that has at least one associated change.
-- Label each group after the step title: `Step N: {title}`.
-- Order groups by step number ascending.
-- If a single step maps to too many files (estimated walkthrough output > 300 lines), split it into sub-groups labeled `Step N-a`, `Step N-b`, etc.
+- Glob `docs/tasks/*/design*.md` —— 覆盖 `design.md`、`design-step1.md`、`design-step2.md` 等。
+- 读取所有匹配文件。这些文件将变更映射到设计步骤，驱动模式 A 的分组。
 
-### Mode B — Without design documents
+**优先级 2 —— 项目约定**（始终读取）：
 
-Group by dependency layer, bottom-up (present lower layers first):
+- 项目根目录的 `CLAUDE.md`。
+- 若 `CLAUDE.md` 本身出现在 diff 中，将其变更前的内容（diff 中的 `-` 行）作为分析其他文件的架构基准。用变更后的内容理解约定为何改变。
 
-1. **Foundation** — types, constants, configuration, schema definitions
-2. **Core logic** — business logic, state management, utilities, helpers
-3. **Interfaces** — API handlers, CLI entry points, UI components, external integrations
+**优先级 3 —— 锚点文件**（仅在需要时读取）：
 
-Rules:
-
-- Aim for 2–5 files per group; never put a single file alone unless it is large and self-contained.
-- If a single group would produce more than 300 lines of walkthrough output, split it further by sub-module or functional boundary.
-- Label groups by layer or functional boundary (e.g., "Resource Templates", "Skill Commands", "Integration Config").
-- When a file sits at the boundary between layers, assign it to the lower layer.
+- 对每个包含变更文件的目录：检查是否存在 `README.md`、`types.ts`、`index.ts`。
+- 仅当模块的目的或接口边界从 diff 中无法清楚判断，或该目录有 ≥ 3 个变更文件时才读取。
 
 ---
 
-## Presentation Format
+## 分组策略
 
-Use this template for every group file (`g{N}.md`). Write in the analysis language (Chinese if the project uses Chinese).
+根据是否找到设计文档选择模式。
+
+### 模式 A —— 有设计文档
+
+- 根据步骤的"Key changes"章节，将每个变更文件映射到对应的设计步骤。
+- 为每个至少关联一处变更的设计步骤创建一个组。
+- 组名以步骤标题命名：`Step N: {title}`。
+- 按步骤编号升序排列组。
+- 若单个步骤映射的文件过多（预计走读输出 > 300 行），拆分为子组，标注为 `Step N-a`、`Step N-b` 等。
+
+### 模式 B —— 无设计文档
+
+按依赖层级分组，自底向上（先呈现底层）：
+
+1. **基础层** —— 类型、常量、配置、schema 定义
+2. **核心逻辑** —— 业务逻辑、状态管理、工具函数、辅助函数
+3. **接口层** —— API handler、CLI 入口、UI 组件、外部集成
+
+规则：
+
+- 每组目标 2–5 个文件；除非文件较大且自成一体，否则不要单独成组。
+- 若单个组的走读输出预计超过 300 行，按子模块或功能边界进一步拆分。
+- 按层级或功能边界命名组（如 "Resource Templates"、"Skill Commands"、"Integration Config"）。
+- 若文件处于层级边界，归入较低层级。
+
+---
+
+## 展示格式
+
+每个组文件（`g{N}.md`）均使用此模板。使用分析语言书写（项目使用中文时用中文）。
 
 ```
 ## G{N} — {label}
 
-[Context] How this group fits the overall change and how it connects to the previous group. For G1, explain its role in the full change.
+[背景] 本组在整体变更中的位置，以及与上一组的关联。G1 说明其在完整变更中的角色。
 
-[Key changes]
-Break into one `###` subsection per meaningful change (type, function, config entry, etc.):
+[关键变更]
+每个有意义的变更（类型、函数、配置项等）拆分为一个 `###` 小节：
 
 ### {item name}
 
-Before/after code snippet extracted directly from the diff.
+直接从 diff 中提取的修改前后代码片段。
 
-- **Modified items**: show the relevant changed lines from the diff; omit unchanged surrounding context beyond what aids understanding.
-- **New items (purely additive)**: do not reproduce the full addition. Show only the core section — primary entry point, key function/class signature, or central algorithm — targeting 10–30 lines. Omit boilerplate, imports, and obvious scaffolding. Readers can open the file directly for the full content.
+- **修改项**：展示 diff 中相关的变更行；省略理解不需要的周围上下文。
+- **新增项（纯新增）**：不完整复现新增内容。仅展示核心部分 —— 主入口、关键函数/类签名或核心算法 —— 目标 10–30 行。省略样板代码、import 和显而易见的脚手架。读者可直接打开文件查看完整内容。
 
-Explain what changed AND why — inline in the same paragraph. Do not separate "what" from "why".
+在同一段落中说明改了什么**以及**为何这样改。不要将"是什么"与"为什么"分开。
 
-▎ 对比：{comparison with a similar pattern already in the codebase} — add this callout when a reader might conflate this item with something similar, or when the contrast clarifies a design decision. Omit if no meaningful comparison exists.
+▎ 对比：{与代码库中类似模式的对比} —— 当读者可能将此项与类似内容混淆，或对比能澄清设计决策时添加此标注。若无有意义的对比则省略。
 
-(Repeat `###` subsections for each meaningful item.)
+（为每个有意义的项目重复 `###` 小节。）
 
-For groups in the foundation layer (types, constants, schema definitions), append after all subsections:
+对于基础层组（类型、常量、schema 定义），在所有小节后追加：
 
 [层间关系]
-Show which modules depend on this group's output, as a downward arrow chain:
-  {this group's module} → {direct dependents} → {their dependents}
+展示哪些模块依赖本组的输出，以向下箭头链表示：
+  {本组模块} → {直接依赖方} → {其依赖方}
 
-[Design intent] Why this overall approach was chosen for the group. If design documents exist, cite the relevant step's goal or acceptance criteria. Otherwise, infer from the diff and context documents. Keep to 2–4 sentences.
+[设计意图] 为何为本组整体选择此方案。若有设计文档，引用相关步骤的目标或验收标准。否则从 diff 和上下文文档推断。控制在 2–4 句话。
 
 ---
 G{N} 讲完，继续 G{N+1}？

@@ -1,30 +1,30 @@
-# Task Mode: {task-name} ({task-type})
+# 任务模式：{task-name}（{task-type}）
 
-Current task directory. Natural language instructions in this session default to this task.
+当前任务目录。本 session 中的自然语言指令默认针对此任务。
 
-**If no task context has been established in the current session**: before responding to any instruction, read `task-state.md` and all documents listed in its Document Index, then output a task summary (current phase, key progress, pending items).
+**若当前 session 尚未建立任务上下文**：在响应任何指令前，先读取 `task-state.md` 及其 Document Index 中列出的所有文档，然后输出任务摘要（当前阶段、关键进展、待办事项）。
 
-## Task Files
+## 任务文件
 
-- `task-state.md` — single source of truth for document list and task progress (not splittable)
-- All other files are listed in the task-state.md Document Index (requirements/design documents may be split)
+- `task-state.md` —— 文档列表和任务进度的唯一来源（不可拆分）
+- 其他所有文件均列于 task-state.md 的 Document Index 中（需求/设计文档可拆分）
 
-## task-state.md Update Rule
+## task-state.md 更新规则
 
-All writes to `task-state.md` must be **silent**: do not display the file content or diff after writing. Only output a single confirmation line, e.g. `task-state.md updated: Step 2 → done`. Exception: verification results must be displayed to the user before being written.
+所有对 `task-state.md` 的写入必须**静默**执行：写入后不显示文件内容或 diff。仅输出一行确认，如 `task-state.md updated: Step 2 → done`。例外：验证结果必须先展示给用户，再写入。
 
-## Available Subcommands
+## 可用子命令
 
-The following natural language instructions are valid in task work mode:
+以下自然语言指令在任务工作模式下有效：
 
-- **plan requirements / refresh requirements** — if `requirements.md` does not exist, create it and add it to the Document Index in `task-state.md`; fill in or update its content; read `{repo}/skills/task/resource/requirements-{task-type}.md` for required sections; when refreshing, preserve user-written content and only fill in missing sections or incorporate changes discussed in conversation; sync task-state.md Requirements Phase status
-- **plan design / refresh design** — if `design.md` does not exist, create it and add it to the Document Index in `task-state.md`; generate or update its content from requirements; must break work into numbered steps; read `{repo}/skills/task/resource/design.md` for required section formats per step; sync task-state.md: Design Phase status → `in_progress`, Current Phase → `design (in_progress)`, add step entries to Implementation Phase each with `step-type` set
-- **start implementation / implement step N** — begin coding for Step N per the design document; check the step's **Step Type** first: `final` steps must produce production-quality code and tests — no step markers (`// Step N:`, `TODO(step-N):`, etc.) in source, test files, or file names; file names use final production names (e.g. `user.test.ts`, not `step2-user.test.ts`); write tests alongside implementation (or per design delegation); if a later step works on the same module, it may modify tests from earlier steps in the same test file — this is expected; `intermediate` steps may produce transitional code — note in source or design which step finalizes it; update task-state.md Current Step
-- **commit** — generate a conventional commit message; update task-state.md for the completed step (record commit hash, set status to done)
-  - Step commit format: `{type}(step-N): {step-title}` (type matches branch type: feat / refactor)
-  - Non-step commits (incidental fixes, doc updates, etc.): standard conventional commits, no step scope
-- **run verification / verify** — execute acceptance checks (auto conditions run directly; manual conditions presented to user one by one); results written to task-state.md
-- **update status from context** — AI infers and updates task-state.md based on current conversation
-- **set status to: {description}** — update task-state.md phase status to the given description
-- **current status / progress** — read task-state.md and output a summary
-- **show unrelated changes** — identify commits in git log unrelated to this task
+- **plan requirements / refresh requirements** —— 若 `requirements.md` 不存在，创建它并将其添加到 `task-state.md` 的 Document Index；填写或更新其内容；读取 `{repo}/skills/task/resource/requirements-{task-type}.md` 了解必要章节；刷新时保留用户已写内容，仅填写缺失章节或补入对话中讨论的变更；同步 task-state.md 的 Requirements Phase 状态
+- **plan design / refresh design** —— 若 `design.md` 不存在，创建它并将其添加到 `task-state.md` 的 Document Index；根据需求生成或更新内容；必须将工作拆解为有编号的步骤；读取 `{repo}/skills/task/resource/design.md` 了解每步骤的必要章节格式；同步 task-state.md：Design Phase 状态 → `in_progress`，Current Phase → `design (in_progress)`，为 Implementation Phase 中每个步骤添加条目并设置 `step-type`
+- **start implementation / implement step N** —— 按设计文档开始第 N 步的编码；先检查步骤的 **Step Type**：`final` 步骤必须产出生产质量的代码和测试 —— 源码、测试文件或文件名中不得出现步骤标记（`// Step N:`、`TODO(step-N):` 等）；文件名使用最终生产名称（如 `user.test.ts`，而非 `step2-user.test.ts`）；与实现同步编写测试（或按设计委托）；若后续步骤修改同一模块，可在同一测试文件中修改早期步骤的测试 —— 这是预期行为；`intermediate` 步骤可产出过渡代码 —— 在源码或设计中注明哪个步骤会最终完成它；更新 task-state.md 的 Current Step
+- **commit** —— 生成符合 Conventional Commits 规范的提交信息；更新已完成步骤的 task-state.md（记录 commit hash，将状态设为 done）
+  - 步骤提交格式：`{type}(step-N): {step-title}`（type 与分支类型一致：feat / refactor）
+  - 非步骤提交（附带修复、文档更新等）：标准 Conventional Commits，无步骤 scope
+- **run verification / verify** —— 执行验收检查（auto 条件直接运行；manual 条件逐一展示给用户）；结果写入 task-state.md
+- **update status from context** —— AI 根据当前对话推断并更新 task-state.md
+- **set status to: {description}** —— 将 task-state.md 的阶段状态更新为给定描述
+- **current status / progress** —— 读取 task-state.md 并输出摘要
+- **show unrelated changes** —— 识别 git log 中与本任务无关的提交

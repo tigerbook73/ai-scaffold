@@ -1,20 +1,19 @@
 # setup-test-rules
 
-Install the AI-assisted test rules convention into the current Node.js project.
+将 AI 辅助测试规则规范安装到当前 Node.js 项目中。
 
-Writes `.claude/rules/test-rules.md` (AI behavior rules, path-scoped to test files) and appends a
-pre-commit hook entry that blocks commits where test files lack a human `@reviewed-by` sign-off.
+写入 `.claude/rules/test-rules.md`（AI 行为规则，作用范围限定为测试文件），并在 pre-commit hook 中追加一条条目，阻止缺少人工 `@reviewed-by` 签名的测试文件被提交。
 
-**Constraints**
+**约束**
 
-- [Write operation] Always overwrites `.claude/rules/test-rules.md`; always replaces the hook entry in `.husky/pre-commit` even if already present
-- Node.js projects only; requires `~/.sk-skills/out/test-rules/setup-test-rules.js` to exist (run `pnpm register` first)
-- Requires husky to be initialized in the project (`.husky/` directory must exist)
+- [写操作] 始终覆盖 `.claude/rules/test-rules.md`；始终替换 `.husky/pre-commit` 中的 hook 条目（即使已存在）
+- 仅适用于 Node.js 项目；要求 `~/.sk-skills/out/test-rules/setup-test-rules.js` 已存在（请先运行 `pnpm register`）
+- 要求项目中已初始化 husky（`.husky/` 目录必须存在）
 
-**Steps**
+**步骤**
 
-1. Confirm `.git/` exists in the current directory. If not, stop with: "Not a git repository."
-2. Confirm `~/.sk-skills/out/test-rules/setup-test-rules.js` exists. If not, stop with: "Run `pnpm register` first."
-3. Run: `node ~/.sk-skills/out/test-rules/setup-test-rules.js`
-   - If the script exits with code **2**, husky is not set up. Run `/aisk/setup-precommit` first, then repeat this step.
-4. Report what was written (the script prints each file path).
+1. 确认当前目录存在 `.git/`。若不存在，停止并输出："Not a git repository."
+2. 确认 `~/.sk-skills/out/test-rules/setup-test-rules.js` 已存在。若不存在，停止并输出："Run `pnpm register` first."
+3. 运行：`node ~/.sk-skills/out/test-rules/setup-test-rules.js`
+   - 若脚本退出码为 **2**，说明 husky 尚未配置。先运行 `/aisk/setup-precommit`，然后重试此步骤。
+4. 报告已写入的内容（脚本会打印每个文件路径）。

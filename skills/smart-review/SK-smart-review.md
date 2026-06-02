@@ -1,47 +1,47 @@
 # smart-review
 
-Iteratively review and fix a specified file, module, or directory.
+对指定文件、模块或目录进行迭代式审查和修复。
 
 ---
 
-## Constraints
+## 约束
 
-- [Write operation] Writes to files within the specified target scope only; modifying files outside the scope requires explicit user authorization
-- Exempt from the global Plan Gate — no need to enter Plan Mode before making changes
+- [写操作] 仅写入指定目标范围内的文件；修改范围外的文件需获得用户明确授权
+- 免除全局 Plan Gate —— 无需进入 Plan Mode 即可进行修改
 
-## Input
+## 输入
 
-`$ARGUMENTS`: `<target-path> [natural language description]`
+`$ARGUMENTS`：`<target-path> [自然语言描述]`
 
-- Target path: a file, module, or directory
-- Natural language description (optional): specify the review focus (e.g. "focus on type consistency", "security issues only")
-- If no description is given, the model determines the review focus based on the target file type
+- 目标路径：文件、模块或目录
+- 自然语言描述（可选）：指定审查重点（如 "专注于类型一致性"、"仅关注安全问题"）
+- 若未提供描述，模型根据目标文件类型自行决定审查重点
 
-If `$ARGUMENTS` is empty, prompt the user to specify a review target and stop.
+若 `$ARGUMENTS` 为空，提示用户指定审查目标，然后停止。
 
-## Steps
+## 步骤
 
-### Step 1 — Review
+### 第一步 — 审查
 
-Scan the target, determine review dimensions based on the natural language description (or file type), and identify all issues.
+扫描目标，根据自然语言描述（或文件类型）确定审查维度，识别所有问题。
 
-- Files outside the target scope may be read for context, but must not be modified
+- 目标范围外的文件可读取作为上下文，但不得修改
 
-### Step 2 — Classify and handle
+### 第二步 — 分类与处理
 
-- Clear answer (logic errors, type errors, formatting issues, obvious omissions, etc.) → fix immediately (within the target scope only)
-- Requires a decision (multiple valid approaches, interface design impact, business trade-offs) → pause, ask interactively, wait for confirmation before continuing
-- Uncertain (context-dependent, needs more information) → record, defer to the end
-- Fix requires modifying files outside the target scope → ask the user for authorization, wait for confirmation before continuing
+- 有明确答案（逻辑错误、类型错误、格式问题、明显遗漏等）→ 立即修复（仅限目标范围内）
+- 需要决策（多种有效方案、接口设计影响、业务权衡）→ 暂停，交互式提问，等待确认后继续
+- 不确定（依赖上下文、需要更多信息）→ 记录，推迟到最后处理
+- 修复需要修改目标范围外的文件 → 向用户申请授权，等待确认后继续
 
-### Step 3 — Loop
+### 第三步 — 循环
 
-After each round of fixes, re-review. Repeat Steps 1 and 2. Exit when either condition is met:
+每轮修复后重新审查。重复第一步和第二步。满足以下任一条件时退出：
 
-- New issues found in this round = 0
-- Round 3 has been completed
+- 本轮发现的新问题数为 0
+- 已完成第 3 轮
 
-### Step 4 — Wrap up
+### 第四步 — 收尾
 
-- Summarize all changes made: list the file, location, and content of each change
-- List all remaining issues together, noting the reason for each (needs decision / insufficient information / out of scope)
+- 汇总所有已做变更：列出每处变更的文件、位置和内容
+- 将所有剩余问题一并列出，注明每项的原因（需要决策 / 信息不足 / 超出范围）
