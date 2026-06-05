@@ -1,6 +1,6 @@
 /**
- * @test-file   setup-test-review-rules
- * @description Verifies that SetupTestReviewRules correctly writes the rules file and updates the husky pre-commit hook
+ * @test-file   setup-test-review-gate
+ * @description Verifies that SetupTestReviewGate correctly writes the gate rules file and updates the husky pre-commit hook
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [2]
  */
@@ -10,10 +10,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { SetupTestReviewRules, HuskyNotFoundError } from "../src/test-review-rules/setup-test-review-rules";
+import {
+  SetupTestReviewGate,
+  HuskyNotFoundError,
+} from "../src/test-review-gate/setup-test-review-gate";
 
 function makeProjectDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-setup-test-review-rules-"));
+  const dir = mkdtempSync(join(tmpdir(), "aisk-setup-test-review-gate-"));
   mkdirSync(join(dir, ".git"), { recursive: true });
   mkdirSync(join(dir, ".husky"), { recursive: true });
   return dir;
@@ -21,19 +24,19 @@ function makeProjectDir(): string {
 
 /**
  * @test-suite  writeRules
- * @target      Validate that .claude/rules/test-review-rules.md is created with correct content from template
+ * @target      Validate that .claude/rules/test-review-gate.md is created with correct content from template
  * @strategy    Integration — uses isolated temp directory with .git stub, no mocks
  * @cases
- *   - [PASS] .claude/rules/test-review-rules.md exists after run
+ *   - [PASS] .claude/rules/test-review-gate.md exists after run
  *   - [PASS] file contains paths frontmatter with test file globs
- *   - [PASS] file contains AI test review rules heading
+ *   - [PASS] file contains AI test review gate heading
  */
-test("writes .claude/rules/test-review-rules.md with template content when run in a project", () => {
+test("writes .claude/rules/test-review-gate.md with template content when run in a project", () => {
   const dir = makeProjectDir();
   try {
-    new SetupTestReviewRules(dir).run();
-    const rulesPath = join(dir, ".claude", "rules", "test-review-rules.md");
-    assert.equal(existsSync(rulesPath), true, "test-review-rules.md must be created");
+    new SetupTestReviewGate(dir).run();
+    const rulesPath = join(dir, ".claude", "rules", "test-review-gate.md");
+    assert.equal(existsSync(rulesPath), true, "test-review-gate.md must be created");
     const content = readFileSync(rulesPath, "utf-8");
     assert.match(content, /paths:/);
     assert.match(content, /\*\*\/\*\.test\.ts/);
@@ -52,12 +55,12 @@ test("writes .claude/rules/test-review-rules.md with template content when run i
  *   - [PASS] thrown error has exitCode 2
  */
 test("throws HuskyNotFoundError with exitCode 2 when .husky directory does not exist", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-setup-test-review-rules-no-husky-"));
+  const dir = mkdtempSync(join(tmpdir(), "aisk-setup-test-review-gate-no-husky-"));
   mkdirSync(join(dir, ".git"), { recursive: true });
   // No .husky directory — simulates project without husky
   try {
     assert.throws(
-      () => new SetupTestReviewRules(dir).run(),
+      () => new SetupTestReviewGate(dir).run(),
       (e: unknown) => e instanceof HuskyNotFoundError && e.exitCode === 2,
       "must throw HuskyNotFoundError with exitCode 2 when .husky is absent",
     );
@@ -72,16 +75,16 @@ test("throws HuskyNotFoundError with exitCode 2 when .husky directory does not e
  * @strategy    Integration — uses isolated temp directory with .git and .husky stubs, no mocks
  * @cases
  *   - [PASS] .husky/pre-commit file created when it does not exist
- *   - [PASS] created hook contains aisk:test-review-rules-check marker
+ *   - [PASS] created hook contains aisk:test-review-gate-check marker
  */
 test("creates .husky/pre-commit with marker when hook does not exist", () => {
   const dir = makeProjectDir();
   try {
-    new SetupTestReviewRules(dir).run();
+    new SetupTestReviewGate(dir).run();
     const hookPath = join(dir, ".husky", "pre-commit");
     assert.equal(existsSync(hookPath), true, ".husky/pre-commit must be created");
     const content = readFileSync(hookPath, "utf-8");
-    assert.match(content, /aisk:test-review-rules-check/);
+    assert.match(content, /aisk:test-review-gate-check/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -93,17 +96,17 @@ test("creates .husky/pre-commit with marker when hook does not exist", () => {
  * @strategy    Integration — uses isolated temp directory with .husky stub, no mocks
  * @cases
  *   - [PASS] original hook content preserved after append
- *   - [PASS] aisk:test-review-rules-check marker present after append
+ *   - [PASS] aisk:test-review-gate-check marker present after append
  */
 test("appends marker to existing .husky/pre-commit when hook is present without marker", () => {
   const dir = makeProjectDir();
   try {
     const hookPath = join(dir, ".husky", "pre-commit");
     writeFileSync(hookPath, "npx lint-staged\n");
-    new SetupTestReviewRules(dir).run();
+    new SetupTestReviewGate(dir).run();
     const content = readFileSync(hookPath, "utf-8");
     assert.match(content, /npx lint-staged/);
-    assert.match(content, /aisk:test-review-rules-check/);
+    assert.match(content, /aisk:test-review-gate-check/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -123,13 +126,13 @@ test("replaces existing hook entry with latest snippet when marker is already pr
     const hookPath = join(dir, ".husky", "pre-commit");
     writeFileSync(
       hookPath,
-      'npx lint-staged\n# aisk:test-review-rules-check\nnode "$HOME/.sk-skills/old/path.js"\n',
+      'npx lint-staged\n# aisk:test-review-gate-check\nnode "$HOME/.sk-skills/old/path.js"\n',
     );
-    new SetupTestReviewRules(dir).run();
+    new SetupTestReviewGate(dir).run();
     const content = readFileSync(hookPath, "utf-8");
     assert.match(content, /npx lint-staged/);
-    assert.match(content, /aisk:test-review-rules-check/);
-    assert.match(content, /out\/test-review-rules\/test-review-rules-check\.js/);
+    assert.match(content, /aisk:test-review-gate-check/);
+    assert.match(content, /out\/test-review-gate\/test-review-gate-check\.js/);
     assert.doesNotMatch(content, /old\/path\.js/);
   } finally {
     rmSync(dir, { recursive: true, force: true });

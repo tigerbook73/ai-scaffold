@@ -1,13 +1,13 @@
-// Installs the AI test review rules convention into the current project:
-// writes .claude/rules/test-review-rules.md and appends a pre-commit hook entry via husky.
+// Installs the AI test review gate convention into the current project:
+// writes .claude/rules/test-review-gate.md and appends a pre-commit hook entry via husky.
 import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "fs";
 import { join } from "path";
 
-const HOOK_MARKER = "# aisk:test-review-rules-check";
+const HOOK_MARKER = "# aisk:test-review-gate-check";
 
 const HOOK_SNIPPET = `
 ${HOOK_MARKER}
-node "$HOME/.sk-skills/out/test-review-rules/test-review-rules-check.js"
+node "$HOME/.sk-skills/out/test-review-gate/test-review-gate-check.js"
 `;
 
 /** Thrown when the target project has no .husky/ directory (exit code 2). */
@@ -18,7 +18,7 @@ export class HuskyNotFoundError extends Error {
   }
 }
 
-export class SetupTestReviewRules {
+export class SetupTestReviewGate {
   constructor(private cwd = process.cwd()) {}
 
   run(): void {
@@ -41,25 +41,25 @@ export class SetupTestReviewRules {
       "..",
       "..",
       "skills",
-      "setup-test-review-rules",
+      "setup-test-review-gate",
       "resource",
-      "test-review-rules.md",
+      "test-review-gate.md",
     );
     const content = readFileSync(templatePath, "utf-8");
     const rulesDir = join(this.cwd, ".claude", "rules");
     mkdirSync(rulesDir, { recursive: true });
-    const rulesPath = join(rulesDir, "test-review-rules.md");
+    const rulesPath = join(rulesDir, "test-review-gate.md");
     writeFileSync(rulesPath, content);
     console.log(`  Wrote: ${rulesPath}`);
   }
 
-  // Writes the test-review-rules-check call to .husky/pre-commit; replaces any existing entry.
+  // Writes the test-review-gate-check call to .husky/pre-commit; replaces any existing entry.
   private updateHook(): void {
     const hookPath = join(this.cwd, ".husky", "pre-commit");
 
     let existing = existsSync(hookPath) ? readFileSync(hookPath, "utf-8") : "";
     // Remove any previous marker entry before re-appending the latest snippet.
-    existing = existing.replace(/\n# aisk:test-review-rules-check\n[^\n]*\n?/g, "");
+    existing = existing.replace(/\n# aisk:test-review-gate-check\n[^\n]*\n?/g, "");
 
     writeFileSync(hookPath, existing + HOOK_SNIPPET);
     chmodSync(hookPath, 0o755);
@@ -69,7 +69,7 @@ export class SetupTestReviewRules {
 
 if (require.main === module) {
   try {
-    new SetupTestReviewRules().run();
+    new SetupTestReviewGate().run();
   } catch (e) {
     if (e instanceof HuskyNotFoundError) {
       console.error(e.message);
