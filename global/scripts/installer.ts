@@ -151,10 +151,10 @@ export class Installer {
 
   private installSkill(unitName: string, spec: SkillSpec): string {
     const src = join(this.aisfHome, "units", unitName, spec.file);
-    const destDir = join(this.cwd, "skills", `aisf:${unitName}:${spec.name}`);
+    const destDir = join(this.cwd, ".claude", "commands", `aisf:${unitName}:${spec.name}`);
     mkdirSync(destDir, { recursive: true });
     cpSync(src, join(destDir, "SKILL.md"));
-    return join("skills", `aisf:${unitName}:${spec.name}`, "SKILL.md");
+    return join(".claude", "commands", `aisf:${unitName}:${spec.name}`, "SKILL.md");
   }
 
   private installRule(unitName: string, spec: RuleSpec): string {

@@ -104,7 +104,7 @@ test("installer checkDeps returns empty unmet when dependency is installed", () 
 
 // ─── installer --install: skill ───────────────────────────────────────────────
 
-test("installer installs skill to skills/aisf:{unit}:{name}/SKILL.md", () => {
+test("installer installs skill to .claude/commands/aisf:{unit}:{name}/SKILL.md", () => {
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
@@ -117,7 +117,7 @@ test("installer installs skill to skills/aisf:{unit}:{name}/SKILL.md", () => {
       JSON.stringify([{ type: "skill", name: "poc", file: "skills/poc.md" }]),
     );
 
-    const skillFile = join(projectDir, "skills", "aisf:poc-unit:poc", "SKILL.md");
+    const skillFile = join(projectDir, ".claude", "commands", "aisf:poc-unit:poc", "SKILL.md");
     assert.ok(readFileSync(skillFile, "utf8").includes("PoC skill content"));
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -136,7 +136,7 @@ test("installer skill install is idempotent (second install overwrites cleanly)"
     installer.install("poc-unit", components);
     installer.install("poc-unit", components);
 
-    const skillFile = join(projectDir, "skills", "aisf:poc-unit:poc", "SKILL.md");
+    const skillFile = join(projectDir, ".claude", "commands", "aisf:poc-unit:poc", "SKILL.md");
     assert.ok(readFileSync(skillFile, "utf8").includes("PoC skill content"));
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -281,6 +281,7 @@ test("installer writes installed.json after install", () => {
     assert.ok("poc-unit" in installed.units);
     assert.ok(installed.units["poc-unit"].installedAt);
     assert.ok(installed.units["poc-unit"].components.skills.length > 0);
+    assert.ok(installed.units["poc-unit"].components.skills[0].startsWith(".claude/commands/"));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
