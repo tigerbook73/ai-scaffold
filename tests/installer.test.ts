@@ -204,6 +204,28 @@ test("installer copies script and creates lefthook.yml entry", () => {
   }
 });
 
+test("installer appends lefthook template vars when params declared", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(projectDir);
+
+    const installer = new Installer(projectDir, aisfHome);
+    installer.install(
+      "poc-unit",
+      JSON.stringify([
+        { type: "script", name: "poc-hook", file: "scripts/poc-hook.js", hook: "pre-commit", params: ["staged_files"] },
+      ]),
+    );
+
+    const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
+    assert.ok(lefthook.includes("{staged_files}"), "must include lefthook template var");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("installer hook registration is idempotent (no duplicate entries)", () => {
   const dir = makeTempDir();
   try {

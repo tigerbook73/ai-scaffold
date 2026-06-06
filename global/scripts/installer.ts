@@ -8,6 +8,7 @@ import {
 } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { registerPreCommitHook } from "../../utils/lefthook";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -17,7 +18,7 @@ interface UnitJson {
   components: {
     skills?: Array<{ name: string; file: string }>;
     rules?: Array<{ name: string; file: string; required?: boolean }>;
-    scripts?: Array<{ name: string; file: string; hook: string }>;
+    scripts?: Array<{ name: string; file: string; hook: string; params?: string[] }>;
     resources?: Array<{ name: string; file: string }>;
   };
 }
@@ -55,6 +56,8 @@ interface ScriptSpec {
   name: string;
   file: string;
   hook: string;
+  /** lefthook template variables to append as CLI args, e.g. ["staged_files"] → {staged_files} */
+  params?: string[];
 }
 
 interface ResourceSpec {
@@ -199,7 +202,9 @@ export class Installer {
     const destFile = join(destDir, `${spec.name}.js`);
     cpSync(srcJs, destFile);
     const relPath = join(".aisf", unitName, "scripts", `${spec.name}.js`);
-    this.updateLefthook(`aisf-${unitName}-${spec.name}`, relPath);
+    const paramStr = (spec.params ?? []).map((p) => `{${p}}`).join(" ");
+    const runCmd = paramStr ? `node ${relPath} ${paramStr}` : `node ${relPath}`;
+    registerPreCommitHook(this.cwd, `aisf-${unitName}-${spec.name}`, runCmd);
     return relPath;
   }
 
@@ -210,41 +215,6 @@ export class Installer {
     mkdirSync(destDir, { recursive: true });
     cpSync(srcDir, destDir, { recursive: true });
     return readdirSync(destDir).map((f) => join(".aisf", unitName, "resources", f));
-  }
-
-  private updateLefthook(commandName: string, scriptRelPath: string): void {
-    const lefthookPath = join(this.cwd, "lefthook.yml");
-    const commandEntry = `    ${commandName}:\n      run: node ${scriptRelPath}`;
-
-    if (!existsSync(lefthookPath)) {
-      writeFileSync(lefthookPath, `pre-commit:\n  commands:\n${commandEntry}\n`);
-      return;
-    }
-
-    let content = readFileSync(lefthookPath, "utf8");
-    if (content.includes(`    ${commandName}:`)) return; // idempotent
-
-    // /^pre-commit:/m only matches uncommented lines (not "# pre-commit:")
-    const preCommitMatch = /^pre-commit:/m.exec(content);
-    if (!preCommitMatch) {
-      const suffix = content.endsWith("\n") ? "" : "\n";
-      content += `${suffix}\npre-commit:\n  commands:\n${commandEntry}\n`;
-      writeFileSync(lefthookPath, content);
-      return;
-    }
-
-    // Scope commands: search to within the pre-commit section
-    const preCommitIdx = preCommitMatch.index;
-    const before = content.slice(0, preCommitIdx);
-    const section = content.slice(preCommitIdx);
-
-    let updated: string;
-    if (/^  commands:/m.test(section)) {
-      updated = section.replace(/^(  commands:)/m, `$1\n${commandEntry}`);
-    } else {
-      updated = section.replace(/^pre-commit:/m, `pre-commit:\n  commands:\n${commandEntry}`);
-    }
-    writeFileSync(lefthookPath, before + updated);
   }
 
   readInstalled(): InstalledJson {

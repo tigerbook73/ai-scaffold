@@ -2,14 +2,19 @@
 import { appendFileSync, mkdirSync } from "fs";
 import { join } from "path";
 
-if (process.argv.includes("--dry-run")) {
+const args = process.argv.slice(2);
+
+if (args.includes("--dry-run")) {
   process.stdout.write("poc-hook: dry-run OK\n");
   process.exit(0);
 }
+
+const stagedFiles = args.filter((a) => !a.startsWith("--"));
 
 const logDir = join(process.cwd(), ".aisf", "poc-unit");
 const logFile = join(logDir, "hook-log.txt");
 
 mkdirSync(logDir, { recursive: true });
-appendFileSync(logFile, `${new Date().toISOString()}\n`);
-process.stdout.write(`poc-hook: logged timestamp to ${logFile}\n`);
+const entry = `${new Date().toISOString()} files=${stagedFiles.join(",") || "(none)"}\n`;
+appendFileSync(logFile, entry);
+process.stdout.write(`poc-hook: ${entry.trim()}\n`);

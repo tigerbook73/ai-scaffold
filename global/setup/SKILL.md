@@ -60,10 +60,13 @@ node ~/.aisf/global/installer.js --check-deps --units {选中的 unit 名称，�
 
 对所有待安装 unit 中含 `AISF:CUSTOM` 边界符的组件（通常是 rule guard）：
 
-1. 读取模板文件（来自 `~/.aisf/units/{unit}/{file}`）
-2. 找到所有 `AISF:CUSTOM` 块（格式见下方说明）
-3. 结合 `hint` 和项目文件结构，推断推荐值
-4. 向用户展示推荐值，等待确认或修改
+1. 读取模板文件（来自 `~/.aisf/units/{unit}/{file}`），找到所有 `AISF:CUSTOM` 块
+2. 对每个块，按以下优先级确定初始值：
+   - **更新**（unit 已在 installed.json 中）：读取已安装文件（`.claude/rules/{unit}/{rule}.md`），
+     按 `name` 属性提取用户的当前值，作为默认值展示给用户确认
+   - **新块**（新版本模板新增、旧文件中找不到对应 `name`）：退化为首次安装逻辑
+   - **首次安装**：结合 `hint` 和项目文件结构推断推荐值
+3. 向用户展示每个块的当前值/推荐值，等待确认或修改
 
 **AISF:CUSTOM 格式（YAML 文件）**：
 ```yaml
@@ -99,8 +102,8 @@ node ~/.aisf/global/installer.js --install --unit {unit-name} --components '{JSO
   { "type": "skill", "name": "poc", "file": "skills/poc.md" },
   // rule 组件：customValues 为步骤 6 收集的用户确认值，installer 自行读取模板并应用
   { "type": "rule", "name": "poc-rule", "file": "rules/poc-rule.md", "customValues": { "paths": "[\"**/*.test.ts\"]" } },
-  // script 组件
-  { "type": "script", "name": "poc-hook", "file": "scripts/poc-hook.js", "hook": "pre-commit" },
+  // script 组件：params 来自 unit.json，对应 lefthook 模板变量（如 {staged_files}）
+  { "type": "script", "name": "poc-hook", "file": "scripts/poc-hook.js", "hook": "pre-commit", "params": ["staged_files"] },
   // resource 组件
   { "type": "resource", "name": "readme", "file": "resources/readme.md" }
 ]

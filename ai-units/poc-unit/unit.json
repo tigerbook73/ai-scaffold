@@ -30,7 +30,8 @@
       {
         "name": "poc-hook",
         "file": "scripts/poc-hook.ts",
-        "hook": "pre-commit"
+        "hook": "pre-commit",
+        "params": ["staged_files"]
       }
     ],
     "resources": [
