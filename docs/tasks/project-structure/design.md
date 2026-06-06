@@ -140,10 +140,10 @@ Markdown 文件使用 HTML 注释：
 
 ```
 {project}/
-  skills/
-    aisf:{unit-name}:{skill-name}/
-      SKILL.md
   .claude/
+    skills/
+      aisf:{unit-name}:{skill-name}/
+        SKILL.md
     rules/
       {unit-name}/
         {rule-name}.md          # 含 AISF:CUSTOM 边界符 + 用户实际值
