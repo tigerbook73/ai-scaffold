@@ -12,11 +12,11 @@
 
 ## Current Phase
 
-design (in_progress)
+implementation (in_progress)
 
 ## Current Step
 
-—
+Step 1（done）
 
 ## Requirements Phase
 
@@ -32,16 +32,16 @@ design (in_progress)
 
 ## Implementation Phase
 
-- status: pending
+- status: in_progress
 
 ### Step 1: 目录结构 + PoC 单元定义
 
 - step-type: intermediate
-- status: pending
+- status: done
 - Commit: —
-- Date: —
-- auto-check: —
-- manual-check: —
+- Date: 2026-06-06
+- auto-check: pass
+- manual-check: pass
 
 ### Step 2: publish 命令
 

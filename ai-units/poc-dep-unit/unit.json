@@ -1,0 +1,15 @@
+{
+  "name": "poc-dep-unit",
+  "description": "PoC dependency unit: minimal unit with skill and resource, used as a dependency by poc-unit.",
+  "provides": ["poc-dep skill: outputs unit info and resource content"],
+  "scope": "validation",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      { "name": "poc-dep", "file": "skills/poc-dep.md" }
+    ],
+    "resources": [
+      { "name": "info", "file": "resources/info.md" }
+    ]
+  }
+}
