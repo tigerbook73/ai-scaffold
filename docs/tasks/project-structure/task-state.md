@@ -7,7 +7,7 @@
 
 ## Document Index
 
-- (no documents yet; entries added here as requirements and design documents are created)
+- `requirements.md` — 重构需求：ai-unit 模型、目录结构、安装机制、验收标准
 
 ## Current Phase
 
@@ -19,9 +19,9 @@ requirements (in_progress)
 
 ## Requirements Phase
 
-- status: in_progress
+- status: done
 - notes:
-  - task just created, requirements pending
+  - requirements.md 已完成，覆盖 ai-unit 模型、目录结构、安装机制、全局命令边界、验收标准
 
 ## Design Phase
 
