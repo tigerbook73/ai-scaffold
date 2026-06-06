@@ -154,7 +154,7 @@ test("installer installs rule guard by reading template and applying customValue
     mkdirSync(rulesDir, { recursive: true });
     writeFileSync(
       join(rulesDir, "poc-rule.md"),
-      '---\n# AISF:CUSTOM name="globs" hint="..."\nglobs: ["**/*.poc-test.*"]\n# AISF:CUSTOM:END\ndescription: poc rule\n---\nRule body.',
+      '---\n# AISF:CUSTOM name="paths" hint="..."\npaths: ["**/*.poc-test.*"]\n# AISF:CUSTOM:END\ndescription: poc rule\n---\nRule body.',
     );
 
     const projectDir = join(dir, "project");
@@ -164,7 +164,7 @@ test("installer installs rule guard by reading template and applying customValue
     installer.install(
       "poc-unit",
       JSON.stringify([
-        { type: "rule", name: "poc-rule", file: "rules/poc-rule.md", customValues: { globs: '["**/*.test.ts"]' } },
+        { type: "rule", name: "poc-rule", file: "rules/poc-rule.md", customValues: { paths: '["**/*.test.ts"]' } },
       ]),
     );
 

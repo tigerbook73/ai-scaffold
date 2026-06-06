@@ -99,8 +99,8 @@ YAML 文件（如 rule guard frontmatter）使用 `#` 注释：
 
 ```yaml
 ---
-# AISF:CUSTOM name="globs" hint="指定规则适用的文件范围，如 **/*.test.ts"
-globs: ["**/*.poc-test.*"]
+# AISF:CUSTOM name="paths" hint="指定规则适用的文件范围，如 **/*.test.ts"
+paths: ["**/*.poc-test.*"]
 # AISF:CUSTOM:END
 description: poc 规则
 ---
@@ -325,8 +325,8 @@ Markdown 文件使用 HTML 注释：
 
 - `(manual) [automation-candidate]` 在测试项目运行 `/aisf:setup`，安装 poc-unit，验证上表所有场景通过
 - `(manual)` 再次运行 setup 安装相同 unit，确认幂等（无重复 hook 条目，config 文件未被覆盖）
-- `(manual)` 确认 rule guard 安装后，`.claude/rules/` 中的文件保留 AISF:CUSTOM 边界符，且 globs 值为用户确认的实际值
-- `(manual)` 模拟更新场景：修改模板中非定制内容，重新 publish + setup，确认用户 globs 值被保留，非定制内容更新
+- `(manual)` 确认 rule guard 安装后，`.claude/rules/` 中的文件保留 AISF:CUSTOM 边界符，且 paths 值为用户确认的实际值
+- `(manual)` 模拟更新场景：修改模板中非定制内容，重新 publish + setup，确认用户 paths 值被保留，非定制内容更新
 
 ---
 

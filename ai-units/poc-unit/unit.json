@@ -17,7 +17,7 @@
         "name": "poc-rule",
         "file": "rules/poc-rule.md",
         "required": true,
-        "hint": "扫描项目中的测试文件找出实际使用的文件后缀和目录结构，推荐合适的 glob patterns"
+        "hint": "扫描项目中的测试文件找出实际使用的文件后缀和目录结构，推荐合适的 paths 匹配规则"
       },
       {
         "name": "poc-rule-nextjs",

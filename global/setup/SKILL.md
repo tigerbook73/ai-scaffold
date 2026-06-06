@@ -67,8 +67,8 @@ node ~/.aisf/global/installer.js --check-deps --units {选中的 unit 名称，�
 
 **AISF:CUSTOM 格式（YAML 文件）**：
 ```yaml
-# AISF:CUSTOM name="globs" hint="..."
-globs: ["**/*.poc-test.*"]
+# AISF:CUSTOM name="paths" hint="..."
+paths: ["**/*.poc-test.*"]
 # AISF:CUSTOM:END
 ```
 
@@ -98,7 +98,7 @@ node ~/.aisf/global/installer.js --install --unit {unit-name} --components '{JSO
   // skill 组件
   { "type": "skill", "name": "poc", "file": "skills/poc.md" },
   // rule 组件：customValues 为步骤 6 收集的用户确认值，installer 自行读取模板并应用
-  { "type": "rule", "name": "poc-rule", "file": "rules/poc-rule.md", "customValues": { "globs": "[\"**/*.test.ts\"]" } },
+  { "type": "rule", "name": "poc-rule", "file": "rules/poc-rule.md", "customValues": { "paths": "[\"**/*.test.ts\"]" } },
   // script 组件
   { "type": "script", "name": "poc-hook", "file": "scripts/poc-hook.js", "hook": "pre-commit" },
   // resource 组件
