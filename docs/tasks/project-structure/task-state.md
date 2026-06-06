@@ -16,7 +16,7 @@ implementation (in_progress)
 
 ## Current Step
 
-Step 1（done）
+Step 2（done）
 
 ## Requirements Phase
 
@@ -38,7 +38,7 @@ Step 1（done）
 
 - step-type: intermediate
 - status: done
-- Commit: —
+- Commit: 46a4ccb
 - Date: 2026-06-06
 - auto-check: pass
 - manual-check: pass
@@ -46,11 +46,11 @@ Step 1（done）
 ### Step 2: publish 命令
 
 - step-type: final
-- status: pending
-- Commit: —
-- Date: —
-- auto-check: —
-- manual-check: —
+- status: done
+- Commit: b740aa5
+- Date: 2026-06-06
+- auto-check: pass
+- manual-check: pass
 
 ### Step 3: setup 命令（add only）
 
