@@ -16,7 +16,7 @@ implementation (in_progress)
 
 ## Current Step
 
-Step 2（done）
+Step 4（done）— 全部步骤完成
 
 ## Requirements Phase
 
@@ -55,20 +55,20 @@ Step 2（done）
 ### Step 3: setup 命令（add only）
 
 - step-type: final
-- status: pending
-- Commit: —
-- Date: —
-- auto-check: —
-- manual-check: —
+- status: done
+- Commit: 98fb2dc
+- Date: 2026-06-06
+- auto-check: pass
+- manual-check: pending（需测试项目手动验证）
 
 ### Step 4: clean 命令
 
 - step-type: final
-- status: pending
-- Commit: —
-- Date: —
-- auto-check: —
-- manual-check: —
+- status: done
+- Commit: 3ffd1b8
+- Date: 2026-06-06
+- auto-check: pass
+- manual-check: pending（需人工确认 setup skill 不可用、目标项目内容不受影响）
 
 ## Task Acceptance
 
