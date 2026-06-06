@@ -46,8 +46,8 @@ interface RuleSpec {
   type: "rule";
   name: string;
   file: string;
-  /** Full resolved content with AISF:CUSTOM blocks filled in by the AI setup skill. */
-  content: string;
+  /** User-confirmed values for each AISF:CUSTOM block, keyed by the block's name attribute. */
+  customValues: Record<string, string>;
 }
 
 interface ScriptSpec {
@@ -158,11 +158,34 @@ export class Installer {
   }
 
   private installRule(unitName: string, spec: RuleSpec): string {
+    const templatePath = join(this.aisfHome, "units", unitName, spec.file);
+    if (!existsSync(templatePath)) {
+      console.error(`Error: rule template not found: ${templatePath}`);
+      process.exit(1);
+    }
+    const template = readFileSync(templatePath, "utf8");
+    const resolved = this.applyCustomValues(template, spec.customValues);
     const destDir = join(this.cwd, ".claude", "rules", unitName);
     mkdirSync(destDir, { recursive: true });
     const destFile = join(destDir, `${spec.name}.md`);
-    writeFileSync(destFile, spec.content);
+    writeFileSync(destFile, resolved);
     return join(".claude", "rules", unitName, `${spec.name}.md`);
+  }
+
+  /** Replaces each AISF:CUSTOM block's content with the matching value from customValues. */
+  private applyCustomValues(template: string, customValues: Record<string, string>): string {
+    // Matches both YAML (#) and Markdown (<!-- -->) boundary formats
+    return template
+      .replace(
+        /(#\s*AISF:CUSTOM name="([^"]+)"[^\n]*\n)([\s\S]*?)(#\s*AISF:CUSTOM:END)/g,
+        (_match, openTag: string, name: string, _defaultContent: string, closeTag: string) =>
+          name in customValues ? `${openTag}${customValues[name]}\n${closeTag}` : _match,
+      )
+      .replace(
+        /(<!--\s*AISF:CUSTOM name="([^"]+)"[^>]*-->\n)([\s\S]*?)(<!--\s*AISF:CUSTOM:END\s*-->)/g,
+        (_match, openTag: string, name: string, _defaultContent: string, closeTag: string) =>
+          name in customValues ? `${openTag}${customValues[name]}\n${closeTag}` : _match,
+      );
   }
 
   private installScript(unitName: string, spec: ScriptSpec): string {

@@ -36,22 +36,25 @@
 
 以清单形式展示，等待用户选择要安装的 unit（勾选）。
 
-## 4. 依赖检查
+## 4. 依赖解析（自动）
 
 调用：
 ```
 node ~/.aisf/global/installer.js --check-deps --units {选中的 unit 名称，逗号分隔}
 ```
 
-若输出中 `unmet` 非空，展示缺少的依赖，询问用户是否一并安装。  
-若用户同意，将依赖 unit 加入待安装列表，重复本步骤直至无缺失依赖。
+若输出中 `unmet` 非空，**自动将缺失依赖加入待安装列表**，不询问用户。  
+重复本步骤直至无缺失依赖（支持多层依赖）。  
+在步骤 8 的安装结果中说明哪些是自动补充的依赖。
 
 ## 5. 可选组件确认
 
-对所有待安装 unit（含步骤 4 新增的依赖单元），逐个读取其 `unit.json` 中 `required: false` 的组件：
+对所有待安装 unit（含步骤 4 自动补充的依赖单元），逐个读取其 `unit.json` 中 `required: false` 的组件：
 
 - 读取 `condition` 字段，结合当前项目的 `package.json` 和文件结构判断是否推荐
-- 向用户展示判断结论和理由，由用户最终确认是否安装
+- 向用户展示判断结论和理由，格式：`{unit-name} / {component-name}（{component-type}）`  
+  例：`poc-unit / poc-rule-nextjs（rule）—— 检测到 next 依赖，推荐安装`
+- 由用户最终确认是否安装
 
 ## 6. 定制配置收集
 
@@ -61,7 +64,6 @@ node ~/.aisf/global/installer.js --check-deps --units {选中的 unit 名称，�
 2. 找到所有 `AISF:CUSTOM` 块（格式见下方说明）
 3. 结合 `hint` 和项目文件结构，推断推荐值
 4. 向用户展示推荐值，等待确认或修改
-5. 将用户确认的值填入对应 `AISF:CUSTOM` 块内，保留边界符
 
 **AISF:CUSTOM 格式（YAML 文件）**：
 ```yaml
@@ -77,9 +79,11 @@ globs: ["**/*.poc-test.*"]
 <!-- AISF:CUSTOM:END -->
 ```
 
-填入用户值后，整个文件内容（含边界符）即为写入目标项目的最终内容。
+用户确认后，将每个 AISF:CUSTOM 块的 `name` 和用户值收集为 `customValues` 对象，传给 installer。
 
 ## 7. 执行安装
+
+**安装顺序**：依赖单元必须先于被依赖单元安装。按依赖拓扑序逐个调用 installer。
 
 对每个待安装 unit，调用：
 
@@ -93,8 +97,8 @@ node ~/.aisf/global/installer.js --install --unit {unit-name} --components '{JSO
 [
   // skill 组件
   { "type": "skill", "name": "poc", "file": "skills/poc.md" },
-  // rule 组件：content 为步骤 6 生成的完整内容（含 AISF:CUSTOM 边界符）
-  { "type": "rule", "name": "poc-rule", "file": "rules/poc-rule.md", "content": "..." },
+  // rule 组件：customValues 为步骤 6 收集的用户确认值，installer 自行读取模板并应用
+  { "type": "rule", "name": "poc-rule", "file": "rules/poc-rule.md", "customValues": { "globs": "[\"**/*.test.ts\"]" } },
   // script 组件
   { "type": "script", "name": "poc-hook", "file": "scripts/poc-hook.js", "hook": "pre-commit" },
   // resource 组件
@@ -102,19 +106,16 @@ node ~/.aisf/global/installer.js --install --unit {unit-name} --components '{JSO
 ]
 ```
 
-> **提示**：规则文件的 `content` 字段包含完整文件内容，边界符随内容一起写入目标文件，  
-> 保证未来 update 时能按 `name` 提取用户值。
-
 ## 8. 报告结果
 
-汇总安装结果，列出每个 unit 及其组件的安装路径：
+汇总安装结果，列出每个 unit 及其组件的安装路径；自动补充的依赖单元标注 `（自动依赖）`：
 
 ```
-已安装 poc-dep-unit：
-  skill: skills/aisf:poc-dep-unit:poc-dep/SKILL.md
+已安装 poc-dep-unit（自动依赖）：
+  skill: .claude/skills/aisf:poc-dep-unit:poc-dep/SKILL.md
 
 已安装 poc-unit：
-  skill:    skills/aisf:poc-unit:poc/SKILL.md
+  skill:    .claude/skills/aisf:poc-unit:poc/SKILL.md
   rule:     .claude/rules/poc-unit/poc-rule.md
   script:   .aisf/poc-unit/scripts/poc-hook.js（已注册到 lefthook pre-commit）
   resource: .aisf/poc-unit/resources/readme.md

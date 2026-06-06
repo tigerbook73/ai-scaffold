@@ -145,23 +145,34 @@ test("installer skill install is idempotent (second install overwrites cleanly)"
 
 // ─── installer --install: rule ────────────────────────────────────────────────
 
-test("installer installs rule guard with resolved content to .claude/rules/", () => {
+test("installer installs rule guard by reading template and applying customValues", () => {
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
+    // Write a template with an AISF:CUSTOM block into the fake store
+    const rulesDir = join(aisfHome, "units", "poc-unit", "rules");
+    mkdirSync(rulesDir, { recursive: true });
+    writeFileSync(
+      join(rulesDir, "poc-rule.md"),
+      '---\n# AISF:CUSTOM name="globs" hint="..."\nglobs: ["**/*.poc-test.*"]\n# AISF:CUSTOM:END\ndescription: poc rule\n---\nRule body.',
+    );
+
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    const resolvedContent =
-      '---\nglobs: ["**/*.test.ts"]\ndescription: poc rule\n---\nRule body.';
     const installer = new Installer(projectDir, aisfHome);
     installer.install(
       "poc-unit",
-      JSON.stringify([{ type: "rule", name: "poc-rule", file: "rules/poc-rule.md", content: resolvedContent }]),
+      JSON.stringify([
+        { type: "rule", name: "poc-rule", file: "rules/poc-rule.md", customValues: { globs: '["**/*.test.ts"]' } },
+      ]),
     );
 
     const ruleFile = join(projectDir, ".claude", "rules", "poc-unit", "poc-rule.md");
-    assert.equal(readFileSync(ruleFile, "utf8"), resolvedContent);
+    const content = readFileSync(ruleFile, "utf8");
+    assert.ok(content.includes('["**/*.test.ts"]'), "customValue must be applied");
+    assert.ok(content.includes("AISF:CUSTOM"), "boundary markers must be preserved");
+    assert.ok(!content.includes("poc-test"), "default value must be replaced");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
