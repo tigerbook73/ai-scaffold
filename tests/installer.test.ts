@@ -240,6 +240,72 @@ test("installer appends hook entry to existing lefthook.yml", () => {
   }
 });
 
+test("installer appends pre-commit section when pre-commit is commented out", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(projectDir);
+    writeFileSync(
+      join(projectDir, "lefthook.yml"),
+      "# pre-commit:\n#   commands:\n#     some-hook:\n#       run: echo disabled\n",
+    );
+
+    const installer = new Installer(projectDir, aisfHome);
+    installer.install(
+      "poc-unit",
+      JSON.stringify([{ type: "script", name: "poc-hook", file: "scripts/poc-hook.js", hook: "pre-commit" }]),
+    );
+
+    const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
+    assert.ok(lefthook.includes("aisf-poc-unit-poc-hook:"), "must add new entry");
+    // The commented block must remain untouched
+    assert.ok(lefthook.includes("# pre-commit:"), "must preserve commented lines");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("installer adds hook to correct section when multiple sections exist", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(projectDir);
+    writeFileSync(
+      join(projectDir, "lefthook.yml"),
+      [
+        "pre-push:",
+        "  commands:",
+        "    lint:",
+        "      run: pnpm lint",
+        "",
+        "pre-commit:",
+        "  commands:",
+        "    typecheck:",
+        "      run: pnpm typecheck",
+        "",
+      ].join("\n"),
+    );
+
+    const installer = new Installer(projectDir, aisfHome);
+    installer.install(
+      "poc-unit",
+      JSON.stringify([{ type: "script", name: "poc-hook", file: "scripts/poc-hook.js", hook: "pre-commit" }]),
+    );
+
+    const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
+    // pre-push section must remain intact
+    assert.ok(lefthook.includes("    lint:"), "must preserve pre-push commands");
+    // new entry must appear in pre-commit section (after typecheck:)
+    const preCommitIdx = lefthook.indexOf("pre-commit:");
+    const preCommitSection = lefthook.slice(preCommitIdx);
+    assert.ok(preCommitSection.includes("aisf-poc-unit-poc-hook:"), "must add to pre-commit section");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 // ─── installer --install: resource ───────────────────────────────────────────
 
 test("installer copies resources to .aisf/{unit}/resources/", () => {

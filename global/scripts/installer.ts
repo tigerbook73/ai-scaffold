@@ -191,39 +191,37 @@ export class Installer {
 
   private updateLefthook(commandName: string, scriptRelPath: string): void {
     const lefthookPath = join(this.cwd, "lefthook.yml");
+    const commandEntry = `    ${commandName}:\n      run: node ${scriptRelPath}`;
 
     if (!existsSync(lefthookPath)) {
-      writeFileSync(
-        lefthookPath,
-        [
-          "pre-commit:",
-          "  commands:",
-          `    ${commandName}:`,
-          `      run: node ${scriptRelPath}`,
-          "",
-        ].join("\n"),
-      );
+      writeFileSync(lefthookPath, `pre-commit:\n  commands:\n${commandEntry}\n`);
       return;
     }
 
     let content = readFileSync(lefthookPath, "utf8");
     if (content.includes(`    ${commandName}:`)) return; // idempotent
 
-    if (!content.includes("pre-commit:")) {
-      content += `\npre-commit:\n  commands:\n    ${commandName}:\n      run: node ${scriptRelPath}\n`;
-    } else if (!content.includes("  commands:")) {
-      content = content.replace(
-        "pre-commit:",
-        `pre-commit:\n  commands:\n    ${commandName}:\n      run: node ${scriptRelPath}`,
-      );
-    } else {
-      content = content.replace(
-        "  commands:",
-        `  commands:\n    ${commandName}:\n      run: node ${scriptRelPath}`,
-      );
+    // /^pre-commit:/m only matches uncommented lines (not "# pre-commit:")
+    const preCommitMatch = /^pre-commit:/m.exec(content);
+    if (!preCommitMatch) {
+      const suffix = content.endsWith("\n") ? "" : "\n";
+      content += `${suffix}\npre-commit:\n  commands:\n${commandEntry}\n`;
+      writeFileSync(lefthookPath, content);
+      return;
     }
 
-    writeFileSync(lefthookPath, content);
+    // Scope commands: search to within the pre-commit section
+    const preCommitIdx = preCommitMatch.index;
+    const before = content.slice(0, preCommitIdx);
+    const section = content.slice(preCommitIdx);
+
+    let updated: string;
+    if (/^  commands:/m.test(section)) {
+      updated = section.replace(/^(  commands:)/m, `$1\n${commandEntry}`);
+    } else {
+      updated = section.replace(/^pre-commit:/m, `pre-commit:\n  commands:\n${commandEntry}`);
+    }
+    writeFileSync(lefthookPath, before + updated);
   }
 
   readInstalled(): InstalledJson {
