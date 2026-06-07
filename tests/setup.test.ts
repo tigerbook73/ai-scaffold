@@ -4,7 +4,6 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [1]
  */
-import assert from "node:assert/strict";
 import {
   lstatSync,
   mkdirSync,
@@ -16,7 +15,7 @@ import {
 } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import { installSymlink } from "../scripts/setup";
 
@@ -38,8 +37,8 @@ test("creates symlink pointing to repo when link path does not exist", () => {
   const linkPath = join(dir, ".sk-skills");
   try {
     installSymlink(linkPath);
-    assert.ok(lstatSync(linkPath).isSymbolicLink(), "must be a symlink");
-    assert.equal(realpathSync(linkPath), repoRoot);
+    expect(lstatSync(linkPath).isSymbolicLink(), "must be a symlink").toBe(true);
+    expect(realpathSync(linkPath)).toBe(repoRoot);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -60,8 +59,8 @@ test("replaces existing symlink when link path already points elsewhere", () => 
   symlinkSync(otherTarget, linkPath);
   try {
     installSymlink(linkPath);
-    assert.ok(lstatSync(linkPath).isSymbolicLink(), "must be a symlink");
-    assert.equal(realpathSync(linkPath), repoRoot);
+    expect(lstatSync(linkPath).isSymbolicLink(), "must be a symlink").toBe(true);
+    expect(realpathSync(linkPath)).toBe(repoRoot);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -81,8 +80,8 @@ test("replaces real directory with symlink when link path is an existing directo
   writeFileSync(join(linkPath, "old-file.txt"), "old content");
   try {
     installSymlink(linkPath);
-    assert.ok(lstatSync(linkPath).isSymbolicLink(), "must be a symlink");
-    assert.equal(realpathSync(linkPath), repoRoot);
+    expect(lstatSync(linkPath).isSymbolicLink(), "must be a symlink").toBe(true);
+    expect(realpathSync(linkPath)).toBe(repoRoot);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

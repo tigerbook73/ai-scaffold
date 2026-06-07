@@ -4,10 +4,9 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [1]
  */
-import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 const repoRoot = process.cwd();
 
@@ -23,12 +22,12 @@ const repoRoot = process.cwd();
  */
 test("exposes Mandatory Rules and Format Tiers when skill-format.md is present", () => {
   const skillFormatPath = join(repoRoot, "skills", "skill-format.md");
-  assert.equal(existsSync(skillFormatPath), true, "skills/skill-format.md not found");
+  expect(existsSync(skillFormatPath), "skills/skill-format.md not found").toBe(true);
 
   const content = readFileSync(skillFormatPath, "utf-8");
-  assert.match(content, /## 强制规则/);
-  assert.match(content, /## 格式等级/);
-  assert.match(content, /EXTRACT:skill-format:start/);
+  expect(content).toMatch(/## 强制规则/);
+  expect(content).toMatch(/## 格式等级/);
+  expect(content).toMatch(/EXTRACT:skill-format:start/);
 });
 
 /**
@@ -42,9 +41,9 @@ test("exposes Mandatory Rules and Format Tiers when skill-format.md is present",
  */
 test("contains extracted format spec when skill-rules.md is built", () => {
   const rulesPath = join(repoRoot, ".claude", "rules", "skill-rules.md");
-  assert.equal(existsSync(rulesPath), true, "skill-rules.md not found");
+  expect(existsSync(rulesPath), "skill-rules.md not found").toBe(true);
 
   const content = readFileSync(rulesPath, "utf-8");
-  assert.match(content, /## 强制规则/);
-  assert.match(content, /## 格式等级/);
+  expect(content).toMatch(/## 强制规则/);
+  expect(content).toMatch(/## 格式等级/);
 });

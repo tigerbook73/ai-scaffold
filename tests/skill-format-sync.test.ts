@@ -4,10 +4,9 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [1]
  */
-import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 const repoRoot = process.cwd();
 const startMarker = "<!-- EXTRACT:skill-format:start -->";
@@ -21,9 +20,9 @@ function extractMarkedContent(content: string, path: string): string {
   const startIdx = content.indexOf(startMarker);
   const endIdx = content.indexOf(endMarker);
 
-  assert.notEqual(startIdx, -1, `${path} is missing start marker`);
-  assert.notEqual(endIdx, -1, `${path} is missing end marker`);
-  assert.ok(endIdx > startIdx, `${path} has markers in the wrong order`);
+  expect(startIdx, `${path} is missing start marker`).not.toBe(-1);
+  expect(endIdx, `${path} is missing end marker`).not.toBe(-1);
+  expect(endIdx > startIdx, `${path} has markers in the wrong order`).toBe(true);
 
   return content.slice(startIdx + startMarker.length, endIdx).trim();
 }
@@ -46,5 +45,5 @@ test("skill format source is synchronized to generated resources", () => {
     ".claude/rules/skill-rules.md",
   );
 
-  assert.equal(claudeRuleContent, sourceContent);
+  expect(claudeRuleContent).toBe(sourceContent);
 });

@@ -4,11 +4,10 @@
  * @ai-generated
  * @reviewed-by
  */
-import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import { augmentUnit } from "../scripts/buildx";
 
@@ -41,12 +40,12 @@ test("augmentUnit sets hasCustom true on rule whose file contains AISF:CUSTOM", 
     );
 
     const changed = augmentUnit(dir);
-    assert.equal(changed, true);
+    expect(changed).toBe(true);
 
     const unit = JSON.parse(readFileSync(join(dir, "unit.json"), "utf8")) as {
       components: { rules: Array<{ hasCustom?: boolean }> };
     };
-    assert.equal(unit.components.rules[0].hasCustom, true);
+    expect(unit.components.rules[0].hasCustom).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -63,12 +62,12 @@ test("augmentUnit removes hasCustom when file no longer contains AISF:CUSTOM", (
     );
 
     const changed = augmentUnit(dir);
-    assert.equal(changed, true);
+    expect(changed).toBe(true);
 
     const unit = JSON.parse(readFileSync(join(dir, "unit.json"), "utf8")) as {
       components: { rules: Array<{ hasCustom?: boolean }> };
     };
-    assert.equal(unit.components.rules[0].hasCustom, undefined);
+    expect(unit.components.rules[0].hasCustom).toBeUndefined();
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -83,8 +82,8 @@ test("augmentUnit returns false and leaves unit.json unchanged when no AISF:CUST
     writeFileSync(join(dir, "unit.json"), original);
 
     const changed = augmentUnit(dir);
-    assert.equal(changed, false);
-    assert.equal(readFileSync(join(dir, "unit.json"), "utf8"), original);
+    expect(changed).toBe(false);
+    expect(readFileSync(join(dir, "unit.json"), "utf8")).toBe(original);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -115,8 +114,8 @@ test("augmentUnit sets hasCustom on skill and resource components", () => {
         resources: Array<{ hasCustom?: boolean }>;
       };
     };
-    assert.equal(unit.components.skills[0].hasCustom, true);
-    assert.equal(unit.components.resources[0].hasCustom, undefined);
+    expect(unit.components.skills[0].hasCustom).toBe(true);
+    expect(unit.components.resources[0].hasCustom).toBeUndefined();
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -126,7 +125,7 @@ test("augmentUnit returns false when unit.json does not exist", () => {
   const dir = makeTempDir();
   try {
     const changed = augmentUnit(dir);
-    assert.equal(changed, false);
+    expect(changed).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

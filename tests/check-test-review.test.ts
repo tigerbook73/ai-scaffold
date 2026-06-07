@@ -4,12 +4,11 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [2]
  */
-import assert from "node:assert/strict";
 import { execSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 const repoRoot = resolve(__dirname, "..");
 const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
@@ -38,7 +37,7 @@ test("exits 0 when no test files are staged", () => {
     initRepo(dir);
     writeFileSync(join(dir, "utils.ts"), "export {}");
     execSync("git add .", { cwd: dir });
-    assert.equal(runCheck(dir).status, 0);
+    expect(runCheck(dir).status).toBe(0);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -57,7 +56,7 @@ test("exits 1 when new test file is staged without @reviewed-by", () => {
     initRepo(dir);
     writeFileSync(join(dir, "service.test.ts"), "// no annotation");
     execSync("git add .", { cwd: dir });
-    assert.equal(runCheck(dir).status, 1);
+    expect(runCheck(dir).status).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -76,7 +75,7 @@ test("exits 0 when new test file is staged with valid @reviewed-by", () => {
     initRepo(dir);
     writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by Tom @ [1]");
     execSync("git add .", { cwd: dir });
-    assert.equal(runCheck(dir).status, 0);
+    expect(runCheck(dir).status).toBe(0);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -97,7 +96,7 @@ test("exits 1 when modified test file is staged with unchanged @reviewed-by vers
     execSync("git add . && git commit -m init", { cwd: dir });
     writeFileSync(join(dir, "service.test.ts"), "// updated\n// @reviewed-by Tom @ [1]");
     execSync("git add .", { cwd: dir });
-    assert.equal(runCheck(dir).status, 1);
+    expect(runCheck(dir).status).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -118,7 +117,7 @@ test("exits 0 when modified test file is staged with incremented @reviewed-by ve
     execSync("git add . && git commit -m init", { cwd: dir });
     writeFileSync(join(dir, "service.test.ts"), "// updated\n// @reviewed-by Tom @ [2]");
     execSync("git add .", { cwd: dir });
-    assert.equal(runCheck(dir).status, 0);
+    expect(runCheck(dir).status).toBe(0);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -142,7 +141,7 @@ test("exits 1 when renamed test file is staged with unchanged @reviewed-by versi
     execSync("git mv old.test.ts new.test.ts", { cwd: dir });
     writeFileSync(join(dir, "new.test.ts"), filler + "// updated\n// @reviewed-by Tom @ [3]");
     execSync("git add .", { cwd: dir });
-    assert.equal(runCheck(dir).status, 1);
+    expect(runCheck(dir).status).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -166,7 +165,7 @@ test("exits 0 when renamed test file is staged with incremented @reviewed-by ver
     execSync("git mv old.test.ts new.test.ts", { cwd: dir });
     writeFileSync(join(dir, "new.test.ts"), filler + "// updated\n// @reviewed-by Tom @ [4]");
     execSync("git add .", { cwd: dir });
-    assert.equal(runCheck(dir).status, 0);
+    expect(runCheck(dir).status).toBe(0);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

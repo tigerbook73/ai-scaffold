@@ -4,12 +4,11 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [1]
  */
-import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 const repoRoot = resolve(__dirname, "..");
 const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
@@ -28,8 +27,8 @@ function run(args: string[]) {
  */
 test("exits 0 and prints usage when called without arguments", () => {
   const result = run([]);
-  assert.equal(result.status, 0);
-  assert.match(result.stdout, /Usage/i);
+  expect(result.status).toBe(0);
+  expect(result.stdout).toMatch(/Usage/i);
 });
 
 /**
@@ -41,8 +40,8 @@ test("exits 0 and prints usage when called without arguments", () => {
  */
 test("exits 1 with source file not found error when file does not exist", () => {
   const result = run(["/tmp/definitely-does-not-exist-aisk.md"]);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /Source file not found/);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/Source file not found/);
 });
 
 /**
@@ -62,8 +61,8 @@ test("exits 0 and writes skill file when --force is used with a valid source", (
   const dstSkillDir = join(repoRoot, "skills", "test-create-skill-fixture");
   try {
     const result = run([srcFile, "--force"]);
-    assert.equal(result.status, 0, `stderr: ${result.stderr}`);
-    assert.match(result.stdout, /Skill written to/);
+    expect(result.status, `stderr: ${result.stderr}`).toBe(0);
+    expect(result.stdout).toMatch(/Skill written to/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
     rmSync(dstSkillDir, { recursive: true, force: true });

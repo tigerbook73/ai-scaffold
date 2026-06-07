@@ -4,10 +4,9 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [1]
  */
-import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 const repoRoot = process.cwd();
 const TASK_RESOURCES = join(repoRoot, "skills", "task", "resource");
@@ -26,14 +25,14 @@ const TASK_RESOURCES = join(repoRoot, "skills", "task", "resource");
  */
 test("task-context.md exists and has required structure", () => {
   const path = join(TASK_RESOURCES, "task-context.md");
-  assert.equal(existsSync(path), true, "task-context.md must exist");
+  expect(existsSync(path), "task-context.md must exist").toBe(true);
 
   const content = readFileSync(path, "utf-8");
-  assert.match(content, /^# 任务模式：/m, "must start with H1 Task Mode");
-  assert.match(content, /\{task-name\}/, "must contain {task-name} placeholder");
-  assert.match(content, /\{task-type\}/, "must contain {task-type} placeholder");
-  assert.match(content, /task-state\.md/, "must reference task-state.md");
-  assert.match(content, /## 可用子命令/, "must have Subcommands section");
+  expect(content).toMatch(/^# 任务模式：/m);
+  expect(content).toMatch(/\{task-name\}/);
+  expect(content).toMatch(/\{task-type\}/);
+  expect(content).toMatch(/task-state\.md/);
+  expect(content).toMatch(/## 可用子命令/);
 });
 
 /**
@@ -47,13 +46,9 @@ test("task-context.md exists and has required structure", () => {
  */
 test("task-context.md is agent-neutral (no slash commands, no agent-specific auto-load phrasing)", () => {
   const content = readFileSync(join(TASK_RESOURCES, "task-context.md"), "utf-8");
-  assert.doesNotMatch(content, /\/aisk[:\/]/, "must not contain /aisk: or /aisk/ references");
-  assert.doesNotMatch(
-    content,
-    /accessing any file in this directory/,
-    "must not use Claude-specific file-access trigger phrasing",
-  );
-  assert.doesNotMatch(content, /## Skill Commands/, "must not have a Skill Commands section");
+  expect(content).not.toMatch(/\/aisk[:\/]/);
+  expect(content).not.toMatch(/accessing any file in this directory/);
+  expect(content).not.toMatch(/## Skill Commands/);
 });
 
 /**
@@ -79,7 +74,7 @@ test("task-context.md contains core subcommand keywords", () => {
     "task-state.md",
   ];
   for (const kw of keywords) {
-    assert.match(content, new RegExp(kw), `must contain: ${kw}`);
+    expect(content, `must contain: ${kw}`).toMatch(new RegExp(kw));
   }
 });
 
@@ -97,19 +92,12 @@ test("task-context.md contains core subcommand keywords", () => {
  */
 test("resource/requirements-feature.md defines required sections for feature tasks", () => {
   const path = join(TASK_RESOURCES, "requirements-feature.md");
-  assert.equal(existsSync(path), true, "requirements-feature.md must exist");
+  expect(existsSync(path), "requirements-feature.md must exist").toBe(true);
 
   const content = readFileSync(path, "utf-8");
-  const requiredSections = [
-    "目标",
-    "背景与动机",
-    "功能需求",
-    "非功能性需求",
-    "范围外",
-    "验收标准",
-  ];
+  const requiredSections = ["目标", "背景与动机", "功能需求", "非功能性需求", "范围外", "验收标准"];
   for (const section of requiredSections) {
-    assert.match(content, new RegExp(`## ${section}`), `must define section: ${section}`);
+    expect(content, `must define section: ${section}`).toMatch(new RegExp(`## ${section}`));
   }
 });
 
@@ -127,19 +115,12 @@ test("resource/requirements-feature.md defines required sections for feature tas
  */
 test("resource/requirements-refactor.md defines required sections for refactor tasks", () => {
   const path = join(TASK_RESOURCES, "requirements-refactor.md");
-  assert.equal(existsSync(path), true, "requirements-refactor.md must exist");
+  expect(existsSync(path), "requirements-refactor.md must exist").toBe(true);
 
   const content = readFileSync(path, "utf-8");
-  const requiredSections = [
-    "目标",
-    "背景与动机",
-    "范围",
-    "范围外",
-    "约束",
-    "验收标准",
-  ];
+  const requiredSections = ["目标", "背景与动机", "范围", "范围外", "约束", "验收标准"];
   for (const section of requiredSections) {
-    assert.match(content, new RegExp(`## ${section}`), `must define section: ${section}`);
+    expect(content, `must define section: ${section}`).toMatch(new RegExp(`## ${section}`));
   }
 });
 
@@ -154,12 +135,12 @@ test("resource/requirements-refactor.md defines required sections for refactor t
  */
 test("resource/design.md defines Step Type with intermediate and final", () => {
   const path = join(TASK_RESOURCES, "design.md");
-  assert.equal(existsSync(path), true, "design.md must exist");
+  expect(existsSync(path), "design.md must exist").toBe(true);
 
   const content = readFileSync(path, "utf-8");
-  assert.match(content, /Step Type/, "must define Step Type section");
-  assert.match(content, /intermediate/, "must define intermediate step type");
-  assert.match(content, /final/, "must define final step type");
+  expect(content).toMatch(/Step Type/);
+  expect(content).toMatch(/intermediate/);
+  expect(content).toMatch(/final/);
 });
 
 /**
@@ -173,9 +154,9 @@ test("resource/design.md defines Step Type with intermediate and final", () => {
  */
 test("resource/design.md defines [automation-candidate] marker", () => {
   const content = readFileSync(join(TASK_RESOURCES, "design.md"), "utf-8");
-  assert.match(content, /automation-candidate/, "must document [automation-candidate] marker");
-  assert.match(content, /Manual Verification/, "must define Manual Verification section");
-  assert.match(content, /Auto Verification/, "must define Auto Verification section");
+  expect(content).toMatch(/automation-candidate/);
+  expect(content).toMatch(/Manual Verification/);
+  expect(content).toMatch(/Auto Verification/);
 });
 
 /**
@@ -193,15 +174,11 @@ test("resource/design.md defines [automation-candidate] marker", () => {
  */
 test("SK-create-task.md creates AGENTS.md from task-context.md and CLAUDE.md as an include", () => {
   const src = readFileSync(join(repoRoot, "skills", "task", "SK-create-task.md"), "utf-8");
-  assert.match(src, /task-context\.md/, "must reference task-context.md");
-  assert.match(src, /AGENTS\.md/, "must reference AGENTS.md creation");
-  assert.match(src, /\.claude\/CLAUDE\.md/, "must reference .claude/CLAUDE.md creation");
-  assert.match(src, /@..\/AGENTS\.md/, "CLAUDE.md must include the generated AGENTS.md");
-  assert.doesNotMatch(
-    src,
-    /\.claude\/CLAUDE\.md` from .*task-context\.md/s,
-    "CLAUDE.md must not duplicate task-context.md",
-  );
-  assert.doesNotMatch(src, /resource-claude\.md/, "must not reference removed resource-claude.md");
-  assert.doesNotMatch(src, /resource-codex\.md/, "must not reference removed resource-codex.md");
+  expect(src).toMatch(/task-context\.md/);
+  expect(src).toMatch(/AGENTS\.md/);
+  expect(src).toMatch(/\.claude\/CLAUDE\.md/);
+  expect(src).toMatch(/@..\/AGENTS\.md/);
+  expect(src).not.toMatch(/\.claude\/CLAUDE\.md` from .*task-context\.md/s);
+  expect(src).not.toMatch(/resource-claude\.md/);
+  expect(src).not.toMatch(/resource-codex\.md/);
 });

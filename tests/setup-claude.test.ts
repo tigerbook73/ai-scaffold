@@ -4,11 +4,10 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [2]
  */
-import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import { scanSkills } from "../scripts/scan-skills";
 import { ClaudeSetup } from "../scripts/setup-claude";
@@ -43,22 +42,20 @@ test("claude setup installs commands into an isolated home", () => {
     const entries = scanSkills(repoRoot).filter((e) => e.targets.claude);
     for (const entry of entries) {
       const file = `${entry.name}.md`;
-      assert.equal(existsSync(join(commandsDir, file)), true, file);
+      expect(existsSync(join(commandsDir, file)), file).toBe(true);
     }
 
-    assert.equal(existsSync(join(commandsDir, "stale.md")), false);
-    assert.equal(existsSync(join(commandsDir, "keep.txt")), true);
+    expect(existsSync(join(commandsDir, "stale.md"))).toBe(false);
+    expect(existsSync(join(commandsDir, "keep.txt"))).toBe(true);
 
     const firstEntry = entries[0];
-    assert.ok(firstEntry);
+    expect(firstEntry).toBeTruthy();
     const installed = readFileSync(join(commandsDir, `${firstEntry.name}.md`), "utf-8");
-    assert.match(installed, /^---\ndescription: /);
-    // closing --- of frontmatter must not be immediately followed by another opening ---
-    assert.doesNotMatch(installed, /\n---\n---\n/, "no double frontmatter block");
+    expect(installed).toMatch(/^---\ndescription: /);
+    expect(installed).not.toMatch(/\n---\n---\n/);
 
-    // set-claude-permission has source frontmatter — verify it doesn't leak through
     const permInstalled = readFileSync(join(commandsDir, "set-claude-permission.md"), "utf-8");
-    assert.doesNotMatch(permInstalled, /^targets:/m);
+    expect(permInstalled).not.toMatch(/^targets:/m);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }

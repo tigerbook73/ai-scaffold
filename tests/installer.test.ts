@@ -5,11 +5,10 @@
  * @ai-generated
  * @reviewed-by
  */
-import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import test from "node:test";
+import { expect, test, vi } from "vitest";
 
 import { Installer } from "../global/scripts/installer";
 
@@ -82,10 +81,10 @@ test("listUnits lists all units with installed=false when nothing installed", ()
       units: Array<{ name: string; description: string; installed: boolean }>;
     };
 
-    assert.equal(result.units.length, 2);
-    assert.ok(result.units.every((u) => u.installed === false));
-    assert.ok(result.units.some((u) => u.name === "poc-unit" && u.description === "PoC unit"));
-    assert.ok(result.units.some((u) => u.name === "poc-dep-unit"));
+    expect(result.units.length).toBe(2);
+    expect(result.units.every((u) => u.installed === false)).toBe(true);
+    expect(result.units.some((u) => u.name === "poc-unit" && u.description === "PoC unit")).toBe(true);
+    expect(result.units.some((u) => u.name === "poc-dep-unit")).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -109,8 +108,8 @@ test("listUnits marks unit as installed=true when present in installed.json", ()
 
     const pocUnit = result.units.find((u) => u.name === "poc-unit");
     const depUnit = result.units.find((u) => u.name === "poc-dep-unit");
-    assert.equal(pocUnit?.installed, true);
-    assert.equal(depUnit?.installed, false);
+    expect(pocUnit?.installed).toBe(true);
+    expect(depUnit?.installed).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -139,8 +138,8 @@ test("checkDeps returns dep in auto and topological order when dep not installed
       auto: string[];
     };
 
-    assert.deepEqual(result.auto, ["poc-dep-unit"]);
-    assert.deepEqual(result.order, ["poc-dep-unit", "poc-unit"]);
+    expect(result.auto).toEqual(["poc-dep-unit"]);
+    expect(result.order).toEqual(["poc-dep-unit", "poc-unit"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -163,8 +162,8 @@ test("checkDeps returns empty auto and only selected unit in order when dep alre
       auto: string[];
     };
 
-    assert.deepEqual(result.auto, []);
-    assert.deepEqual(result.order, ["poc-unit"]);
+    expect(result.auto).toEqual([]);
+    expect(result.order).toEqual(["poc-unit"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -186,7 +185,7 @@ test("installer installs skill to .claude/skills/aisf:{unit}:{name}/SKILL.md", (
     );
 
     const skillFile = join(projectDir, ".claude", "skills", "aisf:poc-unit:poc", "SKILL.md");
-    assert.ok(readFileSync(skillFile, "utf8").includes("PoC skill content"));
+    expect(readFileSync(skillFile, "utf8")).toContain("PoC skill content");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -205,7 +204,7 @@ test("installer skill install is idempotent (second install overwrites cleanly)"
     installer.install("poc-unit", components);
 
     const skillFile = join(projectDir, ".claude", "skills", "aisf:poc-unit:poc", "SKILL.md");
-    assert.ok(readFileSync(skillFile, "utf8").includes("PoC skill content"));
+    expect(readFileSync(skillFile, "utf8")).toContain("PoC skill content");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -239,7 +238,7 @@ test("installer install copies rule template directly when hasCustom is absent",
     );
 
     const content = readFileSync(join(projectDir, ".claude", "rules", "poc-unit", "poc-rule.md"), "utf8");
-    assert.equal(content, "Rule body without custom blocks.");
+    expect(content).toBe("Rule body without custom blocks.");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -253,7 +252,6 @@ test("installer install copies rule from tempPath and deletes it when hasCustom 
     const ruleDestDir = join(projectDir, ".claude", "rules", "poc-unit");
     mkdirSync(ruleDestDir, { recursive: true });
 
-    // AI pre-writes rendered content to tempPath
     const tempPath = join(ruleDestDir, ".aisf-tmp-poc-unit-poc-rule");
     writeFileSync(tempPath, 'paths: ["**/*.test.ts"]\ndescription: rendered rule');
 
@@ -263,8 +261,8 @@ test("installer install copies rule from tempPath and deletes it when hasCustom 
     );
 
     const destFile = join(ruleDestDir, "poc-rule.md");
-    assert.ok(readFileSync(destFile, "utf8").includes('["**/*.test.ts"]'), "rendered content must be written");
-    assert.equal(existsSync(tempPath), false, "tempPath must be deleted after install");
+    expect(readFileSync(destFile, "utf8"), "rendered content must be written").toContain('["**/*.test.ts"]');
+    expect(existsSync(tempPath), "tempPath must be deleted after install").toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -277,27 +275,23 @@ test("installer install errors when hasCustom rule has no tempPath", () => {
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    const origExit = process.exit;
-    let capturedCode: number | undefined;
-    process.exit = ((code?: number) => {
-      capturedCode = code as number;
-      throw new Error(`process.exit(${code})`);
-    }) as typeof process.exit;
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit(${code ?? ""})`);
+    });
 
     try {
-      new Installer(projectDir, aisfHome).install(
-        "poc-unit",
-        JSON.stringify([{ type: "rule", name: "poc-rule", file: "rules/poc-rule.md", hasCustom: true }]),
-      );
-      assert.fail("should have called process.exit");
-    } catch (err) {
-      assert.ok((err as Error).message.includes("process.exit(1)"), "must exit with code 1");
+      expect(() =>
+        new Installer(projectDir, aisfHome).install(
+          "poc-unit",
+          JSON.stringify([{ type: "rule", name: "poc-rule", file: "rules/poc-rule.md", hasCustom: true }]),
+        ),
+      ).toThrow("process.exit(1)");
+      expect(exitSpy).toHaveBeenCalledWith(1);
     } finally {
-      process.exit = origExit;
+      exitSpy.mockRestore();
     }
 
-    assert.equal(capturedCode, 1);
-    assert.equal(existsSync(join(projectDir, ".claude", "rules", "poc-unit", "poc-rule.md")), false);
+    expect(existsSync(join(projectDir, ".claude", "rules", "poc-unit", "poc-rule.md"))).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -326,7 +320,7 @@ test("installer install copies resource file when hasCustom is absent", () => {
     );
 
     const content = readFileSync(join(projectDir, ".aisf", "poc-unit", "resources", "readme.md"), "utf8");
-    assert.equal(content, "readme content");
+    expect(content).toBe("readme content");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -348,11 +342,8 @@ test("installer install copies resource from tempPath and deletes it when hasCus
       JSON.stringify([{ type: "resource", name: "readme", file: "resources/readme.md", hasCustom: true }]),
     );
 
-    assert.equal(
-      readFileSync(join(resourceDestDir, "readme.md"), "utf8"),
-      "rendered readme content",
-    );
-    assert.equal(existsSync(tempPath), false, "tempPath must be deleted after install");
+    expect(readFileSync(join(resourceDestDir, "readme.md"), "utf8")).toBe("rendered readme content");
+    expect(existsSync(tempPath), "tempPath must be deleted after install").toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -372,7 +363,6 @@ test("prepare returns PrepareItem list for hasCustom rule and pre-creates target
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
-    // Add hasCustom rule to unit.json
     const unitJsonPath = join(aisfHome, "units", "poc-unit", "unit.json");
     writeFileSync(
       unitJsonPath,
@@ -394,13 +384,12 @@ test("prepare returns PrepareItem list for hasCustom rule and pre-creates target
     const output = captureStdout(() => new Installer(projectDir, aisfHome).prepare("poc-unit"));
     const items = JSON.parse(output) as Array<{ componentType: string; exists: boolean; tempPath: string }>;
 
-    assert.equal(items.length, 1);
-    assert.equal(items[0].componentType, "rule");
-    assert.equal(items[0].exists, false);
-    assert.ok(items[0].tempPath.includes(".aisf-tmp-poc-unit-poc-rule"));
+    expect(items.length).toBe(1);
+    expect(items[0].componentType).toBe("rule");
+    expect(items[0].exists).toBe(false);
+    expect(items[0].tempPath).toContain(".aisf-tmp-poc-unit-poc-rule");
 
-    // Target directory must be pre-created
-    assert.ok(existsSync(join(projectDir, ".claude", "rules", "poc-unit")));
+    expect(existsSync(join(projectDir, ".claude", "rules", "poc-unit"))).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -412,7 +401,6 @@ test("prepare cleans orphaned .aisf-tmp-* files before returning items", () => {
     const aisfHome = makeFakeAisfHome(dir);
     const projectDir = join(dir, "project");
 
-    // Plant orphan temp files
     const orphanDir = join(projectDir, ".claude", "rules", "some-unit");
     mkdirSync(orphanDir, { recursive: true });
     const orphan = join(orphanDir, ".aisf-tmp-some-unit-some-rule");
@@ -426,7 +414,7 @@ test("prepare cleans orphaned .aisf-tmp-* files before returning items", () => {
 
     captureStdout(() => new Installer(projectDir, aisfHome).prepare("poc-unit"));
 
-    assert.equal(existsSync(orphan), false, "orphan temp file must be removed");
+    expect(existsSync(orphan), "orphan temp file must be removed").toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -448,11 +436,11 @@ test("installer copies script and creates lefthook.yml entry", () => {
     );
 
     const scriptFile = join(projectDir, ".aisf", "poc-unit", "scripts", "poc-hook.js");
-    assert.ok(readFileSync(scriptFile, "utf8").includes("hook"));
+    expect(readFileSync(scriptFile, "utf8")).toContain("hook");
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-    assert.ok(lefthook.includes("aisf-poc-unit-poc-hook:"));
-    assert.ok(lefthook.includes(".aisf/poc-unit/scripts/poc-hook.js"));
+    expect(lefthook).toContain("aisf-poc-unit-poc-hook:");
+    expect(lefthook).toContain(".aisf/poc-unit/scripts/poc-hook.js");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -474,7 +462,7 @@ test("installer appends lefthook template vars when params declared", () => {
     );
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-    assert.ok(lefthook.includes("{staged_files}"), "must include lefthook template var");
+    expect(lefthook, "must include lefthook template var").toContain("{staged_files}");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -496,7 +484,7 @@ test("installer hook registration is idempotent (no duplicate entries)", () => {
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
     const occurrences = lefthook.split("aisf-poc-unit-poc-hook:").length - 1;
-    assert.equal(occurrences, 1, "hook entry must appear exactly once");
+    expect(occurrences, "hook entry must appear exactly once").toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -520,8 +508,8 @@ test("installer appends hook entry to existing lefthook.yml", () => {
     );
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-    assert.ok(lefthook.includes("existing-hook:"), "must preserve existing entries");
-    assert.ok(lefthook.includes("aisf-poc-unit-poc-hook:"), "must add new entry");
+    expect(lefthook, "must preserve existing entries").toContain("existing-hook:");
+    expect(lefthook, "must add new entry").toContain("aisf-poc-unit-poc-hook:");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -545,9 +533,8 @@ test("installer appends pre-commit section when pre-commit is commented out", ()
     );
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-    assert.ok(lefthook.includes("aisf-poc-unit-poc-hook:"), "must add new entry");
-    // The commented block must remain untouched
-    assert.ok(lefthook.includes("# pre-commit:"), "must preserve commented lines");
+    expect(lefthook, "must add new entry").toContain("aisf-poc-unit-poc-hook:");
+    expect(lefthook, "must preserve commented lines").toContain("# pre-commit:");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -582,12 +569,10 @@ test("installer adds hook to correct section when multiple sections exist", () =
     );
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-    // pre-push section must remain intact
-    assert.ok(lefthook.includes("    lint:"), "must preserve pre-push commands");
-    // new entry must appear in pre-commit section (after typecheck:)
+    expect(lefthook, "must preserve pre-push commands").toContain("    lint:");
     const preCommitIdx = lefthook.indexOf("pre-commit:");
     const preCommitSection = lefthook.slice(preCommitIdx);
-    assert.ok(preCommitSection.includes("aisf-poc-unit-poc-hook:"), "must add to pre-commit section");
+    expect(preCommitSection, "must add to pre-commit section").toContain("aisf-poc-unit-poc-hook:");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -609,7 +594,7 @@ test("installer copies resources to .aisf/{unit}/resources/", () => {
     );
 
     const resource = join(projectDir, ".aisf", "poc-unit", "resources", "readme.md");
-    assert.equal(readFileSync(resource, "utf8"), "readme content");
+    expect(readFileSync(resource, "utf8")).toBe("readme content");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -631,10 +616,10 @@ test("installer writes installed.json after install", () => {
     );
 
     const installed = installer.readInstalled();
-    assert.ok("poc-unit" in installed.units);
-    assert.ok(installed.units["poc-unit"].installedAt);
-    assert.ok(installed.units["poc-unit"].components.skills.length > 0);
-    assert.ok(installed.units["poc-unit"].components.skills[0].startsWith(".claude/skills/"));
+    expect("poc-unit" in installed.units).toBe(true);
+    expect(installed.units["poc-unit"].installedAt).toBeTruthy();
+    expect(installed.units["poc-unit"].components.skills.length > 0).toBe(true);
+    expect(installed.units["poc-unit"].components.skills[0].startsWith(".claude/skills/")).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -4,8 +4,7 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [1]
  */
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import { scanSkills } from "../scripts/scan-skills";
 
@@ -21,9 +20,9 @@ const repoRoot = process.cwd();
 test("targets only Claude when set-claude-permission is scanned", () => {
   const entries = scanSkills(repoRoot);
   const perm = entries.find((e) => e.name === "set-claude-permission");
-  assert.ok(perm, "set-claude-permission not found");
-  assert.equal(perm.targets.claude, true);
-  assert.equal(perm.targets.codex, false);
+  expect(perm, "set-claude-permission not found").toBeTruthy();
+  expect(perm!.targets.claude).toBe(true);
+  expect(perm!.targets.codex).toBe(false);
 });
 
 /**
@@ -37,8 +36,8 @@ test("targets both Claude and Codex when any non-permission skill is scanned", (
   const entries = scanSkills(repoRoot);
   for (const entry of entries) {
     if (entry.name === "set-claude-permission") continue;
-    assert.equal(entry.targets.claude, true, `${entry.src} must target claude`);
-    assert.equal(entry.targets.codex, true, `${entry.src} must target codex`);
+    expect(entry.targets.claude, `${entry.src} must target claude`).toBe(true);
+    expect(entry.targets.codex, `${entry.src} must target codex`).toBe(true);
   }
 });
 
@@ -55,14 +54,14 @@ test("uses aisk- prefix and kebab-case when codex skill names are generated", ()
   const entries = scanSkills(repoRoot).filter((e) => e.targets.codex);
   const names = new Set<string>();
   for (const entry of entries) {
-    assert.match(entry.codex.name, /^aisk-[a-z0-9]+(?:-[a-z0-9]+)*$/, entry.src);
-    assert.equal(names.has(entry.codex.name), false, `duplicate name: ${entry.codex.name}`);
+    expect(entry.codex.name, entry.src).toMatch(/^aisk-[a-z0-9]+(?:-[a-z0-9]+)*$/);
+    expect(names.has(entry.codex.name), `duplicate name: ${entry.codex.name}`).toBe(false);
     names.add(entry.codex.name);
-    assert.ok(entry.codex.description.trim().length > 0, `${entry.src} missing codex description`);
-    assert.ok(
+    expect(entry.codex.description.trim().length > 0, `${entry.src} missing codex description`).toBe(true);
+    expect(
       entry.codex.shortDescription.trim().length > 0,
       `${entry.src} missing shortDescription`,
-    );
+    ).toBe(true);
   }
 });
 
@@ -75,8 +74,5 @@ test("uses aisk- prefix and kebab-case when codex skill names are generated", ()
  */
 test("excludes set-claude-permission when codex-targeted skills are listed", () => {
   const entries = scanSkills(repoRoot).filter((e) => e.targets.codex);
-  assert.equal(
-    entries.some((e) => e.name === "set-claude-permission"),
-    false,
-  );
+  expect(entries.some((e) => e.name === "set-claude-permission")).toBe(false);
 });

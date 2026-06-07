@@ -4,11 +4,10 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [2]
  */
-import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import {
   SetupTestReviewGate,
@@ -36,11 +35,11 @@ test("writes .claude/rules/test-review-gate.md with template content when run in
   try {
     new SetupTestReviewGate(dir).run();
     const rulesPath = join(dir, ".claude", "rules", "test-review-gate.md");
-    assert.equal(existsSync(rulesPath), true, "test-review-gate.md must be created");
+    expect(existsSync(rulesPath), "test-review-gate.md must be created").toBe(true);
     const content = readFileSync(rulesPath, "utf-8");
-    assert.match(content, /paths:/);
-    assert.match(content, /\*\*\/\*\.test\.ts/);
-    assert.match(content, /AI 测试审查规则/);
+    expect(content).toMatch(/paths:/);
+    expect(content).toMatch(/\*\*\/\*\.test\.ts/);
+    expect(content).toMatch(/AI 测试审查规则/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -57,13 +56,15 @@ test("writes .claude/rules/test-review-gate.md with template content when run in
 test("throws HuskyNotFoundError with exitCode 2 when .husky directory does not exist", () => {
   const dir = mkdtempSync(join(tmpdir(), "aisk-setup-test-review-gate-no-husky-"));
   mkdirSync(join(dir, ".git"), { recursive: true });
-  // No .husky directory — simulates project without husky
   try {
-    assert.throws(
-      () => new SetupTestReviewGate(dir).run(),
-      (e: unknown) => e instanceof HuskyNotFoundError && e.exitCode === 2,
-      "must throw HuskyNotFoundError with exitCode 2 when .husky is absent",
-    );
+    let caughtError: unknown;
+    try {
+      new SetupTestReviewGate(dir).run();
+    } catch (e) {
+      caughtError = e;
+    }
+    expect(caughtError, "must throw HuskyNotFoundError").toBeInstanceOf(HuskyNotFoundError);
+    expect((caughtError as HuskyNotFoundError).exitCode, "must have exitCode 2").toBe(2);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -82,9 +83,9 @@ test("creates .husky/pre-commit with marker when hook does not exist", () => {
   try {
     new SetupTestReviewGate(dir).run();
     const hookPath = join(dir, ".husky", "pre-commit");
-    assert.equal(existsSync(hookPath), true, ".husky/pre-commit must be created");
+    expect(existsSync(hookPath), ".husky/pre-commit must be created").toBe(true);
     const content = readFileSync(hookPath, "utf-8");
-    assert.match(content, /aisk:test-review-gate-check/);
+    expect(content).toMatch(/aisk:test-review-gate-check/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -105,8 +106,8 @@ test("appends marker to existing .husky/pre-commit when hook is present without 
     writeFileSync(hookPath, "npx lint-staged\n");
     new SetupTestReviewGate(dir).run();
     const content = readFileSync(hookPath, "utf-8");
-    assert.match(content, /npx lint-staged/);
-    assert.match(content, /aisk:test-review-gate-check/);
+    expect(content).toMatch(/npx lint-staged/);
+    expect(content).toMatch(/aisk:test-review-gate-check/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -130,10 +131,10 @@ test("replaces existing hook entry with latest snippet when marker is already pr
     );
     new SetupTestReviewGate(dir).run();
     const content = readFileSync(hookPath, "utf-8");
-    assert.match(content, /npx lint-staged/);
-    assert.match(content, /aisk:test-review-gate-check/);
-    assert.match(content, /out\/test-review-gate\/test-review-gate-check\.js/);
-    assert.doesNotMatch(content, /old\/path\.js/);
+    expect(content).toMatch(/npx lint-staged/);
+    expect(content).toMatch(/aisk:test-review-gate-check/);
+    expect(content).toMatch(/out\/test-review-gate\/test-review-gate-check\.js/);
+    expect(content).not.toMatch(/old\/path\.js/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

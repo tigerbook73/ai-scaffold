@@ -4,12 +4,11 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [1]
  */
-import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 const repoRoot = resolve(__dirname, "..");
 const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
@@ -57,11 +56,8 @@ test("init creates index.json when called with valid key and index", () => {
       ["init", "--key", "test-branch", "--index", JSON.stringify(BASE_INDEX)],
       dir,
     );
-    assert.equal(result.status, 0);
-    assert.equal(
-      existsSync(join(dir, ".ai-skills", "walkthrough", "test-branch", "index.json")),
-      true,
-    );
+    expect(result.status).toBe(0);
+    expect(existsSync(join(dir, ".ai-skills", "walkthrough", "test-branch", "index.json"))).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -80,9 +76,9 @@ test("read prints index JSON to stdout when state exists", () => {
   try {
     run(["init", "--key", "k", "--index", JSON.stringify(BASE_INDEX)], dir);
     const result = run(["read", "--key", "k"], dir);
-    assert.equal(result.status, 0);
+    expect(result.status).toBe(0);
     const parsed = JSON.parse(result.stdout) as typeof BASE_INDEX;
-    assert.equal(parsed.stateKey, BASE_INDEX.stateKey);
+    expect(parsed.stateKey).toBe(BASE_INDEX.stateKey);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -92,7 +88,7 @@ test("read exits 1 when state key does not exist", () => {
   const dir = makeTempDir();
   try {
     const result = run(["read", "--key", "no-such-key"], dir);
-    assert.equal(result.status, 1);
+    expect(result.status).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -113,7 +109,7 @@ test("update overwrites index.json when state exists", () => {
     run(["update", "--key", "k", "--index", JSON.stringify(updated)], dir);
     const result = run(["read", "--key", "k"], dir);
     const parsed = JSON.parse(result.stdout) as typeof BASE_INDEX;
-    assert.equal(parsed.intent, "updated intent");
+    expect(parsed.intent).toBe("updated intent");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -131,8 +127,8 @@ test("list returns empty array when no states exist", () => {
   const dir = makeTempDir();
   try {
     const result = run(["list"], dir);
-    assert.equal(result.status, 0);
-    assert.deepEqual(JSON.parse(result.stdout), []);
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual([]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -144,9 +140,9 @@ test("list returns summary entry when a state exists", () => {
     run(["init", "--key", "k", "--index", JSON.stringify(BASE_INDEX)], dir);
     const result = run(["list"], dir);
     const entries = JSON.parse(result.stdout) as { key: string; status: string }[];
-    assert.equal(entries.length, 1);
-    assert.equal(entries[0].key, "k");
-    assert.equal(entries[0].status, "active");
+    expect(entries.length).toBe(1);
+    expect(entries[0].key).toBe("k");
+    expect(entries[0].status).toBe("active");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -165,9 +161,9 @@ test("find returns active state when hash matches", () => {
   try {
     run(["init", "--key", "k", "--index", JSON.stringify(BASE_INDEX)], dir);
     const result = run(["find", "--hash", BASE_INDEX.targetHash], dir);
-    assert.equal(result.status, 0);
+    expect(result.status).toBe(0);
     const parsed = JSON.parse(result.stdout) as typeof BASE_INDEX;
-    assert.equal(parsed.targetHash, BASE_INDEX.targetHash);
+    expect(parsed.targetHash).toBe(BASE_INDEX.targetHash);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -177,7 +173,7 @@ test("find exits 1 when no active state matches the hash", () => {
   const dir = makeTempDir();
   try {
     const result = run(["find", "--hash", "nonexistent"], dir);
-    assert.equal(result.status, 1);
+    expect(result.status).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -196,10 +192,10 @@ test("next increments currentGroup and marks current group done when not at last
   try {
     run(["init", "--key", "k", "--index", JSON.stringify(BASE_INDEX)], dir);
     const result = run(["next", "--key", "k"], dir);
-    assert.equal(result.status, 0);
+    expect(result.status).toBe(0);
     const state = JSON.parse(run(["read", "--key", "k"], dir).stdout) as typeof BASE_INDEX;
-    assert.equal(state.currentGroup, 2);
-    assert.equal(state.groups[0].done, true);
+    expect(state.currentGroup).toBe(2);
+    expect(state.groups[0].done).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -211,7 +207,7 @@ test("next exits 1 when already at the last group", () => {
     const atLast = { ...BASE_INDEX, currentGroup: 3 };
     run(["init", "--key", "k", "--index", JSON.stringify(atLast)], dir);
     const result = run(["next", "--key", "k"], dir);
-    assert.equal(result.status, 1);
+    expect(result.status).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -239,10 +235,10 @@ test("prev decrements currentGroup and resets group done when not at first group
     };
     run(["init", "--key", "k", "--index", JSON.stringify(atSecond)], dir);
     const result = run(["prev", "--key", "k"], dir);
-    assert.equal(result.status, 0);
+    expect(result.status).toBe(0);
     const state = JSON.parse(run(["read", "--key", "k"], dir).stdout) as typeof BASE_INDEX;
-    assert.equal(state.currentGroup, 1);
-    assert.equal(state.groups[0].done, false);
+    expect(state.currentGroup).toBe(1);
+    expect(state.groups[0].done).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -253,7 +249,7 @@ test("prev exits 1 when already at the first group", () => {
   try {
     run(["init", "--key", "k", "--index", JSON.stringify(BASE_INDEX)], dir);
     const result = run(["prev", "--key", "k"], dir);
-    assert.equal(result.status, 1);
+    expect(result.status).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -280,10 +276,10 @@ test("goto sets currentGroup to N and resets that group done to false", () => {
     };
     run(["init", "--key", "k", "--index", JSON.stringify(allDone)], dir);
     const result = run(["goto", "--key", "k", "--n", "3"], dir);
-    assert.equal(result.status, 0);
+    expect(result.status).toBe(0);
     const state = JSON.parse(run(["read", "--key", "k"], dir).stdout) as typeof BASE_INDEX;
-    assert.equal(state.currentGroup, 3);
-    assert.equal(state.groups[2].done, false);
+    expect(state.currentGroup).toBe(3);
+    expect(state.groups[2].done).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -294,7 +290,7 @@ test("goto exits 1 when target group number is out of range", () => {
   try {
     run(["init", "--key", "k", "--index", JSON.stringify(BASE_INDEX)], dir);
     const result = run(["goto", "--key", "k", "--n", "99"], dir);
-    assert.equal(result.status, 1);
+    expect(result.status).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -312,10 +308,10 @@ test("finish sets status to completed and preserves state directory", () => {
   try {
     run(["init", "--key", "k", "--index", JSON.stringify(BASE_INDEX)], dir);
     const result = run(["finish", "--key", "k"], dir);
-    assert.equal(result.status, 0);
+    expect(result.status).toBe(0);
     const state = JSON.parse(run(["read", "--key", "k"], dir).stdout) as typeof BASE_INDEX;
-    assert.equal(state.status, "completed");
-    assert.equal(existsSync(join(dir, ".ai-skills", "walkthrough", "k")), true);
+    expect(state.status).toBe("completed");
+    expect(existsSync(join(dir, ".ai-skills", "walkthrough", "k"))).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -334,8 +330,8 @@ test("delete removes state directory when key exists", () => {
   try {
     run(["init", "--key", "k", "--index", JSON.stringify(BASE_INDEX)], dir);
     const result = run(["delete", "--key", "k"], dir);
-    assert.equal(result.status, 0);
-    assert.equal(existsSync(join(dir, ".ai-skills", "walkthrough", "k")), false);
+    expect(result.status).toBe(0);
+    expect(existsSync(join(dir, ".ai-skills", "walkthrough", "k"))).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -345,7 +341,7 @@ test("delete exits 1 when key does not exist", () => {
   const dir = makeTempDir();
   try {
     const result = run(["delete", "--key", "no-such-key"], dir);
-    assert.equal(result.status, 1);
+    expect(result.status).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

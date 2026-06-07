@@ -4,11 +4,10 @@
  * @ai-generated
  * @reviewed-by Shengtian Liao @ [2]
  */
-import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import { scanSkills } from "../scripts/scan-skills";
 import { CodexSetup, transformCodexSkill } from "../scripts/setup-codex";
@@ -45,21 +44,20 @@ test("codex setup installs skills into an isolated home", () => {
     const entries = scanSkills(repoRoot).filter((e) => e.targets.codex);
     for (const entry of entries) {
       const skillPath = join(skillsDir, entry.codex.name, "SKILL.md");
-      assert.equal(existsSync(skillPath), true, entry.codex.name);
+      expect(existsSync(skillPath), entry.codex.name).toBe(true);
 
       const skill = readFileSync(skillPath, "utf-8");
-      assert.match(skill, /^---\nname: aisk-/);
-      assert.match(skill, new RegExp(`description: ${JSON.stringify(entry.codex.description)}`));
-      assert.match(
-        skill,
+      expect(skill).toMatch(/^---\nname: aisk-/);
+      expect(skill).toMatch(new RegExp(`description: ${JSON.stringify(entry.codex.description)}`));
+      expect(skill).toMatch(
         new RegExp(`short-description: ${JSON.stringify(entry.codex.shortDescription)}`),
       );
-      assert.match(skill, new RegExp(`Source: skills/${entry.src}`));
-      assert.doesNotMatch(skill, /\*\*Usage\*\*:\s*`\/aisk\//);
+      expect(skill).toMatch(new RegExp(`Source: skills/${entry.src}`));
+      expect(skill).not.toMatch(/\*\*Usage\*\*:\s*`\/aisk\//);
     }
 
-    assert.equal(existsSync(join(skillsDir, "aisk-stale")), false);
-    assert.equal(existsSync(join(skillsDir, "third-party", "SKILL.md")), true);
+    expect(existsSync(join(skillsDir, "aisk-stale"))).toBe(false);
+    expect(existsSync(join(skillsDir, "third-party", "SKILL.md"))).toBe(true);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -91,7 +89,7 @@ test("codex transform removes Claude slash-command usage lines", () => {
     },
   );
 
-  assert.match(output, /^---\nname: aisk-example\n/);
-  assert.doesNotMatch(output, /\*\*Usage\*\*:\s*`\/aisk\//);
-  assert.match(output, /Run `aisk-check-arch` after changes\./);
+  expect(output).toMatch(/^---\nname: aisk-example\n/);
+  expect(output).not.toMatch(/\*\*Usage\*\*:\s*`\/aisk\//);
+  expect(output).toMatch(/Run `aisk-check-arch` after changes\./);
 });

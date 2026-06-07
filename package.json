@@ -13,7 +13,7 @@
     "lint:check": "eslint scripts/**/*.ts src/**/*.ts tests/**/*.ts",
     "lint:fix": "eslint scripts/**/*.ts src/**/*.ts tests/**/*.ts --fix",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test --test-concurrency=1 --test-reporter=spec tests/**/*.test.ts",
+    "test": "vitest run",
     "verify": "pnpm lint:check && pnpm typecheck && pnpm test && pnpm build",
     "format": "prettier --log-level warn --write ."
   },
@@ -36,7 +36,8 @@
     "lint-staged": "^17.0.5",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.4"
+    "typescript-eslint": "^8.59.4",
+    "vitest": "^4.1.8"
   },
   "lint-staged": {
     "*.{ts,js}": [
