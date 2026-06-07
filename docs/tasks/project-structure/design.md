@@ -220,9 +220,13 @@ Markdown 文件使用 HTML 注释：
 
 ### TS 编译方案
 
-优先限制 scripts 只使用 Node.js 内置模块（`fs`、`path`、`child_process` 等），
-用 `tsc` 或 `tsx` 直接编译为 JS，无需打包，`node script.js` 即可运行。
-若某个 script 确实需要第三方依赖，再引入 `esbuild` bundle 单文件（`--bundle --platform=node --format=cjs`）。
+所有 scripts（unit scripts 和 global scripts）统一用 esbuild 打包为单文件 CJS bundle：
+
+- `bundle: true`：所有 import（含 utils/）内联进输出文件，无需外部依赖
+- `platform: "node"`：Node 内置模块自动 external
+- `format: "cjs"`：输出为 CommonJS，`node script.js` 直接运行，无需 package.json
+- `minify: false`：保持输出可读
+- 每个 `.ts` 入口对应一个 `.js` 输出，不合并
 
 ### Auto Verification
 

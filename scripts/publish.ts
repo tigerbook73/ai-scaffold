@@ -1,24 +1,28 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "fs";
 import { join, extname, resolve } from "path";
 import { homedir } from "os";
-import { execSync } from "child_process";
+import { buildSync } from "esbuild";
 
 interface AisfConfig {
   repoPath: string;
   publishedAt: string;
 }
 
-class Publish {
+interface PublishOptions {
+  repoRoot?: string;
+  aisfHome?: string;
+  claudeSkillsDir?: string;
+}
+
+export class Publish {
   private readonly repoRoot: string;
   private readonly aisfHome: string;
   private readonly claudeSkillsDir: string;
-  private readonly tscBin: string;
 
-  constructor() {
-    this.repoRoot = resolve(__dirname, "..");
-    this.aisfHome = join(homedir(), ".aisf");
-    this.claudeSkillsDir = join(homedir(), ".claude", "skills");
-    this.tscBin = join(this.repoRoot, "node_modules", ".bin", "tsc");
+  constructor({ repoRoot, aisfHome, claudeSkillsDir }: PublishOptions = {}) {
+    this.repoRoot = repoRoot ?? resolve(__dirname, "..");
+    this.aisfHome = aisfHome ?? join(homedir(), ".aisf");
+    this.claudeSkillsDir = claudeSkillsDir ?? join(homedir(), ".claude", "skills");
   }
 
   run(): void {
@@ -64,14 +68,18 @@ class Publish {
     console.log(`  unit: ${unitName}`);
   }
 
-  /** Compiles global/scripts/*.ts → ~/.aisf/global/*.js (support scripts for global commands) */
   private publishGlobalScripts(): void {
     const globalScriptsDir = join(this.repoRoot, "global", "scripts");
     if (!existsSync(globalScriptsDir)) return;
 
     const destDir = join(this.aisfHome, "global");
+    if (existsSync(destDir)) rmSync(destDir, { recursive: true, force: true });
     mkdirSync(destDir, { recursive: true });
-    this.compileScripts(globalScriptsDir, destDir);
+
+    for (const file of readdirSync(globalScriptsDir)) {
+      if (extname(file) !== ".ts") continue;
+      this.bundle(join(globalScriptsDir, file), join(destDir, file.replace(/\.ts$/, ".js")));
+    }
   }
 
   private publishGlobalCommands(): void {
@@ -91,13 +99,20 @@ class Publish {
 
   private compileScripts(srcDir: string, destDir: string): void {
     mkdirSync(destDir, { recursive: true });
-    const tsFiles = readdirSync(srcDir).filter((f) => extname(f) === ".ts");
-    for (const file of tsFiles) {
-      execSync(
-        `${this.tscBin} --ignoreConfig --module node16 --moduleResolution node16 --target ES2020 --esModuleInterop --skipLibCheck --types node --typeRoots ${join(this.repoRoot, "node_modules", "@types")} --outDir ${destDir} ${join(srcDir, file)}`,
-        { stdio: "inherit" }
-      );
+    for (const file of readdirSync(srcDir).filter((f) => extname(f) === ".ts")) {
+      this.bundle(join(srcDir, file), join(destDir, file.replace(/\.ts$/, ".js")));
     }
+  }
+
+  private bundle(entryPoint: string, outfile: string): void {
+    buildSync({
+      entryPoints: [entryPoint],
+      outfile,
+      bundle: true,
+      platform: "node",
+      format: "cjs",
+      minify: false,
+    });
   }
 
   private writeConfig(): void {
@@ -111,4 +126,6 @@ class Publish {
   }
 }
 
-new Publish().run();
+if (require.main === module) {
+  new Publish().run();
+}

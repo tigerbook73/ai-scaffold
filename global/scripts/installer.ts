@@ -8,16 +8,44 @@ import {
 } from "fs";
 import { join } from "path";
 import { homedir } from "os";
-import { registerPreCommitHook } from "../../utils/lefthook";
+
+function registerPreCommitHook(projectDir: string, commandName: string, runCommand: string): void {
+  const lefthookPath = join(projectDir, "lefthook.yml");
+  const commandEntry = `    ${commandName}:\n      run: ${runCommand}`;
+
+  if (!existsSync(lefthookPath)) {
+    writeFileSync(lefthookPath, `pre-commit:\n  commands:\n${commandEntry}\n`);
+    return;
+  }
+
+  let content = readFileSync(lefthookPath, "utf8");
+  if (content.includes(`    ${commandName}:`)) return;
+
+  const preCommitMatch = /^pre-commit:/m.exec(content);
+  if (!preCommitMatch) {
+    const suffix = content.endsWith("\n") ? "" : "\n";
+    content += `${suffix}\npre-commit:\n  commands:\n${commandEntry}\n`;
+    writeFileSync(lefthookPath, content);
+    return;
+  }
+
+  const before = content.slice(0, preCommitMatch.index);
+  const section = content.slice(preCommitMatch.index);
+  const updated = /^  commands:/m.test(section)
+    ? section.replace(/^(  commands:)/m, `$1\n${commandEntry}`)
+    : section.replace(/^pre-commit:/m, `pre-commit:\n  commands:\n${commandEntry}`);
+  writeFileSync(lefthookPath, before + updated);
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface UnitJson {
   name: string;
+  description?: string;
   dependencies: string[];
   components: {
     skills?: Array<{ name: string; file: string }>;
-    rules?: Array<{ name: string; file: string; required?: boolean }>;
+    rules?: Array<{ name: string; file: string; required?: boolean; condition?: string }>;
     scripts?: Array<{ name: string; file: string; hook: string; params?: string[] }>;
     resources?: Array<{ name: string; file: string }>;
   };
@@ -80,27 +108,90 @@ export class Installer {
   }
 
   /**
-   * Outputs JSON listing unmet dependencies for the given unit names.
-   * Reads installed.json from the target project to determine what is already installed.
+   * Outputs JSON listing all available units with their install status.
+   * Exits with an error if ~/.aisf/config.json does not exist.
+   */
+  listUnits(): void {
+    const configPath = join(this.aisfHome, "config.json");
+    if (!existsSync(configPath)) {
+      console.error(
+        "错误：本地仓库未找到（~/.aisf/config.json 不存在）。\n请在开发仓库运行 pnpm pub 后再试。",
+      );
+      process.exit(1);
+    }
+
+    const unitsDir = join(this.aisfHome, "units");
+    if (!existsSync(unitsDir)) {
+      process.stdout.write(JSON.stringify({ units: [] }, null, 2) + "\n");
+      return;
+    }
+
+    const installed = this.readInstalled();
+    const units = readdirSync(unitsDir)
+      .map((dir) => {
+        const unitJson = this.readUnitJson(dir);
+        if (!unitJson) return null;
+        return {
+          name: dir,
+          description: unitJson.description ?? "",
+          installed: dir in installed.units,
+        };
+      })
+      .filter((u): u is NonNullable<typeof u> => u !== null);
+
+    process.stdout.write(JSON.stringify({ units }, null, 2) + "\n");
+  }
+
+  /**
+   * Resolves all transitive unmet dependencies for the given unit names and outputs
+   * the full install order (topologically sorted) plus which units were auto-added.
    */
   checkDeps(unitNames: string[]): void {
     const installed = this.readInstalled();
-    const unmet: string[] = [];
+    const toInstall = new Set<string>(unitNames);
+    const auto = new Set<string>();
 
-    for (const unitName of unitNames) {
-      const unitJson = this.readUnitJson(unitName);
-      if (!unitJson) {
-        console.error(`Error: unit "${unitName}" not found in ~/.aisf/units/`);
-        process.exit(1);
-      }
-      for (const dep of unitJson.dependencies) {
-        if (!installed.units[dep] && !unmet.includes(dep)) {
-          unmet.push(dep);
+    const resolve = (names: string[]) => {
+      for (const name of names) {
+        const unitJson = this.readUnitJson(name);
+        if (!unitJson) {
+          console.error(`Error: unit "${name}" not found in ~/.aisf/units/`);
+          process.exit(1);
+        }
+        for (const dep of unitJson.dependencies) {
+          if (!installed.units[dep] && !toInstall.has(dep)) {
+            toInstall.add(dep);
+            if (!unitNames.includes(dep)) auto.add(dep);
+            resolve([dep]);
+          }
         }
       }
-    }
+    };
 
-    process.stdout.write(JSON.stringify({ unmet }, null, 2) + "\n");
+    resolve(unitNames);
+
+    const order = this.topoSort([...toInstall]);
+    process.stdout.write(JSON.stringify({ order, auto: [...auto] }, null, 2) + "\n");
+  }
+
+  private topoSort(unitNames: string[]): string[] {
+    const visited = new Set<string>();
+    const result: string[] = [];
+
+    const visit = (name: string) => {
+      if (visited.has(name)) return;
+      visited.add(name);
+      const unitJson = this.readUnitJson(name);
+      if (unitJson) {
+        for (const dep of unitJson.dependencies) {
+          if (unitNames.includes(dep)) visit(dep);
+        }
+      }
+      result.push(name);
+    };
+
+    for (const name of unitNames) visit(name);
+    return result;
   }
 
   /**
@@ -249,7 +340,8 @@ function printHelp(): void {
       "  installer [options]",
       "",
       "OPTIONS:",
-      "  --check-deps           Check unmet dependencies for the specified units",
+      "  --list                 List all available units with their install status",
+      "  --check-deps           Resolve transitive deps and output topological install order",
       "  --units <a,b,...>      Comma-separated unit names (used with --check-deps)",
       "  --install              Install a unit into the current project",
       "  --unit <name>          Unit name (used with --install)",
@@ -261,7 +353,7 @@ function printHelp(): void {
 }
 
 function parseArgs(argv: string[]): {
-  mode: "check-deps" | "install" | "help";
+  mode: "list" | "check-deps" | "install" | "help";
   units?: string[];
   unit?: string;
   components?: string;
@@ -269,9 +361,10 @@ function parseArgs(argv: string[]): {
   const result: ReturnType<typeof parseArgs> = { mode: "help" };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--check-deps") result.mode = "check-deps";
+    if (arg === "--list") result.mode = "list";
+    else if (arg === "--check-deps") result.mode = "check-deps";
     else if (arg === "--install") result.mode = "install";
-    else if ((arg === "--help" || arg === "-h")) result.mode = "help";
+    else if (arg === "--help" || arg === "-h") result.mode = "help";
     else if (arg === "--units" && argv[i + 1]) result.units = argv[++i].split(",").map((s) => s.trim());
     else if (arg === "--unit" && argv[i + 1]) result.unit = argv[++i];
     else if (arg === "--components" && argv[i + 1]) result.components = argv[++i];
@@ -281,7 +374,9 @@ function parseArgs(argv: string[]): {
 
 const args = parseArgs(process.argv.slice(2));
 
-if (args.mode === "check-deps") {
+if (args.mode === "list") {
+  new Installer().listUnits();
+} else if (args.mode === "check-deps") {
   if (!args.units?.length) {
     console.error("Error: --units is required with --check-deps");
     process.exit(1);

@@ -1,7 +1,7 @@
 /**
  * @test-file   installer
- * @description Verifies the Installer class handles skill/rule/script/resource installation
- *              and lefthook.yml idempotent updates correctly.
+ * @description Verifies the Installer class handles listUnits, checkDeps (topological order),
+ *              skill/rule/script/resource installation, and lefthook.yml idempotent updates.
  * @ai-generated
  * @reviewed-by Shengtian Liao
  */
@@ -20,6 +20,9 @@ function makeTempDir(): string {
 /** Creates a minimal fake ~/.aisf tree for testing, returns its path. */
 function makeFakeAisfHome(tmpDir: string): string {
   const aisfHome = join(tmpDir, ".aisf");
+  mkdirSync(aisfHome, { recursive: true });
+  writeFileSync(join(aisfHome, "config.json"), JSON.stringify({ repoPath: tmpDir }));
+
   const unitDir = join(aisfHome, "units", "poc-unit");
   mkdirSync(join(unitDir, "skills"), { recursive: true });
   mkdirSync(join(unitDir, "scripts"), { recursive: true });
@@ -29,22 +32,45 @@ function makeFakeAisfHome(tmpDir: string): string {
   writeFileSync(join(unitDir, "resources", "readme.md"), "readme content");
   writeFileSync(
     join(unitDir, "unit.json"),
-    JSON.stringify({ name: "poc-unit", dependencies: ["poc-dep-unit"], components: {} }),
+    JSON.stringify({ name: "poc-unit", description: "PoC unit", dependencies: ["poc-dep-unit"], components: {} }),
   );
 
   const depDir = join(aisfHome, "units", "poc-dep-unit");
   mkdirSync(depDir, { recursive: true });
   writeFileSync(
     join(depDir, "unit.json"),
-    JSON.stringify({ name: "poc-dep-unit", dependencies: [], components: {} }),
+    JSON.stringify({ name: "poc-dep-unit", description: "PoC dep unit", dependencies: [], components: {} }),
   );
 
   return aisfHome;
 }
 
-// ─── installer --check-deps ───────────────────────────────────────────────────
+// ─── installer --list ─────────────────────────────────────────────────────────
 
-test("installer checkDeps lists unmet dependencies when nothing installed", () => {
+/**
+ * @test-suite  listUnits
+ * @target      Installer.listUnits()
+ * @strategy    unit; fake ~/.aisf tree
+ * @cases
+ *   - [PASS] lists all units with installed=false when nothing installed
+ *   - [PASS] marks unit as installed=true when present in installed.json
+ */
+function captureStdout(fn: () => void): string {
+  const output: string[] = [];
+  const orig = process.stdout.write.bind(process.stdout);
+  process.stdout.write = (chunk: string | Uint8Array) => {
+    if (typeof chunk === "string") output.push(chunk);
+    return true;
+  };
+  try {
+    fn();
+  } finally {
+    process.stdout.write = orig;
+  }
+  return output.join("");
+}
+
+test("listUnits lists all units with installed=false when nothing installed", () => {
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
@@ -52,26 +78,75 @@ test("installer checkDeps lists unmet dependencies when nothing installed", () =
     mkdirSync(projectDir);
 
     const installer = new Installer(projectDir, aisfHome);
-    const output: string[] = [];
-    const origWrite = process.stdout.write.bind(process.stdout);
-    process.stdout.write = (chunk: string | Uint8Array) => {
-      if (typeof chunk === "string") output.push(chunk);
-      return true;
+    const result = JSON.parse(captureStdout(() => installer.listUnits())) as {
+      units: Array<{ name: string; description: string; installed: boolean }>;
     };
-    try {
-      installer.checkDeps(["poc-unit"]);
-    } finally {
-      process.stdout.write = origWrite;
-    }
 
-    const result = JSON.parse(output.join("")) as { unmet: string[] };
-    assert.deepEqual(result.unmet, ["poc-dep-unit"]);
+    assert.equal(result.units.length, 2);
+    assert.ok(result.units.every((u) => u.installed === false));
+    assert.ok(result.units.some((u) => u.name === "poc-unit" && u.description === "PoC unit"));
+    assert.ok(result.units.some((u) => u.name === "poc-dep-unit"));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test("installer checkDeps returns empty unmet when dependency is installed", () => {
+test("listUnits marks unit as installed=true when present in installed.json", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(join(projectDir, ".aisf"), { recursive: true });
+    writeFileSync(
+      join(projectDir, ".aisf", "installed.json"),
+      JSON.stringify({ units: { "poc-unit": { installedAt: "2026-01-01", components: {} } } }),
+    );
+
+    const installer = new Installer(projectDir, aisfHome);
+    const result = JSON.parse(captureStdout(() => installer.listUnits())) as {
+      units: Array<{ name: string; installed: boolean }>;
+    };
+
+    const pocUnit = result.units.find((u) => u.name === "poc-unit");
+    const depUnit = result.units.find((u) => u.name === "poc-dep-unit");
+    assert.equal(pocUnit?.installed, true);
+    assert.equal(depUnit?.installed, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ─── installer --check-deps ───────────────────────────────────────────────────
+
+/**
+ * @test-suite  checkDeps
+ * @target      Installer.checkDeps()
+ * @strategy    unit; fake ~/.aisf tree
+ * @cases
+ *   - [PASS] returns dep in auto and topological order when dep not installed
+ *   - [PASS] returns empty auto and only selected unit in order when dep already installed
+ */
+test("checkDeps returns dep in auto and topological order when dep not installed", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(projectDir);
+
+    const installer = new Installer(projectDir, aisfHome);
+    const result = JSON.parse(captureStdout(() => installer.checkDeps(["poc-unit"]))) as {
+      order: string[];
+      auto: string[];
+    };
+
+    assert.deepEqual(result.auto, ["poc-dep-unit"]);
+    assert.deepEqual(result.order, ["poc-dep-unit", "poc-unit"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("checkDeps returns empty auto and only selected unit in order when dep already installed", () => {
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
@@ -83,20 +158,13 @@ test("installer checkDeps returns empty unmet when dependency is installed", () 
     );
 
     const installer = new Installer(projectDir, aisfHome);
-    const output: string[] = [];
-    const origWrite = process.stdout.write.bind(process.stdout);
-    process.stdout.write = (chunk: string | Uint8Array) => {
-      if (typeof chunk === "string") output.push(chunk);
-      return true;
+    const result = JSON.parse(captureStdout(() => installer.checkDeps(["poc-unit"]))) as {
+      order: string[];
+      auto: string[];
     };
-    try {
-      installer.checkDeps(["poc-unit"]);
-    } finally {
-      process.stdout.write = origWrite;
-    }
 
-    const result = JSON.parse(output.join("")) as { unmet: string[] };
-    assert.deepEqual(result.unmet, []);
+    assert.deepEqual(result.auto, []);
+    assert.deepEqual(result.order, ["poc-unit"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
