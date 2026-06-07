@@ -110,15 +110,17 @@ node ~/.aisf/global/installer.js resolve {to_install ∪ to_update 的 unit 名�
 **6a. 查询定制组件：**
 
 ```
-node ~/.aisf/global/installer.js prepare {unit-name}
+node ~/.aisf/global/installer.js prepare {unit-name} --optional '{选中的可选组件名 JSON 数组}'
 ```
 
-输出 `PrepareItem[]`，每项包含：
+`--optional` 与步骤 5 用户确认的结果一致，格式为 `["rule:poc-rule", "resource:config"]`；无可选项时可省略。
+
+installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次将安装的组件（必装 + 已选可选项），输出 `PrepareItem[]`，每项包含：
 
 - `componentType`：`"skill"` / `"rule"` / `"resource"`
 - `templatePath`：模板文件路径（`~/.aisf/units/{unit}/{file}`）
 - `targetPath`：最终安装路径
-- `tempPath`：AI 应写入渲染结果的临时文件路径
+- `tempPath`：AI 应写入渲染结果的临时文件路径（与 `targetPath` 同目录，命名约定 `.aisf-tmp-{unit}-{comp}`）
 - `exists`：目标文件是否已存在（用于判断是更新还是首次安装）
 
 列表为空则跳过，直接进入步骤 7。
@@ -150,35 +152,16 @@ node ~/.aisf/global/installer.js uninstall {unit-name}
 **安装/更新**（按步骤 3 输出的 `order` 顺序）：
 
 ```
-node ~/.aisf/global/installer.js install {unit-name} --components '{ComponentSpec[] JSON}'
+node ~/.aisf/global/installer.js install {unit-name} --optional '{选中的可选组件名 JSON 数组}'
 ```
 
-`--components` 的 JSON 格式为 `ComponentSpec[]`：
+`--optional` 格式为 `["rule:poc-rule", "resource:config"]`，无可选项时可省略。
 
-```jsonc
-[
-  { "type": "skill", "name": "poc", "file": "skills/poc.md" },
-  { "type": "skill", "name": "poc-custom", "file": "skills/poc-custom.md", "hasCustom": true },
-  { "type": "rule", "name": "poc-rule", "file": "rules/poc-rule.md" },
-  {
-    "type": "rule",
-    "name": "poc-rule-guard",
-    "file": "rules/poc-rule-guard.md",
-    "hasCustom": true,
-  },
-  {
-    "type": "script",
-    "name": "poc-hook",
-    "file": "scripts/poc-hook.js",
-    "hook": "pre-commit",
-    "params": ["staged_files"],
-  },
-  { "type": "resource", "name": "readme", "file": "resources/readme.md" },
-  { "type": "resource", "name": "config", "file": "resources/config.md", "hasCustom": true },
-]
-```
-
-`hasCustom: true` 时，installer 从 `tempPath`（步骤 6 写入）拷贝内容；若 `tempPath` 不存在，installer 报错退出。
+installer 自行从 `unit.json` 读取完整组件配置：
+- 无 `condition` 的组件 → 必装
+- 有 `condition` 的组件 → 仅在 `--optional` 列表中时安装，否则若已安装则删除
+- 已安装组件中不再出现于 `unit.json` 的（版本升级移除的）→ 自动删除（孤立组件清理）
+- 有 `hasCustom: true` 的组件 → installer 按命名约定（`.aisf-tmp-{unit}-{comp}`）读取步骤 6 写入的临时文件并拷贝；若临时文件不存在，installer 报错退出
 
 执行完成后输出汇总报告：
 

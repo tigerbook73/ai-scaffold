@@ -20,10 +20,10 @@ interface UnitJson {
   description?: string;
   dependencies: string[];
   components: {
-    skills?: Array<{ name: string; file: string; hasCustom?: boolean }>;
-    rules?: Array<{ name: string; file: string; required?: boolean; condition?: string; hasCustom?: boolean }>;
+    skills?: Array<{ name: string; file: string; hasCustom?: boolean; condition?: string }>;
+    rules?: Array<{ name: string; file: string; condition?: string; hasCustom?: boolean }>;
     scripts?: Array<{ name: string; file: string; hook: string; params?: string[] }>;
-    resources?: Array<{ name: string; file: string; hasCustom?: boolean }>;
+    resources?: Array<{ name: string; file: string; hasCustom?: boolean; condition?: string }>;
   };
 }
 
@@ -35,12 +35,15 @@ interface InstalledEntry {
     scripts: string[];
     resources: string[];
   };
+  /** Optional component names that were selected at install time, e.g. ["rule:poc-rule"] */
+  optionalComponents: string[];
 }
 
 interface InstalledJson {
   units: Record<string, InstalledEntry>;
 }
 
+// Internal component specs derived from unit.json — not passed by callers
 interface SkillSpec {
   type: "skill";
   name: string;
@@ -180,11 +183,12 @@ export class Installer {
   }
 
   /**
-   * Returns info for all hasCustom components of a unit so the AI can generate
-   * their content into temp files before calling install.
+   * Returns info for all hasCustom components that will be installed so the AI can
+   * generate their content into temp files before calling install.
+   * Only includes optional components (those with a condition) if they appear in optionalNames.
    * Also cleans up any orphaned .aisf-tmp-* files from previous interrupted runs.
    */
-  prepare(unitName: string): void {
+  prepare(unitName: string, optionalNames: string[] = []): void {
     this.cleanOrphanTempFiles();
 
     const unitJson = this.readUnitJson(unitName);
@@ -197,6 +201,7 @@ export class Installer {
 
     for (const comp of unitJson.components.skills ?? []) {
       if (!comp.hasCustom) continue;
+      if (comp.condition && !optionalNames.includes(`skill:${comp.name}`)) continue;
       const templatePath = join(this.aisfHome, "units", unitName, comp.file);
       const targetPath = join(this.cwd, ".claude", "skills", `aisf-${unitName}-${comp.name}`, "SKILL.md");
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
@@ -206,6 +211,7 @@ export class Installer {
 
     for (const comp of unitJson.components.rules ?? []) {
       if (!comp.hasCustom) continue;
+      if (comp.condition && !optionalNames.includes(`rule:${comp.name}`)) continue;
       const templatePath = join(this.aisfHome, "units", unitName, comp.file);
       const targetPath = join(this.cwd, ".claude", "rules", `aisf-${unitName}`, `${comp.name}.md`);
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
@@ -215,6 +221,7 @@ export class Installer {
 
     for (const comp of unitJson.components.resources ?? []) {
       if (!comp.hasCustom) continue;
+      if (comp.condition && !optionalNames.includes(`resource:${comp.name}`)) continue;
       const templatePath = join(this.aisfHome, "units", unitName, comp.file);
       const targetPath = join(this.cwd, ".aisf", unitName, comp.file);
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
@@ -257,13 +264,6 @@ export class Installer {
       process.exit(1);
     }
 
-    const tryRemoveEmptyDir = (fullPath: string) => {
-      const parentDir = dirname(fullPath);
-      try {
-        if (readdirSync(parentDir).length === 0) rmdirSync(parentDir);
-      } catch { /* ignore */ }
-    };
-
     for (const rel of [
       ...entry.components.skills,
       ...entry.components.rules,
@@ -272,7 +272,7 @@ export class Installer {
       const fullPath = join(this.cwd, rel);
       if (existsSync(fullPath)) {
         rmSync(fullPath);
-        tryRemoveEmptyDir(fullPath);
+        this.tryRemoveEmptyDir(fullPath);
       }
     }
 
@@ -282,7 +282,7 @@ export class Installer {
       const fullPath = join(this.cwd, rel);
       if (existsSync(fullPath)) {
         rmSync(fullPath);
-        tryRemoveEmptyDir(fullPath);
+        this.tryRemoveEmptyDir(fullPath);
       }
     }
 
@@ -293,17 +293,21 @@ export class Installer {
   }
 
   /**
-   * Installs all components for a unit.
-   * componentsJson is a JSON array of ComponentSpec objects produced by the setup skill.
+   * Installs a unit by reading its component list from unit.json.
+   * Required components (no condition) are always installed.
+   * Optional components (have a condition) are installed only if their typed name
+   * appears in optionalNames, e.g. ["rule:poc-rule", "resource:config"].
+   * Previously installed components that are no longer selected are removed.
    */
-  install(unitName: string, componentsJson: string): void {
-    let specs: ComponentSpec[];
-    try {
-      specs = JSON.parse(componentsJson) as ComponentSpec[];
-    } catch {
-      console.error("Error: --components must be valid JSON");
+  install(unitName: string, optionalNames: string[]): void {
+    const unitJson = this.readUnitJson(unitName);
+    if (!unitJson) {
+      console.error(`Error: unit "${unitName}" not found in ~/.aisf/units/`);
       process.exit(1);
     }
+
+    const specs = this.resolveComponents(unitJson, optionalNames);
+    this.removeOrphans(unitName, unitJson, optionalNames);
 
     const installedPaths: InstalledEntry["components"] = {
       skills: [],
@@ -314,32 +318,106 @@ export class Installer {
 
     for (const spec of specs) {
       switch (spec.type) {
-        case "skill": {
-          const dest = this.installSkill(unitName, spec);
-          installedPaths.skills.push(dest);
+        case "skill":
+          installedPaths.skills.push(this.installSkill(unitName, spec));
           break;
-        }
-        case "rule": {
-          const dest = this.installRule(unitName, spec);
-          installedPaths.rules.push(dest);
+        case "rule":
+          installedPaths.rules.push(this.installRule(unitName, spec));
           break;
-        }
-        case "script": {
-          const dest = this.installScript(unitName, spec);
-          installedPaths.scripts.push(dest);
+        case "script":
+          installedPaths.scripts.push(this.installScript(unitName, spec));
           break;
-        }
-        case "resource": {
-          const dest = this.installResource(unitName, spec);
-          installedPaths.resources.push(dest);
+        case "resource":
+          installedPaths.resources.push(this.installResource(unitName, spec));
           break;
+      }
+    }
+
+    this.updateInstalled(unitName, installedPaths, optionalNames);
+    this.ensureGitignores();
+    console.log(`Installed: ${unitName}`);
+  }
+
+  /** Builds the list of ComponentSpecs to install based on unit.json and the selected optionals. */
+  private resolveComponents(unitJson: UnitJson, optionalNames: string[]): ComponentSpec[] {
+    const specs: ComponentSpec[] = [];
+
+    for (const comp of unitJson.components.skills ?? []) {
+      if (!comp.condition || optionalNames.includes(`skill:${comp.name}`)) {
+        specs.push({ type: "skill", name: comp.name, file: comp.file, hasCustom: comp.hasCustom });
+      }
+    }
+    for (const comp of unitJson.components.rules ?? []) {
+      if (!comp.condition || optionalNames.includes(`rule:${comp.name}`)) {
+        specs.push({ type: "rule", name: comp.name, file: comp.file, hasCustom: comp.hasCustom });
+      }
+    }
+    for (const comp of unitJson.components.scripts ?? []) {
+      specs.push({ type: "script", name: comp.name, file: comp.file, hook: comp.hook, params: comp.params });
+    }
+    for (const comp of unitJson.components.resources ?? []) {
+      if (!comp.condition || optionalNames.includes(`resource:${comp.name}`)) {
+        specs.push({ type: "resource", name: comp.name, file: comp.file, hasCustom: comp.hasCustom });
+      }
+    }
+
+    return specs;
+  }
+
+  /**
+   * Removes components that were previously installed but are no longer in scope —
+   * either because they were removed from unit.json or because an optional was deselected.
+   */
+  private removeOrphans(unitName: string, unitJson: UnitJson, optionalNames: string[]): void {
+    const installed = this.readInstalled();
+    const entry = installed.units[unitName];
+    if (!entry) return;
+
+    const newSkillPaths = new Set(
+      (unitJson.components.skills ?? [])
+        .filter((c) => !c.condition || optionalNames.includes(`skill:${c.name}`))
+        .map((c) => join(".claude", "skills", `aisf-${unitName}-${c.name}`, "SKILL.md")),
+    );
+    const newRulePaths = new Set(
+      (unitJson.components.rules ?? [])
+        .filter((c) => !c.condition || optionalNames.includes(`rule:${c.name}`))
+        .map((c) => join(".claude", "rules", `aisf-${unitName}`, `${c.name}.md`)),
+    );
+    const newResourcePaths = new Set(
+      (unitJson.components.resources ?? [])
+        .filter((c) => !c.condition || optionalNames.includes(`resource:${c.name}`))
+        .map((c) => join(".aisf", unitName, c.file)),
+    );
+    const newScriptNames = new Set((unitJson.components.scripts ?? []).map((c) => c.name));
+
+    for (const rel of [...entry.components.skills, ...entry.components.rules, ...entry.components.resources]) {
+      if (!newSkillPaths.has(rel) && !newRulePaths.has(rel) && !newResourcePaths.has(rel)) {
+        const fullPath = join(this.cwd, rel);
+        if (existsSync(fullPath)) {
+          rmSync(fullPath);
+          this.tryRemoveEmptyDir(fullPath);
         }
       }
     }
 
-    this.updateInstalled(unitName, installedPaths);
-    this.ensureGitignores();
-    console.log(`Installed: ${unitName}`);
+    for (const rel of entry.components.scripts) {
+      const scriptName = basename(rel, ".js");
+      if (!newScriptNames.has(scriptName)) {
+        removePreCommitHook(this.cwd, `aisf-${unitName}-${scriptName}`);
+        const fullPath = join(this.cwd, rel);
+        if (existsSync(fullPath)) {
+          rmSync(fullPath);
+          this.tryRemoveEmptyDir(fullPath);
+        }
+      }
+    }
+  }
+
+  private tryRemoveEmptyDir(fullPath: string): void {
+    const parentDir = dirname(fullPath);
+    try {
+      if (readdirSync(parentDir).length === 0) rmdirSync(parentDir);
+    } catch { /* ignore */ }
   }
 
   private installSkill(unitName: string, spec: SkillSpec): string {
@@ -449,11 +527,15 @@ export class Installer {
     return JSON.parse(readFileSync(installedPath, "utf8")) as InstalledJson;
   }
 
-  private updateInstalled(unitName: string, components: InstalledEntry["components"]): void {
+  private updateInstalled(
+    unitName: string,
+    components: InstalledEntry["components"],
+    optionalComponents: string[],
+  ): void {
     const installedPath = join(this.cwd, ".aisf", "installed.json");
     mkdirSync(join(this.cwd, ".aisf"), { recursive: true });
     const data = this.readInstalled();
-    data.units[unitName] = { installedAt: new Date().toISOString(), components };
+    data.units[unitName] = { installedAt: new Date().toISOString(), components, optionalComponents };
     writeFileSync(installedPath, JSON.stringify(data, null, 2) + "\n");
   }
 
@@ -479,7 +561,11 @@ if (require.main === module) {
 
   cli
     .command("prepare <unit>", "Return hasCustom component info and pre-create target dirs")
-    .action((unit: string) => new Installer().prepare(unit));
+    .option("--optional <json>", "JSON array of selected optional component names")
+    .action((unit: string, options: { optional?: string }) => {
+      const optionalNames = parseOptional(options.optional);
+      new Installer().prepare(unit, optionalNames);
+    });
 
   cli
     .command("uninstall <unit>", "Uninstall a unit from the current project")
@@ -487,15 +573,22 @@ if (require.main === module) {
 
   cli
     .command("install <unit>", "Install a unit into the current project")
-    .option("--components <json>", "ComponentSpec[] JSON (produced by setup skill)")
-    .action((unit: string, options: { components?: string }) => {
-      if (!options.components) {
-        console.error("Error: --components is required with install");
-        process.exit(1);
-      }
-      new Installer().install(unit, options.components);
+    .option("--optional <json>", "JSON array of selected optional component names, e.g. [\"rule:poc-rule\"]")
+    .action((unit: string, options: { optional?: string }) => {
+      const optionalNames = parseOptional(options.optional);
+      new Installer().install(unit, optionalNames);
     });
 
   cli.help();
   cli.parse();
+}
+
+function parseOptional(raw: string | undefined): string[] {
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw) as string[];
+  } catch {
+    console.error("Error: --optional must be a valid JSON array");
+    process.exit(1);
+  }
 }
