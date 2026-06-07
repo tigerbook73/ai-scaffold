@@ -50,10 +50,29 @@ node ~/.aisf/global/installer.js list
 node ~/.aisf/global/installer.js resolve {选中的 unit 名称，空格分隔}
 ```
 
-输出 `order`（拓扑排序后的完整安装列表）和 `auto`（自动补充的依赖列表）。  
-无需用户确认，直接采纳。
+输出 `order`（拓扑排序后的完整安装列表）和 `auto`（自动补充的依赖列表）。
 
-## 3. 可选组件确认
+## 3. 安装计划确认
+
+向用户展示完整的安装清单，**等待明确确认后再继续**：
+
+```
+即将安装以下 unit：
+  poc-dep-unit（自动依赖）
+  poc-unit
+  another-unit（已安装，将更新）
+
+确认安装？(yes/no)
+```
+
+标注规则：
+- `auto` 列表中的 unit 标注 `（自动依赖）`
+- 已在 `installed.json` 中的 unit 标注 `（已安装，将更新）`
+- 其余 unit 不加标注
+
+用户回复 `no` 或取消时终止，不执行任何安装。
+
+## 4. 可选组件确认（可选）
 
 对所有待安装 unit（`order` 中的所有 unit），逐个读取其 `unit.json` 中 `required: false` 的组件：
 
@@ -62,7 +81,7 @@ node ~/.aisf/global/installer.js resolve {选中的 unit 名称，空格分隔}
   例：`poc-unit / poc-rule-nextjs（rule）—— 检测到 next 依赖，推荐安装`
 - 由用户最终确认是否安装
 
-## 4. 定制内容生成（hasCustom 组件）
+## 5. 定制内容生成（hasCustom 组件）
 
 对所有待安装 unit，逐一执行以下流程：
 
@@ -80,7 +99,7 @@ node ~/.aisf/global/installer.js prepare {unit-name}
 - `tempPath`：AI 应写入渲染结果的临时文件路径（`.aisf-tmp-{unit}-{comp}` 后缀）
 - `exists`：目标文件是否已存在（用于判断是更新还是首次安装）
 
-若列表为空，跳过此步骤直接进入步骤 5。
+若列表为空，跳过此步骤直接进入步骤 6。
 
 ### 4b. 逐项生成定制内容
 
@@ -99,7 +118,7 @@ node ~/.aisf/global/installer.js prepare {unit-name}
 
 > **注意**：`tempPath` 与 `targetPath` 在同一目录下，目录已由 `prepare` 命令预先创建。
 
-## 5. 执行安装并报告
+## 6. 执行安装并报告
 
 **安装顺序**：按步骤 2 输出的 `order` 列表逐个调用 installer。
 
