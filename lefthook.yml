@@ -1,0 +1,4 @@
+pre-commit:
+  commands:
+    aisf-poc-unit-poc-hook:
+      run: node .aisf/poc-unit/scripts/poc-hook.js

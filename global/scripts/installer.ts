@@ -2,15 +2,16 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  rmdirSync,
   readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
 } from "fs";
-import { dirname, join } from "path";
+import { basename, dirname, join } from "path";
 import { homedir } from "os";
 import { cac } from "cac";
-import { addPreCommitHook } from "./precommit-lefthook";
+import { addPreCommitHook, removePreCommitHook } from "./precommit-lefthook";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -197,7 +198,7 @@ export class Installer {
     for (const comp of unitJson.components.skills ?? []) {
       if (!comp.hasCustom) continue;
       const templatePath = join(this.aisfHome, "units", unitName, comp.file);
-      const targetPath = join(this.cwd, ".claude", "skills", `aisf:${unitName}:${comp.name}`, "SKILL.md");
+      const targetPath = join(this.cwd, ".claude", "skills", `aisf-${unitName}-${comp.name}`, "SKILL.md");
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
       mkdirSync(dirname(targetPath), { recursive: true });
       items.push({ componentType: "skill", templatePath, targetPath, tempPath, exists: existsSync(targetPath) });
@@ -206,7 +207,7 @@ export class Installer {
     for (const comp of unitJson.components.rules ?? []) {
       if (!comp.hasCustom) continue;
       const templatePath = join(this.aisfHome, "units", unitName, comp.file);
-      const targetPath = join(this.cwd, ".claude", "rules", unitName, `${comp.name}.md`);
+      const targetPath = join(this.cwd, ".claude", "rules", `aisf-${unitName}`, `${comp.name}.md`);
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
       mkdirSync(dirname(targetPath), { recursive: true });
       items.push({ componentType: "rule", templatePath, targetPath, tempPath, exists: existsSync(targetPath) });
@@ -243,6 +244,52 @@ export class Installer {
         rmSync(fullPath);
       }
     }
+  }
+
+  /**
+   * Uninstalls all components for a unit and removes its entry from installed.json.
+   */
+  uninstall(unitName: string): void {
+    const installed = this.readInstalled();
+    const entry = installed.units[unitName];
+    if (!entry) {
+      console.error(`Error: unit "${unitName}" is not installed`);
+      process.exit(1);
+    }
+
+    const tryRemoveEmptyDir = (fullPath: string) => {
+      const parentDir = dirname(fullPath);
+      try {
+        if (readdirSync(parentDir).length === 0) rmdirSync(parentDir);
+      } catch { /* ignore */ }
+    };
+
+    for (const rel of [
+      ...entry.components.skills,
+      ...entry.components.rules,
+      ...entry.components.resources,
+    ]) {
+      const fullPath = join(this.cwd, rel);
+      if (existsSync(fullPath)) {
+        rmSync(fullPath);
+        tryRemoveEmptyDir(fullPath);
+      }
+    }
+
+    for (const rel of entry.components.scripts) {
+      const hookName = `aisf-${unitName}-${basename(rel, ".js")}`;
+      removePreCommitHook(this.cwd, hookName);
+      const fullPath = join(this.cwd, rel);
+      if (existsSync(fullPath)) {
+        rmSync(fullPath);
+        tryRemoveEmptyDir(fullPath);
+      }
+    }
+
+    const data = this.readInstalled();
+    delete data.units[unitName];
+    writeFileSync(join(this.cwd, ".aisf", "installed.json"), JSON.stringify(data, null, 2) + "\n");
+    console.log(`Uninstalled: ${unitName}`);
   }
 
   /**
@@ -291,11 +338,12 @@ export class Installer {
     }
 
     this.updateInstalled(unitName, installedPaths);
+    this.ensureGitignores();
     console.log(`Installed: ${unitName}`);
   }
 
   private installSkill(unitName: string, spec: SkillSpec): string {
-    const destDir = join(this.cwd, ".claude", "skills", `aisf:${unitName}:${spec.name}`);
+    const destDir = join(this.cwd, ".claude", "skills", `aisf-${unitName}-${spec.name}`);
     mkdirSync(destDir, { recursive: true });
     const destFile = join(destDir, "SKILL.md");
 
@@ -312,11 +360,11 @@ export class Installer {
       cpSync(src, destFile);
     }
 
-    return join(".claude", "skills", `aisf:${unitName}:${spec.name}`, "SKILL.md");
+    return join(".claude", "skills", `aisf-${unitName}-${spec.name}`, "SKILL.md");
   }
 
   private installRule(unitName: string, spec: RuleSpec): string {
-    const destDir = join(this.cwd, ".claude", "rules", unitName);
+    const destDir = join(this.cwd, ".claude", "rules", `aisf-${unitName}`);
     mkdirSync(destDir, { recursive: true });
     const destFile = join(destDir, `${spec.name}.md`);
 
@@ -337,7 +385,7 @@ export class Installer {
       cpSync(templatePath, destFile);
     }
 
-    return join(".claude", "rules", unitName, `${spec.name}.md`);
+    return join(".claude", "rules", `aisf-${unitName}`, `${spec.name}.md`);
   }
 
   private installScript(unitName: string, spec: ScriptSpec): string {
@@ -381,6 +429,20 @@ export class Installer {
     return join(".aisf", unitName, spec.file);
   }
 
+  private ensureGitignores(): void {
+    const entries: Array<{ dir: string; content: string }> = [
+      { dir: join(this.cwd, ".aisf"), content: "*\n" },
+      { dir: join(this.cwd, ".claude"), content: "skills/aisf-*/\nrules/aisf-*/\n" },
+    ];
+    for (const { dir, content } of entries) {
+      mkdirSync(dir, { recursive: true });
+      const gitignorePath = join(dir, ".gitignore");
+      if (!existsSync(gitignorePath)) {
+        writeFileSync(gitignorePath, content);
+      }
+    }
+  }
+
   readInstalled(): InstalledJson {
     const installedPath = join(this.cwd, ".aisf", "installed.json");
     if (!existsSync(installedPath)) return { units: {} };
@@ -418,6 +480,10 @@ if (require.main === module) {
   cli
     .command("prepare <unit>", "Return hasCustom component info and pre-create target dirs")
     .action((unit: string) => new Installer().prepare(unit));
+
+  cli
+    .command("uninstall <unit>", "Uninstall a unit from the current project")
+    .action((unit: string) => new Installer().uninstall(unit));
 
   cli
     .command("install <unit>", "Install a unit into the current project")

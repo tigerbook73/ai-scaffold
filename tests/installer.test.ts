@@ -171,7 +171,7 @@ test("checkDeps returns empty auto and only selected unit in order when dep alre
 
 // ─── installer --install: skill ───────────────────────────────────────────────
 
-test("installer installs skill to .claude/skills/aisf:{unit}:{name}/SKILL.md", () => {
+test("installer installs skill to .claude/skills/aisf-{unit}-{name}/SKILL.md", () => {
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
@@ -184,7 +184,7 @@ test("installer installs skill to .claude/skills/aisf:{unit}:{name}/SKILL.md", (
       JSON.stringify([{ type: "skill", name: "poc", file: "skills/poc.md" }]),
     );
 
-    const skillFile = join(projectDir, ".claude", "skills", "aisf:poc-unit:poc", "SKILL.md");
+    const skillFile = join(projectDir, ".claude", "skills", "aisf-poc-unit-poc", "SKILL.md");
     expect(readFileSync(skillFile, "utf8")).toContain("PoC skill content");
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -203,7 +203,7 @@ test("installer skill install is idempotent (second install overwrites cleanly)"
     installer.install("poc-unit", components);
     installer.install("poc-unit", components);
 
-    const skillFile = join(projectDir, ".claude", "skills", "aisf:poc-unit:poc", "SKILL.md");
+    const skillFile = join(projectDir, ".claude", "skills", "aisf-poc-unit-poc", "SKILL.md");
     expect(readFileSync(skillFile, "utf8")).toContain("PoC skill content");
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -237,7 +237,7 @@ test("installer install copies rule template directly when hasCustom is absent",
       JSON.stringify([{ type: "rule", name: "poc-rule", file: "rules/poc-rule.md" }]),
     );
 
-    const content = readFileSync(join(projectDir, ".claude", "rules", "poc-unit", "poc-rule.md"), "utf8");
+    const content = readFileSync(join(projectDir, ".claude", "rules", "aisf-poc-unit", "poc-rule.md"), "utf8");
     expect(content).toBe("Rule body without custom blocks.");
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -249,7 +249,7 @@ test("installer install copies rule from tempPath and deletes it when hasCustom 
   try {
     const aisfHome = makeFakeAisfHome(dir);
     const projectDir = join(dir, "project");
-    const ruleDestDir = join(projectDir, ".claude", "rules", "poc-unit");
+    const ruleDestDir = join(projectDir, ".claude", "rules", "aisf-poc-unit");
     mkdirSync(ruleDestDir, { recursive: true });
 
     const tempPath = join(ruleDestDir, ".aisf-tmp-poc-unit-poc-rule");
@@ -291,7 +291,7 @@ test("installer install errors when hasCustom rule has no tempPath", () => {
       exitSpy.mockRestore();
     }
 
-    expect(existsSync(join(projectDir, ".claude", "rules", "poc-unit", "poc-rule.md"))).toBe(false);
+    expect(existsSync(join(projectDir, ".claude", "rules", "aisf-poc-unit", "poc-rule.md"))).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -389,7 +389,7 @@ test("prepare returns PrepareItem list for hasCustom rule and pre-creates target
     expect(items[0].exists).toBe(false);
     expect(items[0].tempPath).toContain(".aisf-tmp-poc-unit-poc-rule");
 
-    expect(existsSync(join(projectDir, ".claude", "rules", "poc-unit"))).toBe(true);
+    expect(existsSync(join(projectDir, ".claude", "rules", "aisf-poc-unit"))).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -595,6 +595,166 @@ test("installer copies resources to .aisf/{unit}/resources/", () => {
 
     const resource = join(projectDir, ".aisf", "poc-unit", "resources", "readme.md");
     expect(readFileSync(resource, "utf8")).toBe("readme content");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ─── installer: installed.json ────────────────────────────────────────────────
+
+// ─── installer uninstall ──────────────────────────────────────────────────────
+
+/**
+ * @test-suite  uninstall
+ * @target      Installer.uninstall()
+ * @strategy    unit; fake ~/.aisf tree; pre-populated installed.json and files
+ * @cases
+ *   - [PASS] removes installed skill file and its parent dir when empty
+ *   - [PASS] removes installed rule file and lefthook entry
+ *   - [FAIL] exits with error when unit is not installed
+ */
+test("uninstall removes skill file and empty parent directory", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    const skillDir = join(projectDir, ".claude", "skills", "aisf-poc-unit-poc");
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, "SKILL.md"), "# poc");
+    mkdirSync(join(projectDir, ".aisf"), { recursive: true });
+    writeFileSync(
+      join(projectDir, ".aisf", "installed.json"),
+      JSON.stringify({
+        units: {
+          "poc-unit": {
+            installedAt: "2026-01-01",
+            components: {
+              skills: [".claude/skills/aisf-poc-unit-poc/SKILL.md"],
+              rules: [],
+              scripts: [],
+              resources: [],
+            },
+          },
+        },
+      }),
+    );
+
+    new Installer(projectDir, aisfHome).uninstall("poc-unit");
+
+    expect(existsSync(join(skillDir, "SKILL.md")), "skill file must be removed").toBe(false);
+    expect(existsSync(skillDir), "empty parent dir must be removed").toBe(false);
+    const data = JSON.parse(readFileSync(join(projectDir, ".aisf", "installed.json"), "utf8")) as {
+      units: Record<string, unknown>;
+    };
+    expect("poc-unit" in data.units, "unit must be removed from installed.json").toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("uninstall removes script file and corresponding lefthook entry", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    const scriptDir = join(projectDir, ".aisf", "poc-unit", "scripts");
+    mkdirSync(scriptDir, { recursive: true });
+    writeFileSync(join(scriptDir, "poc-hook.js"), "// hook");
+    writeFileSync(
+      join(projectDir, "lefthook.yml"),
+      "pre-commit:\n  commands:\n    aisf-poc-unit-poc-hook:\n      run: node .aisf/poc-unit/scripts/poc-hook.js\n",
+    );
+    writeFileSync(
+      join(projectDir, ".aisf", "installed.json"),
+      JSON.stringify({
+        units: {
+          "poc-unit": {
+            installedAt: "2026-01-01",
+            components: {
+              skills: [],
+              rules: [],
+              scripts: [".aisf/poc-unit/scripts/poc-hook.js"],
+              resources: [],
+            },
+          },
+        },
+      }),
+    );
+
+    new Installer(projectDir, aisfHome).uninstall("poc-unit");
+
+    expect(existsSync(join(scriptDir, "poc-hook.js")), "script file must be removed").toBe(false);
+    const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
+    expect(lefthook, "lefthook entry must be removed").not.toContain("aisf-poc-unit-poc-hook:");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("uninstall exits with error when unit is not installed", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(projectDir);
+
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit(${code ?? ""})`);
+    });
+    try {
+      expect(() => new Installer(projectDir, aisfHome).uninstall("poc-unit")).toThrow("process.exit(1)");
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    } finally {
+      exitSpy.mockRestore();
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ─── installer: .gitignore ────────────────────────────────────────────────────
+
+/**
+ * @test-suite  ensureGitignores
+ * @target      Installer.install() → ensureGitignores()
+ * @strategy    unit; fake ~/.aisf tree
+ * @cases
+ *   - [PASS] creates .gitignore in .aisf/, .claude/, .skills/ when not present
+ *   - [PASS] does not overwrite existing .gitignore
+ */
+test("installer creates .gitignore files in .aisf/, .claude/, .skills/ on install", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(projectDir);
+
+    new Installer(projectDir, aisfHome).install(
+      "poc-unit",
+      JSON.stringify([{ type: "skill", name: "poc", file: "skills/poc.md" }]),
+    );
+
+    expect(readFileSync(join(projectDir, ".aisf", ".gitignore"), "utf8")).toBe("*\n");
+    expect(readFileSync(join(projectDir, ".claude", ".gitignore"), "utf8")).toBe("skills/aisf-*/\nrules/aisf-*/\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("installer does not overwrite existing .gitignore files", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(join(projectDir, ".claude"), { recursive: true });
+    writeFileSync(join(projectDir, ".claude", ".gitignore"), "custom-content\n");
+
+    new Installer(projectDir, aisfHome).install(
+      "poc-unit",
+      JSON.stringify([{ type: "skill", name: "poc", file: "skills/poc.md" }]),
+    );
+
+    expect(readFileSync(join(projectDir, ".claude", ".gitignore"), "utf8")).toBe("custom-content\n");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
