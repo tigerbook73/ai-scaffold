@@ -8,6 +8,7 @@ import {
 } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { cac } from "cac";
 
 function registerPreCommitHook(projectDir: string, commandName: string, runCommand: string): void {
   const lefthookPath = join(projectDir, "lefthook.yml");
@@ -331,63 +332,28 @@ export class Installer {
 
 // ─── CLI ─────────────────────────────────────────────────────────────────────
 
-function printHelp(): void {
-  process.stdout.write(
-    [
-      "aisf installer",
-      "",
-      "USAGE:",
-      "  installer [options]",
-      "",
-      "OPTIONS:",
-      "  --list                 List all available units with their install status",
-      "  --check-deps           Resolve transitive deps and output topological install order",
-      "  --units <a,b,...>      Comma-separated unit names (used with --check-deps)",
-      "  --install              Install a unit into the current project",
-      "  --unit <name>          Unit name (used with --install)",
-      "  --components <json>    JSON array of ComponentSpec objects (used with --install)",
-      "  --help, -h             Show this help message",
-      "",
-    ].join("\n"),
-  );
-}
+if (require.main === module) {
+  const cli = cac("installer");
 
-function parseArgs(argv: string[]): {
-  mode: "list" | "check-deps" | "install" | "help";
-  units?: string[];
-  unit?: string;
-  components?: string;
-} {
-  const result: ReturnType<typeof parseArgs> = { mode: "help" };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--list") result.mode = "list";
-    else if (arg === "--check-deps") result.mode = "check-deps";
-    else if (arg === "--install") result.mode = "install";
-    else if (arg === "--help" || arg === "-h") result.mode = "help";
-    else if (arg === "--units" && argv[i + 1]) result.units = argv[++i].split(",").map((s) => s.trim());
-    else if (arg === "--unit" && argv[i + 1]) result.unit = argv[++i];
-    else if (arg === "--components" && argv[i + 1]) result.components = argv[++i];
-  }
-  return result;
-}
+  cli
+    .command("list", "List all available units with install status")
+    .action(() => new Installer().listUnits());
 
-const args = parseArgs(process.argv.slice(2));
+  cli
+    .command("resolve <...units>", "Resolve transitive deps and output install order")
+    .action((units: string[]) => new Installer().checkDeps(units));
 
-if (args.mode === "list") {
-  new Installer().listUnits();
-} else if (args.mode === "check-deps") {
-  if (!args.units?.length) {
-    console.error("Error: --units is required with --check-deps");
-    process.exit(1);
-  }
-  new Installer().checkDeps(args.units);
-} else if (args.mode === "install") {
-  if (!args.unit || !args.components) {
-    console.error("Error: --unit and --components are required with --install");
-    process.exit(1);
-  }
-  new Installer().install(args.unit, args.components);
-} else {
-  printHelp();
+  cli
+    .command("install <unit>", "Install a unit into the current project")
+    .option("--components <json>", "ComponentSpec[] JSON (produced by setup skill)")
+    .action((unit: string, options: { components?: string }) => {
+      if (!options.components) {
+        console.error("Error: --components is required with install");
+        process.exit(1);
+      }
+      new Installer().install(unit, options.components);
+    });
+
+  cli.help();
+  cli.parse();
 }
