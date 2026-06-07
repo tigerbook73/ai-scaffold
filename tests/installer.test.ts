@@ -1,12 +1,12 @@
 /**
  * @test-file   installer
  * @description Verifies the Installer class handles listUnits, checkDeps (topological order),
- *              skill/rule/script/resource installation, and lefthook.yml idempotent updates.
+ *              skill/rule/script/resource installation, prepare command, and lefthook.yml idempotent updates.
  * @ai-generated
- * @reviewed-by Shengtian Liao
+ * @reviewed-by
  */
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -213,34 +213,220 @@ test("installer skill install is idempotent (second install overwrites cleanly)"
 
 // ─── installer --install: rule ────────────────────────────────────────────────
 
-test("installer installs rule guard by reading template and applying customValues", () => {
+/**
+ * @test-suite  installRule
+ * @target      Installer.install() → installRule()
+ * @strategy    unit; fake ~/.aisf tree with rule templates
+ * @cases
+ *   - [PASS] copies rule template directly when hasCustom is absent
+ *   - [PASS] copies from tempPath and deletes it when hasCustom is true
+ *   - [FAIL] exits with error when hasCustom is true but tempPath does not exist
+ */
+test("installer install copies rule template directly when hasCustom is absent", () => {
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
-    // Write a template with an AISF:CUSTOM block into the fake store
     const rulesDir = join(aisfHome, "units", "poc-unit", "rules");
     mkdirSync(rulesDir, { recursive: true });
-    writeFileSync(
-      join(rulesDir, "poc-rule.md"),
-      '---\n# AISF:CUSTOM name="paths" hint="..."\npaths: ["**/*.poc-test.*"]\n# AISF:CUSTOM:END\ndescription: poc rule\n---\nRule body.',
-    );
+    writeFileSync(join(rulesDir, "poc-rule.md"), "Rule body without custom blocks.");
 
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    const installer = new Installer(projectDir, aisfHome);
-    installer.install(
+    new Installer(projectDir, aisfHome).install(
       "poc-unit",
-      JSON.stringify([
-        { type: "rule", name: "poc-rule", file: "rules/poc-rule.md", customValues: { paths: '["**/*.test.ts"]' } },
-      ]),
+      JSON.stringify([{ type: "rule", name: "poc-rule", file: "rules/poc-rule.md" }]),
     );
 
-    const ruleFile = join(projectDir, ".claude", "rules", "poc-unit", "poc-rule.md");
-    const content = readFileSync(ruleFile, "utf8");
-    assert.ok(content.includes('["**/*.test.ts"]'), "customValue must be applied");
-    assert.ok(content.includes("AISF:CUSTOM"), "boundary markers must be preserved");
-    assert.ok(!content.includes("poc-test"), "default value must be replaced");
+    const content = readFileSync(join(projectDir, ".claude", "rules", "poc-unit", "poc-rule.md"), "utf8");
+    assert.equal(content, "Rule body without custom blocks.");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("installer install copies rule from tempPath and deletes it when hasCustom is true", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    const ruleDestDir = join(projectDir, ".claude", "rules", "poc-unit");
+    mkdirSync(ruleDestDir, { recursive: true });
+
+    // AI pre-writes rendered content to tempPath
+    const tempPath = join(ruleDestDir, ".aisf-tmp-poc-unit-poc-rule");
+    writeFileSync(tempPath, 'paths: ["**/*.test.ts"]\ndescription: rendered rule');
+
+    new Installer(projectDir, aisfHome).install(
+      "poc-unit",
+      JSON.stringify([{ type: "rule", name: "poc-rule", file: "rules/poc-rule.md", hasCustom: true }]),
+    );
+
+    const destFile = join(ruleDestDir, "poc-rule.md");
+    assert.ok(readFileSync(destFile, "utf8").includes('["**/*.test.ts"]'), "rendered content must be written");
+    assert.equal(existsSync(tempPath), false, "tempPath must be deleted after install");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("installer install errors when hasCustom rule has no tempPath", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(projectDir);
+
+    const origExit = process.exit;
+    let capturedCode: number | undefined;
+    process.exit = ((code?: number) => {
+      capturedCode = code as number;
+      throw new Error(`process.exit(${code})`);
+    }) as typeof process.exit;
+
+    try {
+      new Installer(projectDir, aisfHome).install(
+        "poc-unit",
+        JSON.stringify([{ type: "rule", name: "poc-rule", file: "rules/poc-rule.md", hasCustom: true }]),
+      );
+      assert.fail("should have called process.exit");
+    } catch (err) {
+      assert.ok((err as Error).message.includes("process.exit(1)"), "must exit with code 1");
+    } finally {
+      process.exit = origExit;
+    }
+
+    assert.equal(capturedCode, 1);
+    assert.equal(existsSync(join(projectDir, ".claude", "rules", "poc-unit", "poc-rule.md")), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ─── installer --install: resource ───────────────────────────────────────────
+
+/**
+ * @test-suite  installResource
+ * @target      Installer.install() → installResource()
+ * @strategy    unit; fake ~/.aisf tree
+ * @cases
+ *   - [PASS] copies resource file to .aisf/{unit}/{file} when hasCustom is absent
+ *   - [PASS] copies from tempPath and deletes it when hasCustom is true
+ */
+test("installer install copies resource file when hasCustom is absent", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(projectDir);
+
+    new Installer(projectDir, aisfHome).install(
+      "poc-unit",
+      JSON.stringify([{ type: "resource", name: "readme", file: "resources/readme.md" }]),
+    );
+
+    const content = readFileSync(join(projectDir, ".aisf", "poc-unit", "resources", "readme.md"), "utf8");
+    assert.equal(content, "readme content");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("installer install copies resource from tempPath and deletes it when hasCustom is true", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    const resourceDestDir = join(projectDir, ".aisf", "poc-unit", "resources");
+    mkdirSync(resourceDestDir, { recursive: true });
+
+    const tempPath = join(resourceDestDir, ".aisf-tmp-poc-unit-readme");
+    writeFileSync(tempPath, "rendered readme content");
+
+    new Installer(projectDir, aisfHome).install(
+      "poc-unit",
+      JSON.stringify([{ type: "resource", name: "readme", file: "resources/readme.md", hasCustom: true }]),
+    );
+
+    assert.equal(
+      readFileSync(join(resourceDestDir, "readme.md"), "utf8"),
+      "rendered readme content",
+    );
+    assert.equal(existsSync(tempPath), false, "tempPath must be deleted after install");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ─── installer prepare ────────────────────────────────────────────────────────
+
+/**
+ * @test-suite  prepare
+ * @target      Installer.prepare()
+ * @strategy    unit; fake ~/.aisf tree with hasCustom components
+ * @cases
+ *   - [PASS] returns PrepareItem list for hasCustom rules and pre-creates target dirs
+ *   - [PASS] cleans orphaned .aisf-tmp-* files before returning
+ */
+test("prepare returns PrepareItem list for hasCustom rule and pre-creates target dir", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    // Add hasCustom rule to unit.json
+    const unitJsonPath = join(aisfHome, "units", "poc-unit", "unit.json");
+    writeFileSync(
+      unitJsonPath,
+      JSON.stringify({
+        name: "poc-unit",
+        description: "PoC unit",
+        dependencies: [],
+        components: {
+          rules: [{ name: "poc-rule", file: "rules/poc-rule.md", hasCustom: true }],
+        },
+      }),
+    );
+    mkdirSync(join(aisfHome, "units", "poc-unit", "rules"), { recursive: true });
+    writeFileSync(join(aisfHome, "units", "poc-unit", "rules", "poc-rule.md"), "template content");
+
+    const projectDir = join(dir, "project");
+    mkdirSync(projectDir);
+
+    const output = captureStdout(() => new Installer(projectDir, aisfHome).prepare("poc-unit"));
+    const items = JSON.parse(output) as Array<{ componentType: string; exists: boolean; tempPath: string }>;
+
+    assert.equal(items.length, 1);
+    assert.equal(items[0].componentType, "rule");
+    assert.equal(items[0].exists, false);
+    assert.ok(items[0].tempPath.includes(".aisf-tmp-poc-unit-poc-rule"));
+
+    // Target directory must be pre-created
+    assert.ok(existsSync(join(projectDir, ".claude", "rules", "poc-unit")));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("prepare cleans orphaned .aisf-tmp-* files before returning items", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+
+    // Plant orphan temp files
+    const orphanDir = join(projectDir, ".claude", "rules", "some-unit");
+    mkdirSync(orphanDir, { recursive: true });
+    const orphan = join(orphanDir, ".aisf-tmp-some-unit-some-rule");
+    writeFileSync(orphan, "stale");
+
+    const unitJsonPath = join(aisfHome, "units", "poc-unit", "unit.json");
+    writeFileSync(
+      unitJsonPath,
+      JSON.stringify({ name: "poc-unit", description: "PoC", dependencies: [], components: {} }),
+    );
+
+    captureStdout(() => new Installer(projectDir, aisfHome).prepare("poc-unit"));
+
+    assert.equal(existsSync(orphan), false, "orphan temp file must be removed");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

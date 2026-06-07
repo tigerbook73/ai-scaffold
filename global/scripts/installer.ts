@@ -4,9 +4,10 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   writeFileSync,
 } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 import { homedir } from "os";
 import { cac } from "cac";
 import { addPreCommitHook } from "./precommit-lefthook";
@@ -18,10 +19,10 @@ interface UnitJson {
   description?: string;
   dependencies: string[];
   components: {
-    skills?: Array<{ name: string; file: string }>;
-    rules?: Array<{ name: string; file: string; required?: boolean; condition?: string }>;
+    skills?: Array<{ name: string; file: string; hasCustom?: boolean }>;
+    rules?: Array<{ name: string; file: string; required?: boolean; condition?: string; hasCustom?: boolean }>;
     scripts?: Array<{ name: string; file: string; hook: string; params?: string[] }>;
-    resources?: Array<{ name: string; file: string }>;
+    resources?: Array<{ name: string; file: string; hasCustom?: boolean }>;
   };
 }
 
@@ -43,14 +44,14 @@ interface SkillSpec {
   type: "skill";
   name: string;
   file: string;
+  hasCustom?: boolean;
 }
 
 interface RuleSpec {
   type: "rule";
   name: string;
   file: string;
-  /** User-confirmed values for each AISF:CUSTOM block, keyed by the block's name attribute. */
-  customValues: Record<string, string>;
+  hasCustom?: boolean;
 }
 
 interface ScriptSpec {
@@ -66,9 +67,18 @@ interface ResourceSpec {
   type: "resource";
   name: string;
   file: string;
+  hasCustom?: boolean;
 }
 
 type ComponentSpec = SkillSpec | RuleSpec | ScriptSpec | ResourceSpec;
+
+export interface PrepareItem {
+  componentType: "skill" | "rule" | "resource";
+  templatePath: string;
+  targetPath: string;
+  tempPath: string;
+  exists: boolean;
+}
 
 // ─── Installer ───────────────────────────────────────────────────────────────
 
@@ -169,6 +179,73 @@ export class Installer {
   }
 
   /**
+   * Returns info for all hasCustom components of a unit so the AI can generate
+   * their content into temp files before calling install.
+   * Also cleans up any orphaned .aisf-tmp-* files from previous interrupted runs.
+   */
+  prepare(unitName: string): void {
+    this.cleanOrphanTempFiles();
+
+    const unitJson = this.readUnitJson(unitName);
+    if (!unitJson) {
+      console.error(`Error: unit "${unitName}" not found in ~/.aisf/units/`);
+      process.exit(1);
+    }
+
+    const items: PrepareItem[] = [];
+
+    for (const comp of unitJson.components.skills ?? []) {
+      if (!comp.hasCustom) continue;
+      const templatePath = join(this.aisfHome, "units", unitName, comp.file);
+      const targetPath = join(this.cwd, ".claude", "skills", `aisf:${unitName}:${comp.name}`, "SKILL.md");
+      const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
+      mkdirSync(dirname(targetPath), { recursive: true });
+      items.push({ componentType: "skill", templatePath, targetPath, tempPath, exists: existsSync(targetPath) });
+    }
+
+    for (const comp of unitJson.components.rules ?? []) {
+      if (!comp.hasCustom) continue;
+      const templatePath = join(this.aisfHome, "units", unitName, comp.file);
+      const targetPath = join(this.cwd, ".claude", "rules", unitName, `${comp.name}.md`);
+      const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
+      mkdirSync(dirname(targetPath), { recursive: true });
+      items.push({ componentType: "rule", templatePath, targetPath, tempPath, exists: existsSync(targetPath) });
+    }
+
+    for (const comp of unitJson.components.resources ?? []) {
+      if (!comp.hasCustom) continue;
+      const templatePath = join(this.aisfHome, "units", unitName, comp.file);
+      const targetPath = join(this.cwd, ".aisf", unitName, comp.file);
+      const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
+      mkdirSync(dirname(targetPath), { recursive: true });
+      items.push({ componentType: "resource", templatePath, targetPath, tempPath, exists: existsSync(targetPath) });
+    }
+
+    process.stdout.write(JSON.stringify(items, null, 2) + "\n");
+  }
+
+  private makeTempPath(targetPath: string, unitName: string, compName: string): string {
+    return join(dirname(targetPath), `.aisf-tmp-${unitName}-${compName}`);
+  }
+
+  private cleanOrphanTempFiles(): void {
+    for (const dir of [join(this.cwd, ".claude"), join(this.cwd, ".aisf")]) {
+      if (existsSync(dir)) this.removeTempFilesIn(dir);
+    }
+  }
+
+  private removeTempFilesIn(dir: string): void {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        this.removeTempFilesIn(fullPath);
+      } else if (entry.name.startsWith(".aisf-tmp-")) {
+        rmSync(fullPath);
+      }
+    }
+  }
+
+  /**
    * Installs all components for a unit.
    * componentsJson is a JSON array of ComponentSpec objects produced by the setup skill.
    */
@@ -206,8 +283,8 @@ export class Installer {
           break;
         }
         case "resource": {
-          const dests = this.installResources(unitName);
-          installedPaths.resources.push(...dests);
+          const dest = this.installResource(unitName, spec);
+          installedPaths.resources.push(dest);
           break;
         }
       }
@@ -218,42 +295,49 @@ export class Installer {
   }
 
   private installSkill(unitName: string, spec: SkillSpec): string {
-    const src = join(this.aisfHome, "units", unitName, spec.file);
     const destDir = join(this.cwd, ".claude", "skills", `aisf:${unitName}:${spec.name}`);
     mkdirSync(destDir, { recursive: true });
-    cpSync(src, join(destDir, "SKILL.md"));
+    const destFile = join(destDir, "SKILL.md");
+
+    if (spec.hasCustom) {
+      const tempPath = this.makeTempPath(destFile, unitName, spec.name);
+      if (!existsSync(tempPath)) {
+        console.error(`Error: temp file not found for skill "${spec.name}" — run prepare first: ${tempPath}`);
+        process.exit(1);
+      }
+      cpSync(tempPath, destFile);
+      rmSync(tempPath);
+    } else {
+      const src = join(this.aisfHome, "units", unitName, spec.file);
+      cpSync(src, destFile);
+    }
+
     return join(".claude", "skills", `aisf:${unitName}:${spec.name}`, "SKILL.md");
   }
 
   private installRule(unitName: string, spec: RuleSpec): string {
-    const templatePath = join(this.aisfHome, "units", unitName, spec.file);
-    if (!existsSync(templatePath)) {
-      console.error(`Error: rule template not found: ${templatePath}`);
-      process.exit(1);
-    }
-    const template = readFileSync(templatePath, "utf8");
-    const resolved = this.applyCustomValues(template, spec.customValues);
     const destDir = join(this.cwd, ".claude", "rules", unitName);
     mkdirSync(destDir, { recursive: true });
     const destFile = join(destDir, `${spec.name}.md`);
-    writeFileSync(destFile, resolved);
-    return join(".claude", "rules", unitName, `${spec.name}.md`);
-  }
 
-  /** Replaces each AISF:CUSTOM block's content with the matching value from customValues. */
-  private applyCustomValues(template: string, customValues: Record<string, string>): string {
-    // Matches both YAML (#) and Markdown (<!-- -->) boundary formats
-    return template
-      .replace(
-        /(#\s*AISF:CUSTOM name="([^"]+)"[^\n]*\n)([\s\S]*?)(#\s*AISF:CUSTOM:END)/g,
-        (_match, openTag: string, name: string, _defaultContent: string, closeTag: string) =>
-          name in customValues ? `${openTag}${customValues[name]}\n${closeTag}` : _match,
-      )
-      .replace(
-        /(<!--\s*AISF:CUSTOM name="([^"]+)"[^>]*-->\n)([\s\S]*?)(<!--\s*AISF:CUSTOM:END\s*-->)/g,
-        (_match, openTag: string, name: string, _defaultContent: string, closeTag: string) =>
-          name in customValues ? `${openTag}${customValues[name]}\n${closeTag}` : _match,
-      );
+    if (spec.hasCustom) {
+      const tempPath = this.makeTempPath(destFile, unitName, spec.name);
+      if (!existsSync(tempPath)) {
+        console.error(`Error: temp file not found for rule "${spec.name}" — run prepare first: ${tempPath}`);
+        process.exit(1);
+      }
+      cpSync(tempPath, destFile);
+      rmSync(tempPath);
+    } else {
+      const templatePath = join(this.aisfHome, "units", unitName, spec.file);
+      if (!existsSync(templatePath)) {
+        console.error(`Error: rule template not found: ${templatePath}`);
+        process.exit(1);
+      }
+      cpSync(templatePath, destFile);
+    }
+
+    return join(".claude", "rules", unitName, `${spec.name}.md`);
   }
 
   private installScript(unitName: string, spec: ScriptSpec): string {
@@ -273,13 +357,28 @@ export class Installer {
     return relPath;
   }
 
-  private installResources(unitName: string): string[] {
-    const srcDir = join(this.aisfHome, "units", unitName, "resources");
-    if (!existsSync(srcDir)) return [];
-    const destDir = join(this.cwd, ".aisf", unitName, "resources");
-    mkdirSync(destDir, { recursive: true });
-    cpSync(srcDir, destDir, { recursive: true });
-    return readdirSync(destDir).map((f) => join(".aisf", unitName, "resources", f));
+  private installResource(unitName: string, spec: ResourceSpec): string {
+    const destFile = join(this.cwd, ".aisf", unitName, spec.file);
+    mkdirSync(dirname(destFile), { recursive: true });
+
+    if (spec.hasCustom) {
+      const tempPath = this.makeTempPath(destFile, unitName, spec.name);
+      if (!existsSync(tempPath)) {
+        console.error(`Error: temp file not found for resource "${spec.name}" — run prepare first: ${tempPath}`);
+        process.exit(1);
+      }
+      cpSync(tempPath, destFile);
+      rmSync(tempPath);
+    } else {
+      const srcFile = join(this.aisfHome, "units", unitName, spec.file);
+      if (!existsSync(srcFile)) {
+        console.error(`Error: resource file not found: ${srcFile}`);
+        process.exit(1);
+      }
+      cpSync(srcFile, destFile);
+    }
+
+    return join(".aisf", unitName, spec.file);
   }
 
   readInstalled(): InstalledJson {
@@ -315,6 +414,10 @@ if (require.main === module) {
   cli
     .command("resolve <...units>", "Resolve transitive deps and output install order")
     .action((units: string[]) => new Installer().checkDeps(units));
+
+  cli
+    .command("prepare <unit>", "Return hasCustom component info and pre-create target dirs")
+    .action((unit: string) => new Installer().prepare(unit));
 
   cli
     .command("install <unit>", "Install a unit into the current project")

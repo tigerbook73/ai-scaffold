@@ -36,7 +36,7 @@ export function addPreCommitHook(
     return;
   }
 
-  const content = readFileSync(lefthookPath, "utf8");
+  const content = readFileSync(lefthookPath, "utf8").replace(/\r\n/g, "\n");
   const lines = content.split("\n");
   const bounds = getPreCommitBounds(lines);
 
@@ -71,7 +71,7 @@ export function removePreCommitHook(projectDir: string, commandName: string): vo
   const lefthookPath = join(projectDir, "lefthook.yml");
   if (!existsSync(lefthookPath)) return;
 
-  const lines = readFileSync(lefthookPath, "utf8").split("\n");
+  const lines = readFileSync(lefthookPath, "utf8").replace(/\r\n/g, "\n").split("\n");
   const bounds = getPreCommitBounds(lines);
   if (!bounds) return;
 
@@ -81,7 +81,9 @@ export function removePreCommitHook(projectDir: string, commandName: string): vo
 
   const startIdx = bounds.start + relIdx;
   let endIdx = startIdx + 1;
-  while (endIdx < bounds.end && lines[endIdx].startsWith("      ")) {
+  // Consume property lines (6+ spaces) and blank lines — consistent with getPreCommitBounds,
+  // which also includes blank lines in the section range.
+  while (endIdx < bounds.end && (lines[endIdx].startsWith("      ") || lines[endIdx] === "")) {
     endIdx++;
   }
 
@@ -102,7 +104,7 @@ export function updatePreCommitHook(
   const lefthookPath = join(projectDir, "lefthook.yml");
   if (!existsSync(lefthookPath)) return;
 
-  const lines = readFileSync(lefthookPath, "utf8").split("\n");
+  const lines = readFileSync(lefthookPath, "utf8").replace(/\r\n/g, "\n").split("\n");
   const bounds = getPreCommitBounds(lines);
   if (!bounds) return;
 
