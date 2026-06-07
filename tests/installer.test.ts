@@ -111,7 +111,7 @@ test("listUnits marks unit as installed=true when present in installed.json", ()
     writeFileSync(
       join(projectDir, ".aisf", "installed.json"),
       JSON.stringify({
-        units: { "poc-unit": { installedAt: "2026-01-01", components: {}, optionalComponents: [] } },
+        units: { "poc-unit": { installedAt: "2026-01-01", components: {} } },
       }),
     );
 
@@ -169,7 +169,7 @@ test("checkDeps returns empty auto and only selected unit in order when dep alre
       join(projectDir, ".aisf", "installed.json"),
       JSON.stringify({
         units: {
-          "poc-dep-unit": { installedAt: "2026-01-01", components: {}, optionalComponents: [] },
+          "poc-dep-unit": { installedAt: "2026-01-01", components: {} },
         },
       }),
     );
@@ -859,12 +859,11 @@ test("uninstall removes skill file and empty parent directory", () => {
           "poc-unit": {
             installedAt: "2026-01-01",
             components: {
-              skills: [".claude/skills/aisf-poc-unit-poc/SKILL.md"],
+              skills: [{ name: "poc", path: ".claude/skills/aisf-poc-unit-poc/SKILL.md" }],
               rules: [],
               scripts: [],
               resources: [],
             },
-            optionalComponents: [],
           },
         },
       }),
@@ -904,10 +903,9 @@ test("uninstall removes script file and corresponding lefthook entry", () => {
             components: {
               skills: [],
               rules: [],
-              scripts: [".aisf/poc-unit/scripts/poc-hook.js"],
+              scripts: [{ name: "poc-hook", path: ".aisf/poc-unit/scripts/poc-hook.js" }],
               resources: [],
             },
-            optionalComponents: [],
           },
         },
       }),
@@ -988,7 +986,7 @@ test("installer does not overwrite existing .gitignore files", () => {
 
 // ─── installer: installed.json ────────────────────────────────────────────────
 
-test("installer writes installed.json with optionalComponents after install", () => {
+test("installer writes installed.json with correct component records after install", () => {
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
@@ -1017,7 +1015,6 @@ test("installer writes installed.json with optionalComponents after install", ()
     const installed = installer.readInstalled();
     expect("poc-unit" in installed.units).toBe(true);
     expect(installed.units["poc-unit"].installedAt).toBeTruthy();
-    expect(installed.units["poc-unit"].optionalComponents).toEqual(["rule:poc-rule-opt"]);
     expect(installed.units["poc-unit"].components.skills.length).toBe(1);
     expect(installed.units["poc-unit"].components.rules.length).toBe(1);
   } finally {

@@ -5,7 +5,7 @@
  * @reviewed-by
  */
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { expect, test } from "vitest";
 
@@ -88,7 +88,7 @@ test("derives name from directory name when creating unit.json", () => {
     refreshUnit(dir);
 
     const unit = readUnit(dir);
-    expect(unit.name).toBe(require("node:path").basename(dir));
+    expect(unit.name).toBe(basename(dir));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

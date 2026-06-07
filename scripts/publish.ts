@@ -78,7 +78,12 @@ export class Publish {
 
     for (const file of readdirSync(globalScriptsDir)) {
       if (extname(file) !== ".ts") continue;
-      this.bundle(join(globalScriptsDir, file), join(destDir, file.replace(/\.ts$/, ".js")));
+      // Publish *-types.ts as source — interfaces have no runtime representation after compilation.
+      if (file.endsWith("-types.ts")) {
+        cpSync(join(globalScriptsDir, file), join(destDir, file));
+      } else {
+        this.bundle(join(globalScriptsDir, file), join(destDir, file.replace(/\.ts$/, ".js")));
+      }
     }
   }
 

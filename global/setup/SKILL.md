@@ -24,7 +24,7 @@
 node ~/.aisf/global/installer.js list
 ```
 
-若命令失败（config.json 不存在），输出 installer 的错误并停止。
+若命令失败，输出 installer 的错误并停止。
 
 将结果格式化为编号列表展示给用户，**已安装的 unit 默认预选中**：
 
@@ -51,7 +51,7 @@ node ~/.aisf/global/installer.js list
 
 ### 2. 计算变更集
 
-根据最终选中与当前 `installed.json` 的对比：
+根据最终选中与当前 `installed.json` 的对比（结构见 `~/.aisf/global/installer-types.ts` → `InstalledJson`）：
 
 - `to_remove` = 已安装 ∩ 未选中
 - `to_install` = 选中 ∩ 未安装
@@ -96,12 +96,14 @@ node ~/.aisf/global/installer.js resolve {to_install ∪ to_update 的 unit 名�
 
 ### 5. 可选组件确认
 
-对 `to_install ∪ to_update` 中的所有 unit，逐个读取其 `unit.json` 中 `required: false` 的组件：
+对 `to_install ∪ to_update` 中的所有 unit，逐个直接读取 `~/.aisf/units/{unit}/unit.json`（结构见 `~/.aisf/global/installer-types.ts` → `UnitJson`），找出有 `condition` 字段的组件（即可选组件）：
 
-- 读取 `condition` 字段，结合当前项目的 `package.json` 和文件结构判断是否推荐
+- 根据 `condition` 字段描述，结合当前项目的 `package.json` 和文件结构判断是否推荐
 - 向用户展示判断结论和理由，格式：`{unit-name} / {component-name}（{component-type}）`  
   例：`poc-unit / poc-rule-nextjs（rule）—— 检测到 next 依赖，推荐安装`
 - 由用户最终确认是否安装
+
+确认结束后，将本次所有已选可选组件记录为 `{type}:{name}` 格式列表（如 `["rule:poc-rule-nextjs", "resource:config"]`），供 Steps 6、7 的 `--optional` 参数使用。
 
 ### 6. 定制内容生成（hasCustom 组件）
 
@@ -115,13 +117,7 @@ node ~/.aisf/global/installer.js prepare {unit-name} --optional '{选中的可�
 
 `--optional` 与步骤 5 用户确认的结果一致，格式为 `["rule:poc-rule", "resource:config"]`；无可选项时可省略。
 
-installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次将安装的组件（必装 + 已选可选项），输出 `PrepareItem[]`，每项包含：
-
-- `componentType`：`"skill"` / `"rule"` / `"resource"`
-- `templatePath`：模板文件路径（`~/.aisf/units/{unit}/{file}`）
-- `targetPath`：最终安装路径
-- `tempPath`：AI 应写入渲染结果的临时文件路径（与 `targetPath` 同目录，命名约定 `.aisf-tmp-{unit}-{comp}`）
-- `exists`：目标文件是否已存在（用于判断是更新还是首次安装）
+installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次将安装的组件（必装 + 已选可选项），输出 `PrepareItem[]`（字段定义见 `~/.aisf/global/installer-types.ts` → `PrepareItem`）。
 
 列表为空则跳过，直接进入步骤 7。
 
@@ -132,7 +128,7 @@ installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次�
    - Markdown 文件：`<!-- AISF:CUSTOM name="..." hint="..." -->` … `<!-- AISF:CUSTOM:END -->`
 
 2. 确定每个块的内容：
-   - `exists: true`（更新）：从 `targetPath` 提取当前值，作为默认值展示，等待确认或修改
+   - `exists: true`（更新）：从 `targetPath` 提取当前值，作为默认值展示，等待确认或修改；若 `currentPath` 存在且与 `targetPath` 不同，则从 `currentPath` 读取旧内容作为迁移参考
    - `exists: false`（首次）：结合 `hint` 和项目文件结构推断推荐值，展示后等待确认
 
 3. 将所有 `AISF:CUSTOM` 块替换为用户确认的内容，将完整渲染结果写入 `tempPath`
@@ -158,6 +154,7 @@ node ~/.aisf/global/installer.js install {unit-name} --optional '{选中的可�
 `--optional` 格式为 `["rule:poc-rule", "resource:config"]`，无可选项时可省略。
 
 installer 自行从 `unit.json` 读取完整组件配置：
+
 - 无 `condition` 的组件 → 必装
 - 有 `condition` 的组件 → 仅在 `--optional` 列表中时安装，否则若已安装则删除
 - 已安装组件中不再出现于 `unit.json` 的（版本升级移除的）→ 自动删除（孤立组件清理）
