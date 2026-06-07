@@ -49,23 +49,15 @@ node ~/.aisf/global/installer.js list
 
 解析规则：先处理 `all`/`none`（若存在），再按顺序处理各编号（正数加入、负数移除）。编号超范围时直接忽略。
 
-### 2. 计算变更集
+### 2. 依赖解析与变更计算
 
-根据最终选中与当前 `installed.json` 的对比（结构见 `~/.aisf/global/installer-types.ts` → `InstalledJson`）：
-
-- `to_remove` = 已安装 ∩ 未选中
-- `to_install` = 选中 ∩ 未安装
-- `to_update` = 选中 ∩ 已安装
-
-### 3. 依赖解析（自动）
-
-若 `to_install ∪ to_update` 非空，运行：
+选中完成后，将**完整的期望选中列表**传给 resolve，由 installer 负责计算 changeset 并解析依赖：
 
 ```
-node ~/.aisf/global/installer.js resolve {to_install ∪ to_update 的 unit 名称，空格分隔}
+node ~/.aisf/global/installer.js resolve {所有选中的 unit 名称，空格分隔}
 ```
 
-输出 `order`（拓扑排序后的完整安装列表）和 `auto`（自动补充的依赖）。
+输出结构见 `~/.aisf/global/installer-types.ts` → `ResolveResult`。
 
 **冲突检查**：若 `auto` 中的某 unit 出现在 `to_remove` 中，说明用户选择与依赖冲突，终止并提示：
 
@@ -74,7 +66,7 @@ node ~/.aisf/global/installer.js resolve {to_install ∪ to_update 的 unit 名�
 请重新选择。
 ```
 
-### 4. 计划确认
+### 3. 计划确认
 
 向用户展示完整变更计划，**等待明确确认后再执行**：
 
@@ -94,7 +86,7 @@ node ~/.aisf/global/installer.js resolve {to_install ∪ to_update 的 unit 名�
 
 用户回复 `no` 时终止，不执行任何操作。
 
-### 5. 可选组件确认
+### 4. 可选组件确认
 
 对 `to_install ∪ to_update` 中的所有 unit，逐个直接读取 `~/.aisf/units/{unit}/unit.json`（结构见 `~/.aisf/global/installer-types.ts` → `UnitJson`），找出有 `condition` 字段的组件（即可选组件）：
 
@@ -103,25 +95,25 @@ node ~/.aisf/global/installer.js resolve {to_install ∪ to_update 的 unit 名�
   例：`poc-unit / poc-rule-nextjs（rule）—— 检测到 next 依赖，推荐安装`
 - 由用户最终确认是否安装
 
-确认结束后，将本次所有已选可选组件记录为 `{type}:{name}` 格式列表（如 `["rule:poc-rule-nextjs", "resource:config"]`），供 Steps 6、7 的 `--optional` 参数使用。
+确认结束后，将本次所有已选可选组件记录为 `{type}:{name}` 格式列表（如 `["rule:poc-rule-nextjs", "resource:config"]`），供步骤 5、6 的 `--optional` 参数使用。
 
-### 6. 定制内容生成（hasCustom 组件）
+### 5. 定制内容生成（hasCustom 组件）
 
 对 `to_install ∪ to_update` 中的每个 unit，逐一执行：
 
-**6a. 查询定制组件：**
+**5a. 查询定制组件：**
 
 ```
 node ~/.aisf/global/installer.js prepare {unit-name} --optional '{选中的可选组件名 JSON 数组}'
 ```
 
-`--optional` 与步骤 5 用户确认的结果一致，格式为 `["rule:poc-rule", "resource:config"]`；无可选项时可省略。
+`--optional` 与步骤 4 用户确认的结果一致，格式为 `["rule:poc-rule", "resource:config"]`；无可选项时可省略。
 
 installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次将安装的组件（必装 + 已选可选项），输出 `PrepareItem[]`（字段定义见 `~/.aisf/global/installer-types.ts` → `PrepareItem`）。
 
-列表为空则跳过，直接进入步骤 7。
+列表为空则跳过，直接进入步骤 6。
 
-**6b. 逐项生成定制内容：**
+**5b. 逐项生成定制内容：**
 
 1. 读取 `templatePath`，找出所有 `AISF:CUSTOM` 块：
    - YAML 文件：`# AISF:CUSTOM name="..." hint="..."` … `# AISF:CUSTOM:END`
@@ -135,7 +127,7 @@ installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次�
 
 > `tempPath` 与 `targetPath` 在同一目录下，目录已由 `prepare` 命令预先创建。
 
-### 7. 执行并报告
+### 6. 执行并报告
 
 **先卸载，再安装/更新。**
 
@@ -145,7 +137,7 @@ installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次�
 node ~/.aisf/global/installer.js uninstall {unit-name}
 ```
 
-**安装/更新**（按步骤 3 输出的 `order` 顺序）：
+**安装/更新**（按步骤 2 输出的 `order` 顺序）：
 
 ```
 node ~/.aisf/global/installer.js install {unit-name} --optional '{选中的可选组件名 JSON 数组}'
@@ -158,7 +150,7 @@ installer 自行从 `unit.json` 读取完整组件配置：
 - 无 `condition` 的组件 → 必装
 - 有 `condition` 的组件 → 仅在 `--optional` 列表中时安装，否则若已安装则删除
 - 已安装组件中不再出现于 `unit.json` 的（版本升级移除的）→ 自动删除（孤立组件清理）
-- 有 `hasCustom: true` 的组件 → installer 按命名约定（`.aisf-tmp-{unit}-{comp}`）读取步骤 6 写入的临时文件并拷贝；若临时文件不存在，installer 报错退出
+- 有 `hasCustom: true` 的组件 → installer 按命名约定（`.aisf-tmp-{unit}-{comp}`）读取步骤 5 写入的临时文件并拷贝；若临时文件不存在，installer 报错退出
 
 执行完成后输出汇总报告：
 

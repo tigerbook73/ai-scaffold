@@ -38,6 +38,7 @@ export class Publish {
       this.publishUnit(join(unitsDir, unitName), unitName);
     }
 
+    this.publishUnitsOrder(unitsDir);
     this.publishGlobalScripts();
     this.publishGlobalCommands();
     this.writeConfig();
@@ -66,6 +67,14 @@ export class Publish {
     }
 
     console.log(`  unit: ${unitName}`);
+  }
+
+  /** Copies the pre-computed unit order from ai-units/units.json to ~/.aisf/units.json. */
+  private publishUnitsOrder(unitsDir: string): void {
+    const src = join(unitsDir, "units.json");
+    if (!existsSync(src)) return;
+    mkdirSync(this.aisfHome, { recursive: true });
+    cpSync(src, join(this.aisfHome, "units.json"));
   }
 
   private publishGlobalScripts(): void {

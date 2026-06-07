@@ -23,9 +23,10 @@ import type {
   ResourceSpec,
   ComponentSpec,
   PrepareItem,
+  ResolveResult,
 } from "./installer-types";
 
-export type { PrepareItem };
+export type { PrepareItem, ResolveResult };
 
 // ─── Installer ───────────────────────────────────────────────────────────────
 
@@ -55,51 +56,61 @@ export class Installer {
   }
 
   /**
-   * Scans ~/.aisf/units/ and returns metadata for every available unit.
+   * Scans ~/.aisf/units/ and returns metadata for every available unit,
+   * ordered by the pre-computed global order from ~/.aisf/units.json.
    *
-   * @returns Array of unit descriptors, or an empty array if the units directory does not exist.
+   * @returns Array of unit descriptors in dependency-stable order.
    */
   private getUnitList(): Array<{ name: string; description: string; installed: boolean }> {
     const unitsDir = join(this.aisfHome, "units");
     if (!existsSync(unitsDir)) return [];
 
     const installed = this.readInstalled();
-    return readdirSync(unitsDir)
+    const globalOrder = this.readGlobalOrder();
+    const names =
+      globalOrder.length > 0
+        ? globalOrder.filter((n) => existsSync(join(unitsDir, n, "unit.json")))
+        : readdirSync(unitsDir)
+            .filter((n) => existsSync(join(unitsDir, n, "unit.json")))
+            .sort();
+
+    return names
       .map((dir) => {
         const unitJson = this.readUnitJson(dir);
         if (!unitJson) return null;
-        return {
-          name: dir,
-          description: unitJson.description ?? "",
-          installed: dir in installed.units,
-        };
+        return { name: dir, description: unitJson.description ?? "", installed: dir in installed.units };
       })
       .filter((u): u is NonNullable<typeof u> => u !== null);
   }
 
   /**
-   * Resolves all transitive unmet dependencies for the given unit names and outputs
-   * the full install order (topologically sorted) plus which units were auto-added.
+   * Computes the full changeset for the given desired state and outputs it as JSON.
+   * The desired state is the complete list of unit names the user wants installed.
    *
-   * @param unitNames Names of units the caller explicitly wants to install.
+   * @param selectedNames Full list of unit names in the desired installed state.
    */
-  checkDeps(unitNames: string[]): void {
-    const result = this.resolveDeps(unitNames);
+  checkDeps(selectedNames: string[]): void {
+    const result = this.resolveDeps(selectedNames);
     process.stdout.write(JSON.stringify(result, null, 2) + "\n");
   }
 
   /**
-   * Resolves transitive unmet dependencies and returns the topologically sorted install order.
+   * Computes the full changeset by comparing the desired state against the current
+   * installed state. Resolves transitive dependencies automatically.
    *
-   * @param unitNames Names of units the caller explicitly wants to install.
-   * @returns Install order and the set of units that were auto-added as dependencies.
+   * @param selectedNames Full desired state — the unit names the user wants installed.
+   * @returns Complete changeset including to_remove, to_install, to_update, order, and auto.
    */
-  private resolveDeps(unitNames: string[]): { order: string[]; auto: string[] } {
+  private resolveDeps(selectedNames: string[]): ResolveResult {
     const installed = this.readInstalled();
-    const toInstall = new Set<string>(unitNames);
+    const installedNames = new Set(Object.keys(installed.units));
+    const selectedSet = new Set(selectedNames);
+
+    // Expand selected units with all their transitive dependencies
+    const fullRequired = new Set<string>(selectedNames);
     const auto = new Set<string>();
 
-    const resolve = (names: string[]) => {
+    const resolveTransitive = (names: string[]) => {
       for (const name of names) {
         const unitJson = this.readUnitJson(name);
         if (!unitJson) {
@@ -107,45 +118,50 @@ export class Installer {
           process.exit(1);
         }
         for (const dep of unitJson.dependencies) {
-          if (!installed.units[dep] && !toInstall.has(dep)) {
-            toInstall.add(dep);
-            if (!unitNames.includes(dep)) auto.add(dep);
-            resolve([dep]);
+          if (!fullRequired.has(dep)) {
+            fullRequired.add(dep);
+            if (!selectedSet.has(dep)) auto.add(dep);
+            resolveTransitive([dep]);
           }
         }
       }
     };
 
-    resolve(unitNames);
-    const order = this.topoSort([...toInstall]);
-    return { order, auto: [...auto] };
+    resolveTransitive(selectedNames);
+
+    const to_remove = this.sortByGlobalOrder([...installedNames].filter((n) => !fullRequired.has(n)));
+    const to_install = this.sortByGlobalOrder([...fullRequired].filter((n) => !installedNames.has(n)));
+    const to_update = this.sortByGlobalOrder(selectedNames.filter((n) => installedNames.has(n)));
+    const order = this.sortByGlobalOrder([...to_install, ...to_update]);
+
+    return { to_remove, to_install, to_update, order, auto: this.sortByGlobalOrder([...auto]) };
   }
 
   /**
-   * Performs a depth-first topological sort of the given unit names
-   * so that dependencies always appear before dependents.
+   * Sorts the given unit names by the pre-computed global order from ~/.aisf/units.json.
+   * Units not present in the order file are appended sorted lexicographically.
    *
-   * @param unitNames Flat list of unit names to sort.
-   * @returns Ordered array with dependencies first.
+   * @param names Unit names to sort.
+   * @returns Sorted copy of the input array.
    */
-  private topoSort(unitNames: string[]): string[] {
-    const visited = new Set<string>();
-    const result: string[] = [];
+  private sortByGlobalOrder(names: string[]): string[] {
+    const order = this.readGlobalOrder();
+    const index = new Map(order.map((n, i) => [n, i]));
+    return [...names].sort((a, b) => {
+      const ai = index.get(a) ?? Infinity;
+      const bi = index.get(b) ?? Infinity;
+      return ai !== bi ? ai - bi : a.localeCompare(b);
+    });
+  }
 
-    const visit = (name: string) => {
-      if (visited.has(name)) return;
-      visited.add(name);
-      const unitJson = this.readUnitJson(name);
-      if (unitJson) {
-        for (const dep of unitJson.dependencies) {
-          if (unitNames.includes(dep)) visit(dep);
-        }
-      }
-      result.push(name);
-    };
-
-    for (const name of unitNames) visit(name);
-    return result;
+  /**
+   * Reads the pre-computed global unit order from ~/.aisf/units.json.
+   * Falls back to an empty array (callers handle the missing-order case via localeCompare).
+   */
+  private readGlobalOrder(): string[] {
+    const orderPath = join(this.aisfHome, "units.json");
+    if (!existsSync(orderPath)) return [];
+    return JSON.parse(readFileSync(orderPath, "utf8")) as string[];
   }
 
   /**

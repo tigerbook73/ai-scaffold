@@ -1,8 +1,8 @@
 /**
  * @test-file   installer
- * @description Verifies the Installer class handles listUnits, checkDeps (topological order),
- *              skill/rule/script/resource installation, prepare command, optional components,
- *              orphan removal, and lefthook.yml idempotent updates.
+ * @description Verifies the Installer class handles listUnits, checkDeps (ResolveResult with
+ *              to_install/to_update/to_remove/auto/order), skill/rule/script/resource installation,
+ *              prepare command, optional components, orphan removal, and lefthook.yml idempotent updates.
  * @ai-generated
  * @reviewed-by
  */
@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { expect, test, vi } from "vitest";
 
 import { Installer } from "../global/scripts/installer";
+import type { ResolveResult } from "../global/scripts/installer-types";
 
 function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), "aisk-installer-"));
@@ -50,6 +51,9 @@ function makeFakeAisfHome(tmpDir: string): string {
     join(depDir, "unit.json"),
     JSON.stringify({ name: "poc-dep-unit", description: "PoC dep unit", dependencies: [], components: {} }),
   );
+
+  // Pre-computed global order (dep before dependent, alphabetical within same depth)
+  writeFileSync(join(aisfHome, "units.json"), JSON.stringify(["poc-dep-unit", "poc-unit"], null, 2) + "\n");
 
   return aisfHome;
 }
@@ -136,10 +140,11 @@ test("listUnits marks unit as installed=true when present in installed.json", ()
  * @target      Installer.checkDeps()
  * @strategy    unit; fake ~/.aisf tree
  * @cases
- *   - [PASS] returns dep in auto and topological order when dep not installed
- *   - [PASS] returns empty auto and only selected unit in order when dep already installed
+ *   - [PASS] returns full ResolveResult with dep in to_install and auto when nothing installed
+ *   - [PASS] dep already installed → dep in auto (not explicitly selected) but not in to_install
+ *   - [PASS] installed unit not in desired state → appears in to_remove
  */
-test("checkDeps returns dep in auto and topological order when dep not installed", () => {
+test("checkDeps returns full ResolveResult with dep in to_install and auto when nothing installed", () => {
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
@@ -147,11 +152,11 @@ test("checkDeps returns dep in auto and topological order when dep not installed
     mkdirSync(projectDir);
 
     const installer = new Installer(projectDir, aisfHome);
-    const result = JSON.parse(captureStdout(() => installer.checkDeps(["poc-unit"]))) as {
-      order: string[];
-      auto: string[];
-    };
+    const result = JSON.parse(captureStdout(() => installer.checkDeps(["poc-unit"]))) as ResolveResult;
 
+    expect(result.to_remove).toEqual([]);
+    expect(result.to_install).toEqual(["poc-dep-unit", "poc-unit"]);
+    expect(result.to_update).toEqual([]);
     expect(result.auto).toEqual(["poc-dep-unit"]);
     expect(result.order).toEqual(["poc-dep-unit", "poc-unit"]);
   } finally {
@@ -159,7 +164,7 @@ test("checkDeps returns dep in auto and topological order when dep not installed
   }
 });
 
-test("checkDeps returns empty auto and only selected unit in order when dep already installed", () => {
+test("checkDeps with dep already installed → dep in auto but not to_install, poc-unit in to_install", () => {
   const dir = makeTempDir();
   try {
     const aisfHome = makeFakeAisfHome(dir);
@@ -169,19 +174,50 @@ test("checkDeps returns empty auto and only selected unit in order when dep alre
       join(projectDir, ".aisf", "installed.json"),
       JSON.stringify({
         units: {
-          "poc-dep-unit": { installedAt: "2026-01-01", components: {} },
+          "poc-dep-unit": { installedAt: "2026-01-01", components: { skills: [], rules: [], scripts: [], resources: [] } },
         },
       }),
     );
 
     const installer = new Installer(projectDir, aisfHome);
-    const result = JSON.parse(captureStdout(() => installer.checkDeps(["poc-unit"]))) as {
-      order: string[];
-      auto: string[];
-    };
+    const result = JSON.parse(captureStdout(() => installer.checkDeps(["poc-unit"]))) as ResolveResult;
 
-    expect(result.auto).toEqual([]);
+    expect(result.to_remove).toEqual([]);
+    expect(result.to_install).toEqual(["poc-unit"]);
+    expect(result.to_update).toEqual([]);
+    // poc-dep-unit is auto (not explicitly selected) even though already installed
+    expect(result.auto).toEqual(["poc-dep-unit"]);
     expect(result.order).toEqual(["poc-unit"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("checkDeps with installed unit not in desired state → appears in to_remove", () => {
+  const dir = makeTempDir();
+  try {
+    const aisfHome = makeFakeAisfHome(dir);
+    const projectDir = join(dir, "project");
+    mkdirSync(join(projectDir, ".aisf"), { recursive: true });
+    writeFileSync(
+      join(projectDir, ".aisf", "installed.json"),
+      JSON.stringify({
+        units: {
+          "poc-unit": { installedAt: "2026-01-01", components: { skills: [], rules: [], scripts: [], resources: [] } },
+          "poc-dep-unit": { installedAt: "2026-01-01", components: { skills: [], rules: [], scripts: [], resources: [] } },
+        },
+      }),
+    );
+
+    const installer = new Installer(projectDir, aisfHome);
+    // Desired state: nothing selected — uninstall everything
+    const result = JSON.parse(captureStdout(() => installer.checkDeps([]))) as ResolveResult;
+
+    expect(result.to_remove).toEqual(["poc-dep-unit", "poc-unit"]);
+    expect(result.to_install).toEqual([]);
+    expect(result.to_update).toEqual([]);
+    expect(result.auto).toEqual([]);
+    expect(result.order).toEqual([]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

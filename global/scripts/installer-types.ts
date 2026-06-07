@@ -108,6 +108,25 @@ export interface PrepareItem {
   exists: boolean;
 }
 
+// ─── resolve command output ───────────────────────────────────────────────────
+
+/**
+ * Full changeset returned by `installer resolve`.
+ * Computed from the desired state (selected unit names) vs. the current installed state.
+ */
+export interface ResolveResult {
+  /** Currently installed units that are not in the desired state and will be removed. */
+  to_remove: string[];
+  /** Units that need to be freshly installed (from selected list + auto-added deps). */
+  to_install: string[];
+  /** Units in the selected list that are already installed and will be updated. */
+  to_update: string[];
+  /** Topologically sorted install order for to_install ∪ to_update. */
+  order: string[];
+  /** Transitive dependencies that were automatically added to to_install. */
+  auto: string[];
+}
+
 // ─── internal component specs (installer-only) ───────────────────────────────
 
 /** Resolved install spec for a skill component (condition stripped — filter-only field). */

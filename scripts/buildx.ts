@@ -145,6 +145,62 @@ export function refreshUnit(unitSrcDir: string): boolean {
   return true;
 }
 
+/**
+ * Computes the global topological order of all units in the registry.
+ * Uses Kahn's algorithm with lexicographic priority so that units at the same
+ * dependency depth are always sorted alphabetically, giving a stable, predictable order.
+ *
+ * @param unitsDir Absolute path to the directory containing all unit subdirectories.
+ * @returns Sorted array of unit names (dependencies before dependents).
+ */
+export function computeGlobalOrder(unitsDir: string): string[] {
+  const deps = new Map<string, string[]>();
+
+  for (const name of readdirSync(unitsDir).sort()) {
+    const unitJsonPath = join(unitsDir, name, "unit.json");
+    if (!existsSync(unitJsonPath)) continue;
+    const unit = JSON.parse(readFileSync(unitJsonPath, "utf8")) as ExistingUnitJson;
+    const validDeps = (unit.dependencies ?? []).filter((d) =>
+      existsSync(join(unitsDir, d, "unit.json")),
+    );
+    deps.set(name, validDeps);
+  }
+
+  const inDegree = new Map<string, number>();
+  const dependents = new Map<string, string[]>();
+
+  for (const name of deps.keys()) {
+    inDegree.set(name, 0);
+    dependents.set(name, []);
+  }
+  for (const [name, unitDeps] of deps) {
+    for (const dep of unitDeps) {
+      inDegree.set(name, (inDegree.get(name) ?? 0) + 1);
+      dependents.get(dep)!.push(name);
+    }
+  }
+
+  const queue = [...deps.keys()].filter((n) => inDegree.get(n) === 0).sort();
+  const result: string[] = [];
+
+  while (queue.length > 0) {
+    const name = queue.shift()!;
+    result.push(name);
+    const newReady: string[] = [];
+    for (const dependent of dependents.get(name) ?? []) {
+      const deg = (inDegree.get(dependent) ?? 1) - 1;
+      inDegree.set(dependent, deg);
+      if (deg === 0) newReady.push(dependent);
+    }
+    if (newReady.length > 0) {
+      queue.push(...newReady);
+      queue.sort();
+    }
+  }
+
+  return result;
+}
+
 export function checkDependencies(unitsDir: string): boolean {
   const unitNames = new Set(readdirSync(unitsDir));
   let valid = true;
@@ -188,5 +244,7 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  console.log(`\nbuildx complete. ${updatedCount} unit(s) updated.`);
+  const order = computeGlobalOrder(unitsDir);
+  writeFileSync(join(unitsDir, "units.json"), JSON.stringify(order, null, 2) + "\n");
+  console.log(`\nbuildx complete. ${updatedCount} unit(s) updated. Order: [${order.join(", ")}]`);
 }
