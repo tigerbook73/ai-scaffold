@@ -9,34 +9,7 @@ import {
 import { join } from "path";
 import { homedir } from "os";
 import { cac } from "cac";
-
-function registerPreCommitHook(projectDir: string, commandName: string, runCommand: string): void {
-  const lefthookPath = join(projectDir, "lefthook.yml");
-  const commandEntry = `    ${commandName}:\n      run: ${runCommand}`;
-
-  if (!existsSync(lefthookPath)) {
-    writeFileSync(lefthookPath, `pre-commit:\n  commands:\n${commandEntry}\n`);
-    return;
-  }
-
-  let content = readFileSync(lefthookPath, "utf8");
-  if (content.includes(`    ${commandName}:`)) return;
-
-  const preCommitMatch = /^pre-commit:/m.exec(content);
-  if (!preCommitMatch) {
-    const suffix = content.endsWith("\n") ? "" : "\n";
-    content += `${suffix}\npre-commit:\n  commands:\n${commandEntry}\n`;
-    writeFileSync(lefthookPath, content);
-    return;
-  }
-
-  const before = content.slice(0, preCommitMatch.index);
-  const section = content.slice(preCommitMatch.index);
-  const updated = /^  commands:/m.test(section)
-    ? section.replace(/^(  commands:)/m, `$1\n${commandEntry}`)
-    : section.replace(/^pre-commit:/m, `pre-commit:\n  commands:\n${commandEntry}`);
-  writeFileSync(lefthookPath, before + updated);
-}
+import { addPreCommitHook } from "./precommit-lefthook";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -296,7 +269,7 @@ export class Installer {
     const relPath = join(".aisf", unitName, "scripts", `${spec.name}.js`);
     const paramStr = (spec.params ?? []).map((p) => `{${p}}`).join(" ");
     const runCmd = paramStr ? `node ${relPath} ${paramStr}` : `node ${relPath}`;
-    registerPreCommitHook(this.cwd, `aisf-${unitName}-${spec.name}`, runCmd);
+    addPreCommitHook(this.cwd, `aisf-${unitName}-${spec.name}`, runCmd);
     return relPath;
   }
 
