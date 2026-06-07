@@ -7,6 +7,7 @@
 **核心模型：选中列表 = 期望状态**
 
 已安装的 unit 默认预选中。用户调整后的最终选中列表即为操作完成后的期望状态：
+
 - 从选中中**移除**已安装的 unit → 卸载
 - **新增**未安装的 unit → 安装
 - 保留已安装的 unit → 更新
@@ -18,6 +19,7 @@
 ### 1. 获取列表并收集期望状态
 
 运行：
+
 ```
 node ~/.aisf/global/installer.js list
 ```
@@ -29,28 +31,23 @@ node ~/.aisf/global/installer.js list
 ```
 可管理的 unit：
   1. poc-dep-unit  — PoC dep unit（未安装）
-  2. poc-unit      — PoC unit（已安装 ✓）
+  2. poc-unit      — PoC unit（已安装）
   3. another-unit  — 另一个 unit（未安装）
 
-当前选中：2（已安装 unit 默认勾选）
-调整选中即为调整期望状态：取消已安装的 unit 将卸载它，新增未安装的 unit 将安装它。
-
-输入选择（空格或逗号分隔，负数取消选中，all / none）：
+提示用户输入（正数安装/更新，负数删除，all全部安装/更新，none全部卸载）：
 ```
 
 **输入语法：**
 
-| 示例 | 含义 |
-|------|------|
+| 示例            | 含义               |
+| --------------- | ------------------ |
 | `1 3` 或 `1, 3` | 将 1、3 号加入选中 |
-| `-2` | 将 2 号从选中移除 |
-| `all` | 选中全部 |
-| `none` | 清空所有选中 |
-| `all -3` | 全选后排除 3 号 |
+| `-2`            | 将 2 号从选中移除  |
+| `all`           | 选中全部           |
+| `none`          | 清空所有选中       |
+| `all -3`        | 全选后排除 3 号    |
 
-解析规则：先处理 `all`/`none`（若存在），再按顺序处理各编号（正数加入、负数移除）。编号超范围时提示用户重新输入。
-
-如果最终选中与当前安装状态完全一致（无新增、无移除），提示"无变更，已退出。"并停止。
+解析规则：先处理 `all`/`none`（若存在），再按顺序处理各编号（正数加入、负数移除）。编号超范围时直接忽略。
 
 ### 2. 计算变更集
 
@@ -91,6 +88,7 @@ node ~/.aisf/global/installer.js resolve {to_install ∪ to_update 的 unit 名�
 ```
 
 标注规则：
+
 - `auto` 中的 unit 标注 `（自动依赖）`
 - 三类操作（卸载 / 安装 / 更新）分行展示，无对应操作时省略该行
 
@@ -116,6 +114,7 @@ node ~/.aisf/global/installer.js prepare {unit-name}
 ```
 
 输出 `PrepareItem[]`，每项包含：
+
 - `componentType`：`"skill"` / `"rule"` / `"resource"`
 - `templatePath`：模板文件路径（`~/.aisf/units/{unit}/{file}`）
 - `targetPath`：最终安装路径
@@ -161,10 +160,21 @@ node ~/.aisf/global/installer.js install {unit-name} --components '{ComponentSpe
   { "type": "skill", "name": "poc", "file": "skills/poc.md" },
   { "type": "skill", "name": "poc-custom", "file": "skills/poc-custom.md", "hasCustom": true },
   { "type": "rule", "name": "poc-rule", "file": "rules/poc-rule.md" },
-  { "type": "rule", "name": "poc-rule-guard", "file": "rules/poc-rule-guard.md", "hasCustom": true },
-  { "type": "script", "name": "poc-hook", "file": "scripts/poc-hook.js", "hook": "pre-commit", "params": ["staged_files"] },
+  {
+    "type": "rule",
+    "name": "poc-rule-guard",
+    "file": "rules/poc-rule-guard.md",
+    "hasCustom": true,
+  },
+  {
+    "type": "script",
+    "name": "poc-hook",
+    "file": "scripts/poc-hook.js",
+    "hook": "pre-commit",
+    "params": ["staged_files"],
+  },
   { "type": "resource", "name": "readme", "file": "resources/readme.md" },
-  { "type": "resource", "name": "config", "file": "resources/config.md", "hasCustom": true }
+  { "type": "resource", "name": "config", "file": "resources/config.md", "hasCustom": true },
 ]
 ```
 
