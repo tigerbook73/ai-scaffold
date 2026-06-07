@@ -87,12 +87,8 @@ export function refreshUnit(unitSrcDir: string): boolean {
     ? (JSON.parse(readFileSync(unitJsonPath, "utf8")) as ExistingUnitJson)
     : {};
 
-  const existingRules = new Map(
-    (existing.components?.rules ?? []).map((r) => [r.name, r]),
-  );
-  const existingScripts = new Map(
-    (existing.components?.scripts ?? []).map((s) => [s.name, s]),
-  );
+  const existingRules = new Map((existing.components?.rules ?? []).map((r) => [r.name, r]));
+  const existingScripts = new Map((existing.components?.scripts ?? []).map((s) => [s.name, s]));
 
   const skills: SkillEntry[] = scanFiles(join(unitSrcDir, "skills"), [".md"]).map((f) => ({
     name: nameFromFilename(f),
@@ -178,7 +174,7 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  console.log("buildx: refreshing unit.json files...\n");
+  console.log("buildx: refreshing unit.json files...");
   let updatedCount = 0;
   for (const unitName of readdirSync(unitsDir)) {
     if (refreshUnit(join(unitsDir, unitName))) {
