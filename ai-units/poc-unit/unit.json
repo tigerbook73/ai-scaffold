@@ -1,41 +1,42 @@
 {
   "name": "poc-unit",
-  "description": "PoC full-coverage unit: exercises all component types (skill, rule guard, script hook, resource) and dependency resolution.",
-  "provides": [
-    "poc skill: outputs installation info and resource content",
-    "poc-rule: rule guard marking [POC_RULE_ACTIVE] in responses",
-    "poc-hook: pre-commit hook logging timestamps"
+  "description": "PoC unit covering all four component types (skill, rule, script, resource); validates full installation flow",
+  "dependencies": [
+    "poc-dep-unit"
   ],
-  "scope": "validation",
-  "dependencies": ["poc-dep-unit"],
   "components": {
     "skills": [
-      { "name": "poc", "file": "skills/poc.md" }
+      {
+        "name": "poc",
+        "file": "skills/poc.md"
+      }
     ],
     "rules": [
       {
-        "name": "poc-rule",
-        "file": "rules/poc-rule.md",
-        "required": true,
-        "hint": "扫描项目中的测试文件找出实际使用的文件后缀和目录结构，推荐合适的 paths 匹配规则"
-      },
-      {
         "name": "poc-rule-nextjs",
         "file": "rules/poc-rule-nextjs.md",
-        "required": false,
-        "condition": "仅当项目使用 Next.js（package.json dependencies 中含 next）时安装"
+        "hint": "扫描项目中的测试文件找出实际使用的文件后缀和目录结构，推荐合适的 glob patterns",
+        "hasCustom": true
+      },
+      {
+        "name": "poc-rule",
+        "file": "rules/poc-rule.md",
+        "hint": "扫描项目中的测试文件找出实际使用的文件后缀和目录结构，推荐合适的 glob patterns",
+        "hasCustom": true
       }
     ],
     "scripts": [
       {
         "name": "poc-hook",
         "file": "scripts/poc-hook.ts",
-        "hook": "pre-commit",
-        "params": ["staged_files"]
+        "hook": "pre-commit"
       }
     ],
     "resources": [
-      { "name": "readme", "file": "resources/readme.md" }
+      {
+        "name": "readme",
+        "file": "resources/readme.md"
+      }
     ]
   }
 }

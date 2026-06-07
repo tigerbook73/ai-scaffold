@@ -1,55 +1,172 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "fs";
-import { join, resolve } from "path";
+import { basename, extname, join, resolve } from "path";
 
-interface ComponentEntry {
+interface SkillEntry {
   name: string;
   file: string;
+}
+
+interface RuleEntry {
+  name: string;
+  file: string;
+  condition?: string;
+  hint?: string;
   hasCustom?: boolean;
-  [key: string]: unknown;
+}
+
+interface ScriptEntry {
+  name: string;
+  file: string;
+  hook?: string;
+  params?: string[];
+}
+
+interface ResourceEntry {
+  name: string;
+  file: string;
 }
 
 interface UnitJson {
+  name: string;
+  description: string;
+  dependencies: string[];
   components: {
-    skills?: ComponentEntry[];
-    rules?: ComponentEntry[];
-    resources?: ComponentEntry[];
-    [key: string]: ComponentEntry[] | undefined;
+    skills?: SkillEntry[];
+    rules?: RuleEntry[];
+    scripts?: ScriptEntry[];
+    resources?: ResourceEntry[];
+  };
+}
+
+interface ExistingUnitJson {
+  name?: string;
+  description?: string;
+  dependencies?: string[];
+  components?: {
+    rules?: Array<{ name?: string; condition?: string; [key: string]: unknown }>;
+    scripts?: Array<{ name?: string; hook?: string; params?: string[]; [key: string]: unknown }>;
+    [key: string]: unknown;
   };
   [key: string]: unknown;
 }
 
-function containsAisfCustom(filePath: string): boolean {
+function scanFiles(dir: string, exts: string[]): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => exts.includes(extname(f)))
+    .sort();
+}
+
+function nameFromFilename(filename: string): string {
+  return basename(filename, extname(filename));
+}
+
+function hasAisfCustom(filePath: string): boolean {
   if (!existsSync(filePath)) return false;
   return /AISF:CUSTOM/.test(readFileSync(filePath, "utf8"));
 }
 
-/** Scans all component files in a unit source dir and writes hasCustom flags to unit.json. */
-export function augmentUnit(unitSrcDir: string): boolean {
+function extractHint(filePath: string): string | undefined {
+  if (!existsSync(filePath)) return undefined;
+  const match = readFileSync(filePath, "utf8").match(/AISF:CUSTOM.*?hint="([^"]+)"/);
+  return match?.[1];
+}
+
+/**
+ * Refreshes unit.json from the filesystem.
+ * - Auto-discovers component files in skills/, rules/, scripts/, resources/
+ * - Preserves manually-maintained fields: description, dependencies, rules[].condition, scripts[].hook/params
+ * - Extracts rules[].hint from AISF:CUSTOM blocks
+ * - Removes deprecated fields (scope, provides, required)
+ * Returns true if unit.json was updated, false if unchanged or unit.json does not exist.
+ */
+export function refreshUnit(unitSrcDir: string): boolean {
   const unitJsonPath = join(unitSrcDir, "unit.json");
-  if (!existsSync(unitJsonPath)) return false;
 
-  const unitJson = JSON.parse(readFileSync(unitJsonPath, "utf8")) as UnitJson;
-  let changed = false;
+  const existing: ExistingUnitJson = existsSync(unitJsonPath)
+    ? (JSON.parse(readFileSync(unitJsonPath, "utf8")) as ExistingUnitJson)
+    : {};
 
-  for (const subdir of ["skills", "rules", "resources"] as const) {
-    for (const comp of unitJson.components[subdir] ?? []) {
-      const filePath = join(unitSrcDir, comp.file);
-      const found = containsAisfCustom(filePath);
+  const existingRules = new Map(
+    (existing.components?.rules ?? []).map((r) => [r.name, r]),
+  );
+  const existingScripts = new Map(
+    (existing.components?.scripts ?? []).map((s) => [s.name, s]),
+  );
 
-      if (found && !comp.hasCustom) {
-        comp.hasCustom = true;
-        changed = true;
-      } else if (!found && comp.hasCustom) {
-        delete comp.hasCustom;
-        changed = true;
+  const skills: SkillEntry[] = scanFiles(join(unitSrcDir, "skills"), [".md"]).map((f) => ({
+    name: nameFromFilename(f),
+    file: `skills/${f}`,
+  }));
+
+  const rules: RuleEntry[] = scanFiles(join(unitSrcDir, "rules"), [".md"]).map((f) => {
+    const name = nameFromFilename(f);
+    const filePath = join(unitSrcDir, "rules", f);
+    const prev = existingRules.get(name);
+    const entry: RuleEntry = { name, file: `rules/${f}` };
+    if (prev?.condition) entry.condition = prev.condition;
+    const hint = extractHint(filePath);
+    if (hint) entry.hint = hint;
+    if (hasAisfCustom(filePath)) entry.hasCustom = true;
+    return entry;
+  });
+
+  const scripts: ScriptEntry[] = scanFiles(join(unitSrcDir, "scripts"), [".ts"]).map((f) => {
+    const name = nameFromFilename(f);
+    const prev = existingScripts.get(name);
+    const entry: ScriptEntry = { name, file: `scripts/${f}` };
+    if (prev?.hook) entry.hook = prev.hook;
+    if (prev?.params?.length) entry.params = prev.params;
+    return entry;
+  });
+
+  const resources: ResourceEntry[] = scanFiles(join(unitSrcDir, "resources"), [".md"]).map((f) => ({
+    name: nameFromFilename(f),
+    file: `resources/${f}`,
+  }));
+
+  const updated: UnitJson = {
+    name: basename(unitSrcDir),
+    description: existing.description ?? "TODO",
+    dependencies: existing.dependencies ?? [],
+    components: {},
+  };
+
+  if (skills.length) updated.components.skills = skills;
+  if (rules.length) updated.components.rules = rules;
+  if (scripts.length) updated.components.scripts = scripts;
+  if (resources.length) updated.components.resources = resources;
+
+  const hasComponents = skills.length + rules.length + scripts.length + resources.length > 0;
+  const unitJsonExists = existsSync(unitJsonPath);
+  if (!hasComponents && !unitJsonExists) return false;
+
+  const newContent = JSON.stringify(updated, null, 2) + "\n";
+  const oldContent = unitJsonExists ? readFileSync(unitJsonPath, "utf8") : "";
+
+  if (newContent === oldContent) return false;
+  writeFileSync(unitJsonPath, newContent);
+  return true;
+}
+
+export function checkDependencies(unitsDir: string): boolean {
+  const unitNames = new Set(readdirSync(unitsDir));
+  let valid = true;
+
+  for (const unitName of unitNames) {
+    const unitJsonPath = join(unitsDir, unitName, "unit.json");
+    if (!existsSync(unitJsonPath)) continue;
+
+    const unit = JSON.parse(readFileSync(unitJsonPath, "utf8")) as ExistingUnitJson;
+    for (const dep of unit.dependencies ?? []) {
+      if (!unitNames.has(dep)) {
+        console.error(`  error: ${unitName} → dependency "${dep}" not found`);
+        valid = false;
       }
     }
   }
 
-  if (changed) {
-    writeFileSync(unitJsonPath, JSON.stringify(unitJson, null, 2) + "\n");
-  }
-  return changed;
+  return valid;
 }
 
 if (require.main === module) {
@@ -61,13 +178,19 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  console.log("buildx: scanning AISF:CUSTOM blocks in unit components...\n");
+  console.log("buildx: refreshing unit.json files...\n");
   let updatedCount = 0;
   for (const unitName of readdirSync(unitsDir)) {
-    if (augmentUnit(join(unitsDir, unitName))) {
+    if (refreshUnit(join(unitsDir, unitName))) {
       console.log(`  updated: ${unitName}`);
       updatedCount++;
     }
   }
+
+  console.log("\nbuildx: checking dependencies...");
+  if (!checkDependencies(unitsDir)) {
+    process.exit(1);
+  }
+
   console.log(`\nbuildx complete. ${updatedCount} unit(s) updated.`);
 }

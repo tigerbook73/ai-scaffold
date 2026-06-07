@@ -1,15 +1,19 @@
 {
   "name": "poc-dep-unit",
-  "description": "PoC dependency unit: minimal unit with skill and resource, used as a dependency by poc-unit.",
-  "provides": ["poc-dep skill: outputs unit info and resource content"],
-  "scope": "validation",
+  "description": "PoC dependency unit with skill and resource; validates dependency resolution in the ai-unit install flow",
   "dependencies": [],
   "components": {
     "skills": [
-      { "name": "poc-dep", "file": "skills/poc-dep.md" }
+      {
+        "name": "poc-dep",
+        "file": "skills/poc-dep.md"
+      }
     ],
     "resources": [
-      { "name": "info", "file": "resources/info.md" }
+      {
+        "name": "info",
+        "file": "resources/info.md"
+      }
     ]
   }
 }
