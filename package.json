@@ -6,7 +6,6 @@
     "build": "node --import tsx scripts/build.ts",
     "register": "pnpm build && node --import tsx scripts/publish.ts",
     "clean": "node --import tsx scripts/clean.ts",
-    "create-skill": "node --import tsx src/create-skill/create-skill.ts",
     "lint": "pnpm lint:fix",
     "lint:check": "eslint scripts/**/*.ts src/**/*.ts tests/**/*.ts",
     "lint:fix": "eslint scripts/**/*.ts src/**/*.ts tests/**/*.ts --fix",

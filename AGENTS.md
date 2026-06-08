@@ -15,7 +15,6 @@
 ```bash
 pnpm register                 # Publish units to ~/.aisk/ (Claude Code + Codex)
 pnpm build                    # Scan units/ and update units.json + unit.json files
-pnpm create-skill -- <file>   # Promote a skill file to the repository
 pnpm lint:check               # ESLint check without modifying files
 pnpm lint:fix                 # ESLint fix for scripts, resources, and tests
 pnpm typecheck                # TypeScript check
