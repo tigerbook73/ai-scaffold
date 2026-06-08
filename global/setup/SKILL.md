@@ -30,8 +30,8 @@ node ~/.aisk/global/installer.js list
 
 ```
 可管理的 unit：
-  1. poc-dep-unit  — PoC dep unit（未安装）
-  2. poc-unit      — PoC unit（已安装）
+  1. poc-dep  — PoC dep unit（未安装）
+  2. poc      — PoC unit（已安装）
   3. another-unit  — 另一个 unit（未安装）
 
 提示用户输入（正数安装/更新，负数删除，all全部安装/更新，none全部卸载）：
@@ -64,7 +64,7 @@ node ~/.aisk/global/installer.js resolve {所有选中的 unit 名称，空格�
 **冲突检查**：若 `auto` 中的某 unit 出现在 `to_remove` 中，说明用户选择与依赖冲突，终止并提示：
 
 ```
-错误：poc-unit 依赖 poc-dep-unit，但 poc-dep-unit 已从选中中移除。
+错误：poc 依赖 poc-dep，但 poc-dep 已从选中中移除。
 请重新选择。
 ```
 
@@ -76,7 +76,7 @@ node ~/.aisk/global/installer.js resolve {所有选中的 unit 名称，空格�
 变更计划：
   卸载：another-unit
   安装：new-unit
-  更新：poc-dep-unit（自动依赖）、poc-unit
+  更新：poc-dep（自动依赖）、poc
 
 确认执行？(yes/no)
 ```
@@ -94,7 +94,7 @@ node ~/.aisk/global/installer.js resolve {所有选中的 unit 名称，空格�
 
 - 根据 `condition` 字段描述，结合当前项目的 `package.json` 和文件结构判断是否推荐
 - 向用户展示判断结论和理由，格式：`{unit-name} / {component-name}（{component-type}）`  
-  例：`poc-unit / poc-rule-nextjs（rule）—— 检测到 next 依赖，推荐安装`
+  例：`poc / poc-rule-nextjs（rule）—— 检测到 next 依赖，推荐安装`
 - 由用户最终确认是否安装
 
 确认结束后，将本次所有已选可选组件记录为 `{type}:{name}` 格式列表（如 `["rule:poc-rule-nextjs", "resource:config"]`），供步骤 5、6 的 `--optional` 参数使用。
@@ -165,11 +165,11 @@ installer 自行从 `unit.json` 读取完整组件配置：
     skill: .claude/skills/aisk-new-unit-foo/SKILL.md
 
 已更新：
-  poc-dep-unit（自动依赖）：
-    skill: .claude/skills/aisk-poc-dep-unit-poc-dep/SKILL.md
-  poc-unit：
-    skill:    .claude/skills/aisk-poc-unit-poc/SKILL.md
-    rule:     .claude/rules/aisk-poc-unit/poc-rule.md
-    script:   .aisk/poc-unit/scripts/poc-hook.js（已注册到 lefthook pre-commit）
-    resource: .aisk/poc-unit/resources/readme.md
+  poc-dep（自动依赖）：
+    skill: .claude/skills/aisk-poc-dep-poc-dep/SKILL.md
+  poc：
+    skill:    .claude/skills/aisk-poc-poc/SKILL.md
+    rule:     .claude/rules/aisk-poc/poc-rule.md
+    script:   .aisk/poc/scripts/poc-hook.js（已注册到 lefthook pre-commit）
+    resource: .aisk/poc/resources/readme.md
 ```

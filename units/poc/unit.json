@@ -1,7 +1,7 @@
 {
-  "name": "poc-unit",
+  "name": "poc",
   "description": "PoC unit covering all four component types (skill, rule, script, resource); validates full installation flow",
-  "dependencies": ["poc-dep-unit"],
+  "dependencies": ["poc-dep"],
   "components": {
     "skills": [
       {

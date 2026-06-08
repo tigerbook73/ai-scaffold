@@ -1,5 +1,5 @@
 {
-  "name": "poc-dep-unit",
+  "name": "poc-dep",
   "description": "PoC dependency unit with skill and resource; validates dependency resolution in the ai-unit install flow",
   "dependencies": [],
   "components": {

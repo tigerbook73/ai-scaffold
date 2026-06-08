@@ -1,8 +1,1 @@
-[
-  "confirm-unit",
-  "poc-dep-unit",
-  "poc-unit",
-  "quick-ship-unit",
-  "smart-review-unit",
-  "test-review-gate-unit"
-]
+["confirm-intent", "poc-dep", "poc", "quick-ship", "smart-review", "test-review-gate"]

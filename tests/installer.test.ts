@@ -24,7 +24,7 @@ function makeFakeAiskHome(tmpDir: string): string {
   mkdirSync(aiskHome, { recursive: true });
   writeFileSync(join(aiskHome, "config.json"), JSON.stringify({ repoPath: tmpDir }));
 
-  const unitDir = join(aiskHome, "units", "poc-unit");
+  const unitDir = join(aiskHome, "units", "poc");
   mkdirSync(join(unitDir, "skills"), { recursive: true });
   mkdirSync(join(unitDir, "scripts"), { recursive: true });
   mkdirSync(join(unitDir, "resources"), { recursive: true });
@@ -34,9 +34,9 @@ function makeFakeAiskHome(tmpDir: string): string {
   writeFileSync(
     join(unitDir, "unit.json"),
     JSON.stringify({
-      name: "poc-unit",
+      name: "poc",
       description: "PoC unit",
-      dependencies: ["poc-dep-unit"],
+      dependencies: ["poc-dep"],
       components: {
         skills: [{ name: "poc", file: "skills/poc.md" }],
         scripts: [{ name: "poc-hook", file: "scripts/poc-hook.js", hook: "pre-commit" }],
@@ -45,12 +45,12 @@ function makeFakeAiskHome(tmpDir: string): string {
     }),
   );
 
-  const depDir = join(aiskHome, "units", "poc-dep-unit");
+  const depDir = join(aiskHome, "units", "poc-dep");
   mkdirSync(depDir, { recursive: true });
   writeFileSync(
     join(depDir, "unit.json"),
     JSON.stringify({
-      name: "poc-dep-unit",
+      name: "poc-dep",
       description: "PoC dep unit",
       dependencies: [],
       components: {},
@@ -58,10 +58,7 @@ function makeFakeAiskHome(tmpDir: string): string {
   );
 
   // Pre-computed global order (dep before dependent, alphabetical within same depth)
-  writeFileSync(
-    join(aiskHome, "units.json"),
-    JSON.stringify(["poc-dep-unit", "poc-unit"], null, 2) + "\n",
-  );
+  writeFileSync(join(aiskHome, "units.json"), JSON.stringify(["poc-dep", "poc"], null, 2) + "\n");
 
   return aiskHome;
 }
@@ -107,10 +104,8 @@ test("listUnits lists all units with installed=false when nothing installed", ()
 
     expect(result.units.length).toBe(2);
     expect(result.units.every((u) => u.installed === false)).toBe(true);
-    expect(result.units.some((u) => u.name === "poc-unit" && u.description === "PoC unit")).toBe(
-      true,
-    );
-    expect(result.units.some((u) => u.name === "poc-dep-unit")).toBe(true);
+    expect(result.units.some((u) => u.name === "poc" && u.description === "PoC unit")).toBe(true);
+    expect(result.units.some((u) => u.name === "poc-dep")).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -125,7 +120,7 @@ test("listUnits marks unit as installed=true when present in installed.json", ()
     writeFileSync(
       join(projectDir, ".aisk", "installed.json"),
       JSON.stringify({
-        units: { "poc-unit": { installedAt: "2026-01-01", components: {} } },
+        units: { poc: { installedAt: "2026-01-01", components: {} } },
       }),
     );
 
@@ -134,8 +129,8 @@ test("listUnits marks unit as installed=true when present in installed.json", ()
       units: Array<{ name: string; installed: boolean }>;
     };
 
-    const pocUnit = result.units.find((u) => u.name === "poc-unit");
-    const depUnit = result.units.find((u) => u.name === "poc-dep-unit");
+    const pocUnit = result.units.find((u) => u.name === "poc");
+    const depUnit = result.units.find((u) => u.name === "poc-dep");
     expect(pocUnit?.installed).toBe(true);
     expect(depUnit?.installed).toBe(false);
   } finally {
@@ -162,21 +157,19 @@ test("checkDeps returns full ResolveResult with dep in to_install and auto when 
     mkdirSync(projectDir);
 
     const installer = new Installer(projectDir, aiskHome);
-    const result = JSON.parse(
-      captureStdout(() => installer.checkDeps(["poc-unit"])),
-    ) as ResolveResult;
+    const result = JSON.parse(captureStdout(() => installer.checkDeps(["poc"]))) as ResolveResult;
 
     expect(result.to_remove).toEqual([]);
-    expect(result.to_install).toEqual(["poc-dep-unit", "poc-unit"]);
+    expect(result.to_install).toEqual(["poc-dep", "poc"]);
     expect(result.to_update).toEqual([]);
-    expect(result.auto).toEqual(["poc-dep-unit"]);
-    expect(result.order).toEqual(["poc-dep-unit", "poc-unit"]);
+    expect(result.auto).toEqual(["poc-dep"]);
+    expect(result.order).toEqual(["poc-dep", "poc"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test("checkDeps with dep already installed → dep in auto but not to_install, poc-unit in to_install", () => {
+test("checkDeps with dep already installed → dep in auto but not to_install, poc in to_install", () => {
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
@@ -186,7 +179,7 @@ test("checkDeps with dep already installed → dep in auto but not to_install, p
       join(projectDir, ".aisk", "installed.json"),
       JSON.stringify({
         units: {
-          "poc-dep-unit": {
+          "poc-dep": {
             installedAt: "2026-01-01",
             components: { skills: [], rules: [], scripts: [], resources: [] },
           },
@@ -195,16 +188,14 @@ test("checkDeps with dep already installed → dep in auto but not to_install, p
     );
 
     const installer = new Installer(projectDir, aiskHome);
-    const result = JSON.parse(
-      captureStdout(() => installer.checkDeps(["poc-unit"])),
-    ) as ResolveResult;
+    const result = JSON.parse(captureStdout(() => installer.checkDeps(["poc"]))) as ResolveResult;
 
     expect(result.to_remove).toEqual([]);
-    expect(result.to_install).toEqual(["poc-unit"]);
+    expect(result.to_install).toEqual(["poc"]);
     expect(result.to_update).toEqual([]);
-    // poc-dep-unit is auto (not explicitly selected) even though already installed
-    expect(result.auto).toEqual(["poc-dep-unit"]);
-    expect(result.order).toEqual(["poc-unit"]);
+    // poc-dep is auto (not explicitly selected) even though already installed
+    expect(result.auto).toEqual(["poc-dep"]);
+    expect(result.order).toEqual(["poc"]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -220,11 +211,11 @@ test("checkDeps with installed unit not in desired state → appears in to_remov
       join(projectDir, ".aisk", "installed.json"),
       JSON.stringify({
         units: {
-          "poc-unit": {
+          poc: {
             installedAt: "2026-01-01",
             components: { skills: [], rules: [], scripts: [], resources: [] },
           },
-          "poc-dep-unit": {
+          "poc-dep": {
             installedAt: "2026-01-01",
             components: { skills: [], rules: [], scripts: [], resources: [] },
           },
@@ -236,7 +227,7 @@ test("checkDeps with installed unit not in desired state → appears in to_remov
     // Desired state: nothing selected — uninstall everything
     const result = JSON.parse(captureStdout(() => installer.checkDeps([]))) as ResolveResult;
 
-    expect(result.to_remove).toEqual(["poc-dep-unit", "poc-unit"]);
+    expect(result.to_remove).toEqual(["poc-dep", "poc"]);
     expect(result.to_install).toEqual([]);
     expect(result.to_update).toEqual([]);
     expect(result.auto).toEqual([]);
@@ -263,9 +254,9 @@ test("installer installs skill to .claude/skills/aisk-{unit}-{name}/SKILL.md", (
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
-    const skillFile = join(projectDir, ".claude", "skills", "aisk-poc-unit-poc", "SKILL.md");
+    const skillFile = join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md");
     expect(readFileSync(skillFile, "utf8")).toContain("PoC skill content");
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -280,10 +271,10 @@ test("installer skill install is idempotent (second install overwrites cleanly)"
     mkdirSync(projectDir);
 
     const installer = new Installer(projectDir, aiskHome);
-    installer.install("poc-unit", []);
-    installer.install("poc-unit", []);
+    installer.install("poc", []);
+    installer.install("poc", []);
 
-    const skillFile = join(projectDir, ".claude", "skills", "aisk-poc-unit-poc", "SKILL.md");
+    const skillFile = join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md");
     expect(readFileSync(skillFile, "utf8")).toContain("PoC skill content");
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -305,13 +296,13 @@ test("installer install copies rule template directly when hasCustom is absent",
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
-    const rulesDir = join(aiskHome, "units", "poc-unit", "rules");
+    const rulesDir = join(aiskHome, "units", "poc", "rules");
     mkdirSync(rulesDir, { recursive: true });
     writeFileSync(join(rulesDir, "poc-rule.md"), "Rule body without custom blocks.");
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: { rules: [{ name: "poc-rule", file: "rules/poc-rule.md" }] },
@@ -321,10 +312,10 @@ test("installer install copies rule template directly when hasCustom is absent",
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     const content = readFileSync(
-      join(projectDir, ".claude", "rules", "aisk-poc-unit", "poc-rule.md"),
+      join(projectDir, ".claude", "rules", "aisk-poc", "poc-rule.md"),
       "utf8",
     );
     expect(content).toBe("Rule body without custom blocks.");
@@ -338,9 +329,9 @@ test("installer install copies rule from tempPath and deletes it when hasCustom 
   try {
     const aiskHome = makeFakeAiskHome(dir);
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: { rules: [{ name: "poc-rule", file: "rules/poc-rule.md", hasCustom: true }] },
@@ -348,13 +339,13 @@ test("installer install copies rule from tempPath and deletes it when hasCustom 
     );
 
     const projectDir = join(dir, "project");
-    const ruleDestDir = join(projectDir, ".claude", "rules", "aisk-poc-unit");
+    const ruleDestDir = join(projectDir, ".claude", "rules", "aisk-poc");
     mkdirSync(ruleDestDir, { recursive: true });
 
-    const tempPath = join(ruleDestDir, ".aisk-tmp-poc-unit-poc-rule");
+    const tempPath = join(ruleDestDir, ".aisk-tmp-poc-poc-rule");
     writeFileSync(tempPath, 'paths: ["**/*.test.ts"]\ndescription: rendered rule');
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     const destFile = join(ruleDestDir, "poc-rule.md");
     expect(readFileSync(destFile, "utf8"), "rendered content must be written").toContain(
@@ -371,9 +362,9 @@ test("installer install errors when hasCustom rule has no tempPath", () => {
   try {
     const aiskHome = makeFakeAiskHome(dir);
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: { rules: [{ name: "poc-rule", file: "rules/poc-rule.md", hasCustom: true }] },
@@ -388,7 +379,7 @@ test("installer install errors when hasCustom rule has no tempPath", () => {
     });
 
     try {
-      expect(() => new Installer(projectDir, aiskHome).install("poc-unit", [])).toThrow(
+      expect(() => new Installer(projectDir, aiskHome).install("poc", [])).toThrow(
         "process.exit(1)",
       );
       expect(exitSpy).toHaveBeenCalledWith(1);
@@ -396,9 +387,7 @@ test("installer install errors when hasCustom rule has no tempPath", () => {
       exitSpy.mockRestore();
     }
 
-    expect(existsSync(join(projectDir, ".claude", "rules", "aisk-poc-unit", "poc-rule.md"))).toBe(
-      false,
-    );
+    expect(existsSync(join(projectDir, ".claude", "rules", "aisk-poc", "poc-rule.md"))).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -421,10 +410,10 @@ test("installer install copies resource file when hasCustom is absent", () => {
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     const content = readFileSync(
-      join(projectDir, ".aisk", "poc-unit", "resources", "readme.md"),
+      join(projectDir, ".aisk", "poc", "resources", "readme.md"),
       "utf8",
     );
     expect(content).toBe("readme content");
@@ -438,9 +427,9 @@ test("installer install copies resource from tempPath and deletes it when hasCus
   try {
     const aiskHome = makeFakeAiskHome(dir);
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -450,13 +439,13 @@ test("installer install copies resource from tempPath and deletes it when hasCus
     );
 
     const projectDir = join(dir, "project");
-    const resourceDestDir = join(projectDir, ".aisk", "poc-unit", "resources");
+    const resourceDestDir = join(projectDir, ".aisk", "poc", "resources");
     mkdirSync(resourceDestDir, { recursive: true });
 
-    const tempPath = join(resourceDestDir, ".aisk-tmp-poc-unit-readme");
+    const tempPath = join(resourceDestDir, ".aisk-tmp-poc-readme");
     writeFileSync(tempPath, "rendered readme content");
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     expect(readFileSync(join(resourceDestDir, "readme.md"), "utf8")).toBe(
       "rendered readme content",
@@ -482,13 +471,13 @@ test("installer skips optional component when not in optionalNames", () => {
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
-    const rulesDir = join(aiskHome, "units", "poc-unit", "rules");
+    const rulesDir = join(aiskHome, "units", "poc", "rules");
     mkdirSync(rulesDir, { recursive: true });
     writeFileSync(join(rulesDir, "poc-rule-opt.md"), "optional rule");
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -501,14 +490,14 @@ test("installer skips optional component when not in optionalNames", () => {
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
-    expect(existsSync(join(projectDir, ".claude", "skills", "aisk-poc-unit-poc", "SKILL.md"))).toBe(
+    expect(existsSync(join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md"))).toBe(
       true,
     );
-    expect(
-      existsSync(join(projectDir, ".claude", "rules", "aisk-poc-unit", "poc-rule-opt.md")),
-    ).toBe(false);
+    expect(existsSync(join(projectDir, ".claude", "rules", "aisk-poc", "poc-rule-opt.md"))).toBe(
+      false,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -518,13 +507,13 @@ test("installer installs optional component when typed name is in optionalNames"
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
-    const rulesDir = join(aiskHome, "units", "poc-unit", "rules");
+    const rulesDir = join(aiskHome, "units", "poc", "rules");
     mkdirSync(rulesDir, { recursive: true });
     writeFileSync(join(rulesDir, "poc-rule-opt.md"), "optional rule");
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -536,11 +525,11 @@ test("installer installs optional component when typed name is in optionalNames"
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    new Installer(projectDir, aiskHome).install("poc-unit", ["rule:poc-rule-opt"]);
+    new Installer(projectDir, aiskHome).install("poc", ["rule:poc-rule-opt"]);
 
-    expect(
-      existsSync(join(projectDir, ".claude", "rules", "aisk-poc-unit", "poc-rule-opt.md")),
-    ).toBe(true);
+    expect(existsSync(join(projectDir, ".claude", "rules", "aisk-poc", "poc-rule-opt.md"))).toBe(
+      true,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -550,13 +539,13 @@ test("installer removes previously installed optional rule when deselected on re
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
-    const rulesDir = join(aiskHome, "units", "poc-unit", "rules");
+    const rulesDir = join(aiskHome, "units", "poc", "rules");
     mkdirSync(rulesDir, { recursive: true });
     writeFileSync(join(rulesDir, "poc-rule-opt.md"), "optional rule");
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -570,18 +559,18 @@ test("installer removes previously installed optional rule when deselected on re
     mkdirSync(projectDir);
 
     const installer = new Installer(projectDir, aiskHome);
-    installer.install("poc-unit", ["rule:poc-rule-opt"]);
-    expect(
-      existsSync(join(projectDir, ".claude", "rules", "aisk-poc-unit", "poc-rule-opt.md")),
-    ).toBe(true);
+    installer.install("poc", ["rule:poc-rule-opt"]);
+    expect(existsSync(join(projectDir, ".claude", "rules", "aisk-poc", "poc-rule-opt.md"))).toBe(
+      true,
+    );
 
-    installer.install("poc-unit", []);
+    installer.install("poc", []);
     expect(
-      existsSync(join(projectDir, ".claude", "rules", "aisk-poc-unit", "poc-rule-opt.md")),
+      existsSync(join(projectDir, ".claude", "rules", "aisk-poc", "poc-rule-opt.md")),
       "deselected optional must be removed",
     ).toBe(false);
     expect(
-      existsSync(join(projectDir, ".claude", "skills", "aisk-poc-unit-poc", "SKILL.md")),
+      existsSync(join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md")),
       "required skill must still exist",
     ).toBe(true);
   } finally {
@@ -602,17 +591,17 @@ test("installer removes orphaned component file when unit.json no longer declare
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
-    const rulesDir = join(aiskHome, "units", "poc-unit", "rules");
+    const rulesDir = join(aiskHome, "units", "poc", "rules");
     mkdirSync(rulesDir, { recursive: true });
     writeFileSync(join(rulesDir, "poc-rule-old.md"), "old rule");
 
-    const unitJsonPath = join(aiskHome, "units", "poc-unit", "unit.json");
+    const unitJsonPath = join(aiskHome, "units", "poc", "unit.json");
 
     // v1: unit has skill + rule
     writeFileSync(
       unitJsonPath,
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -626,25 +615,25 @@ test("installer removes orphaned component file when unit.json no longer declare
     mkdirSync(projectDir);
 
     const installer = new Installer(projectDir, aiskHome);
-    installer.install("poc-unit", []);
-    const ruleFile = join(projectDir, ".claude", "rules", "aisk-poc-unit", "poc-rule-old.md");
+    installer.install("poc", []);
+    const ruleFile = join(projectDir, ".claude", "rules", "aisk-poc", "poc-rule-old.md");
     expect(existsSync(ruleFile)).toBe(true);
 
     // v2: rule removed from unit.json
     writeFileSync(
       unitJsonPath,
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: { skills: [{ name: "poc", file: "skills/poc.md" }] },
       }),
     );
 
-    installer.install("poc-unit", []);
+    installer.install("poc", []);
     expect(existsSync(ruleFile), "orphaned rule file must be removed").toBe(false);
     expect(
-      existsSync(join(projectDir, ".claude", "skills", "aisk-poc-unit-poc", "SKILL.md")),
+      existsSync(join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md")),
       "skill must still exist",
     ).toBe(true);
   } finally {
@@ -669,9 +658,9 @@ test("prepare returns PrepareItem list for hasCustom rule and pre-creates target
   try {
     const aiskHome = makeFakeAiskHome(dir);
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -679,13 +668,13 @@ test("prepare returns PrepareItem list for hasCustom rule and pre-creates target
         },
       }),
     );
-    mkdirSync(join(aiskHome, "units", "poc-unit", "rules"), { recursive: true });
-    writeFileSync(join(aiskHome, "units", "poc-unit", "rules", "poc-rule.md"), "template content");
+    mkdirSync(join(aiskHome, "units", "poc", "rules"), { recursive: true });
+    writeFileSync(join(aiskHome, "units", "poc", "rules", "poc-rule.md"), "template content");
 
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    const output = captureStdout(() => new Installer(projectDir, aiskHome).prepare("poc-unit"));
+    const output = captureStdout(() => new Installer(projectDir, aiskHome).prepare("poc"));
     const items = JSON.parse(output) as Array<{
       componentType: string;
       exists: boolean;
@@ -695,8 +684,8 @@ test("prepare returns PrepareItem list for hasCustom rule and pre-creates target
     expect(items.length).toBe(1);
     expect(items[0].componentType).toBe("rule");
     expect(items[0].exists).toBe(false);
-    expect(items[0].tempPath).toContain(".aisk-tmp-poc-unit-poc-rule");
-    expect(existsSync(join(projectDir, ".claude", "rules", "aisk-poc-unit"))).toBe(true);
+    expect(items[0].tempPath).toContain(".aisk-tmp-poc-poc-rule");
+    expect(existsSync(join(projectDir, ".claude", "rules", "aisk-poc"))).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -707,9 +696,9 @@ test("prepare excludes optional hasCustom component when not in optionalNames", 
   try {
     const aiskHome = makeFakeAiskHome(dir);
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -728,7 +717,7 @@ test("prepare excludes optional hasCustom component when not in optionalNames", 
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    const output = captureStdout(() => new Installer(projectDir, aiskHome).prepare("poc-unit", []));
+    const output = captureStdout(() => new Installer(projectDir, aiskHome).prepare("poc", []));
     const items = JSON.parse(output) as unknown[];
     expect(items.length).toBe(0);
   } finally {
@@ -740,12 +729,12 @@ test("prepare includes optional hasCustom component when in optionalNames", () =
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
-    mkdirSync(join(aiskHome, "units", "poc-unit", "rules"), { recursive: true });
-    writeFileSync(join(aiskHome, "units", "poc-unit", "rules", "poc-rule-opt.md"), "template");
+    mkdirSync(join(aiskHome, "units", "poc", "rules"), { recursive: true });
+    writeFileSync(join(aiskHome, "units", "poc", "rules", "poc-rule-opt.md"), "template");
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -765,7 +754,7 @@ test("prepare includes optional hasCustom component when in optionalNames", () =
     mkdirSync(projectDir);
 
     const output = captureStdout(() =>
-      new Installer(projectDir, aiskHome).prepare("poc-unit", ["rule:poc-rule-opt"]),
+      new Installer(projectDir, aiskHome).prepare("poc", ["rule:poc-rule-opt"]),
     );
     const items = JSON.parse(output) as Array<{ componentType: string }>;
     expect(items.length).toBe(1);
@@ -787,11 +776,11 @@ test("prepare cleans orphaned .aisk-tmp-* files before returning items", () => {
     writeFileSync(orphan, "stale");
 
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
-      JSON.stringify({ name: "poc-unit", description: "PoC", dependencies: [], components: {} }),
+      join(aiskHome, "units", "poc", "unit.json"),
+      JSON.stringify({ name: "poc", description: "PoC", dependencies: [], components: {} }),
     );
 
-    captureStdout(() => new Installer(projectDir, aiskHome).prepare("poc-unit"));
+    captureStdout(() => new Installer(projectDir, aiskHome).prepare("poc"));
 
     expect(existsSync(orphan), "orphan temp file must be removed").toBe(false);
   } finally {
@@ -808,14 +797,14 @@ test("installer copies script and creates lefthook.yml entry", () => {
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
-    const scriptFile = join(projectDir, ".aisk", "poc-unit", "scripts", "poc-hook.js");
+    const scriptFile = join(projectDir, ".aisk", "poc", "scripts", "poc-hook.js");
     expect(readFileSync(scriptFile, "utf8")).toContain("hook");
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-    expect(lefthook).toContain("aisk-poc-unit-poc-hook:");
-    expect(lefthook).toContain(".aisk/poc-unit/scripts/poc-hook.js");
+    expect(lefthook).toContain("aisk-poc-poc-hook:");
+    expect(lefthook).toContain(".aisk/poc/scripts/poc-hook.js");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -826,9 +815,9 @@ test("installer appends lefthook template vars when params declared", () => {
   try {
     const aiskHome = makeFakeAiskHome(dir);
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -847,7 +836,7 @@ test("installer appends lefthook template vars when params declared", () => {
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
     expect(lefthook, "must include lefthook template var").toContain("{staged_files}");
@@ -864,11 +853,11 @@ test("installer hook registration is idempotent (no duplicate entries)", () => {
     mkdirSync(projectDir);
 
     const installer = new Installer(projectDir, aiskHome);
-    installer.install("poc-unit", []);
-    installer.install("poc-unit", []);
+    installer.install("poc", []);
+    installer.install("poc", []);
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-    const occurrences = lefthook.split("aisk-poc-unit-poc-hook:").length - 1;
+    const occurrences = lefthook.split("aisk-poc-poc-hook:").length - 1;
     expect(occurrences, "hook entry must appear exactly once").toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -886,11 +875,11 @@ test("installer appends hook entry to existing lefthook.yml", () => {
       "pre-commit:\n  commands:\n    existing-hook:\n      run: echo ok\n",
     );
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
     expect(lefthook, "must preserve existing entries").toContain("existing-hook:");
-    expect(lefthook, "must add new entry").toContain("aisk-poc-unit-poc-hook:");
+    expect(lefthook, "must add new entry").toContain("aisk-poc-poc-hook:");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -907,10 +896,10 @@ test("installer appends pre-commit section when pre-commit is commented out", ()
       "# pre-commit:\n#   commands:\n#     some-hook:\n#       run: echo disabled\n",
     );
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-    expect(lefthook, "must add new entry").toContain("aisk-poc-unit-poc-hook:");
+    expect(lefthook, "must add new entry").toContain("aisk-poc-poc-hook:");
     expect(lefthook, "must preserve commented lines").toContain("# pre-commit:");
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -939,13 +928,13 @@ test("installer adds hook to correct section when multiple sections exist", () =
       ].join("\n"),
     );
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
     expect(lefthook, "must preserve pre-push commands").toContain("    lint:");
     const preCommitIdx = lefthook.indexOf("pre-commit:");
     const preCommitSection = lefthook.slice(preCommitIdx);
-    expect(preCommitSection, "must add to pre-commit section").toContain("aisk-poc-unit-poc-hook:");
+    expect(preCommitSection, "must add to pre-commit section").toContain("aisk-poc-poc-hook:");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -967,7 +956,7 @@ test("uninstall removes skill file and empty parent directory", () => {
   try {
     const aiskHome = makeFakeAiskHome(dir);
     const projectDir = join(dir, "project");
-    const skillDir = join(projectDir, ".claude", "skills", "aisk-poc-unit-poc");
+    const skillDir = join(projectDir, ".claude", "skills", "aisk-poc-poc");
     mkdirSync(skillDir, { recursive: true });
     writeFileSync(join(skillDir, "SKILL.md"), "# poc");
     mkdirSync(join(projectDir, ".aisk"), { recursive: true });
@@ -975,10 +964,10 @@ test("uninstall removes skill file and empty parent directory", () => {
       join(projectDir, ".aisk", "installed.json"),
       JSON.stringify({
         units: {
-          "poc-unit": {
+          poc: {
             installedAt: "2026-01-01",
             components: {
-              skills: [{ name: "poc", path: ".claude/skills/aisk-poc-unit-poc/SKILL.md" }],
+              skills: [{ name: "poc", path: ".claude/skills/aisk-poc-poc/SKILL.md" }],
               rules: [],
               scripts: [],
               resources: [],
@@ -988,14 +977,14 @@ test("uninstall removes skill file and empty parent directory", () => {
       }),
     );
 
-    new Installer(projectDir, aiskHome).uninstall("poc-unit");
+    new Installer(projectDir, aiskHome).uninstall("poc");
 
     expect(existsSync(join(skillDir, "SKILL.md")), "skill file must be removed").toBe(false);
     expect(existsSync(skillDir), "empty parent dir must be removed").toBe(false);
     const data = JSON.parse(readFileSync(join(projectDir, ".aisk", "installed.json"), "utf8")) as {
       units: Record<string, unknown>;
     };
-    expect("poc-unit" in data.units, "unit must be removed from installed.json").toBe(false);
+    expect("poc" in data.units, "unit must be removed from installed.json").toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -1006,23 +995,23 @@ test("uninstall removes script file and corresponding lefthook entry", () => {
   try {
     const aiskHome = makeFakeAiskHome(dir);
     const projectDir = join(dir, "project");
-    const scriptDir = join(projectDir, ".aisk", "poc-unit", "scripts");
+    const scriptDir = join(projectDir, ".aisk", "poc", "scripts");
     mkdirSync(scriptDir, { recursive: true });
     writeFileSync(join(scriptDir, "poc-hook.js"), "// hook");
     writeFileSync(
       join(projectDir, "lefthook.yml"),
-      "pre-commit:\n  commands:\n    aisk-poc-unit-poc-hook:\n      run: node .aisk/poc-unit/scripts/poc-hook.js\n",
+      "pre-commit:\n  commands:\n    aisk-poc-poc-hook:\n      run: node .aisk/poc/scripts/poc-hook.js\n",
     );
     writeFileSync(
       join(projectDir, ".aisk", "installed.json"),
       JSON.stringify({
         units: {
-          "poc-unit": {
+          poc: {
             installedAt: "2026-01-01",
             components: {
               skills: [],
               rules: [],
-              scripts: [{ name: "poc-hook", path: ".aisk/poc-unit/scripts/poc-hook.js" }],
+              scripts: [{ name: "poc-hook", path: ".aisk/poc/scripts/poc-hook.js" }],
               resources: [],
             },
           },
@@ -1030,11 +1019,11 @@ test("uninstall removes script file and corresponding lefthook entry", () => {
       }),
     );
 
-    new Installer(projectDir, aiskHome).uninstall("poc-unit");
+    new Installer(projectDir, aiskHome).uninstall("poc");
 
     expect(existsSync(join(scriptDir, "poc-hook.js")), "script file must be removed").toBe(false);
     const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-    expect(lefthook, "lefthook entry must be removed").not.toContain("aisk-poc-unit-poc-hook:");
+    expect(lefthook, "lefthook entry must be removed").not.toContain("aisk-poc-poc-hook:");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -1051,9 +1040,7 @@ test("uninstall exits with error when unit is not installed", () => {
       throw new Error(`process.exit(${code ?? ""})`);
     });
     try {
-      expect(() => new Installer(projectDir, aiskHome).uninstall("poc-unit")).toThrow(
-        "process.exit(1)",
-      );
+      expect(() => new Installer(projectDir, aiskHome).uninstall("poc")).toThrow("process.exit(1)");
       expect(exitSpy).toHaveBeenCalledWith(1);
     } finally {
       exitSpy.mockRestore();
@@ -1080,7 +1067,7 @@ test("installer creates .gitignore files in .aisk/ and .claude/ on install", () 
     const projectDir = join(dir, "project");
     mkdirSync(projectDir);
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     expect(readFileSync(join(projectDir, ".aisk", ".gitignore"), "utf8")).toBe("*\n");
     expect(readFileSync(join(projectDir, ".claude", ".gitignore"), "utf8")).toBe(
@@ -1099,7 +1086,7 @@ test("installer does not overwrite existing .gitignore files", () => {
     mkdirSync(join(projectDir, ".claude"), { recursive: true });
     writeFileSync(join(projectDir, ".claude", ".gitignore"), "custom-content\n");
 
-    new Installer(projectDir, aiskHome).install("poc-unit", []);
+    new Installer(projectDir, aiskHome).install("poc", []);
 
     expect(readFileSync(join(projectDir, ".claude", ".gitignore"), "utf8")).toBe(
       "custom-content\n",
@@ -1115,13 +1102,13 @@ test("installer writes installed.json with correct component records after insta
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
-    const rulesDir = join(aiskHome, "units", "poc-unit", "rules");
+    const rulesDir = join(aiskHome, "units", "poc", "rules");
     mkdirSync(rulesDir, { recursive: true });
     writeFileSync(join(rulesDir, "poc-rule-opt.md"), "optional rule");
     writeFileSync(
-      join(aiskHome, "units", "poc-unit", "unit.json"),
+      join(aiskHome, "units", "poc", "unit.json"),
       JSON.stringify({
-        name: "poc-unit",
+        name: "poc",
         description: "PoC unit",
         dependencies: [],
         components: {
@@ -1135,13 +1122,13 @@ test("installer writes installed.json with correct component records after insta
     mkdirSync(projectDir);
 
     const installer = new Installer(projectDir, aiskHome);
-    installer.install("poc-unit", ["rule:poc-rule-opt"]);
+    installer.install("poc", ["rule:poc-rule-opt"]);
 
     const installed = installer.readInstalled();
-    expect("poc-unit" in installed.units).toBe(true);
-    expect(installed.units["poc-unit"].installedAt).toBeTruthy();
-    expect(installed.units["poc-unit"].components.skills.length).toBe(1);
-    expect(installed.units["poc-unit"].components.rules.length).toBe(1);
+    expect("poc" in installed.units).toBe(true);
+    expect(installed.units["poc"].installedAt).toBeTruthy();
+    expect(installed.units["poc"].components.skills.length).toBe(1);
+    expect(installed.units["poc"].components.rules.length).toBe(1);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -1,5 +1,5 @@
 {
-  "name": "test-review-gate-unit",
+  "name": "test-review-gate",
   "description": "在测试文件上强制执行 @reviewed-by 注释和 @cases / it() 名称一致性约束，通过 pre-commit hook 和 Claude 规则实现",
   "dependencies": [],
   "components": {
