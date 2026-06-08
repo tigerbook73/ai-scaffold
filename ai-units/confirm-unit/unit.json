@@ -1,0 +1,13 @@
+{
+  "name": "confirm-unit",
+  "description": "在执行前确认用户的预期结果，然后等待明确的最终确认，除非用户已明确允许直接执行。",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      {
+        "name": "confirm-intent",
+        "file": "skills/confirm-intent.md"
+      }
+    ]
+  }
+}

@@ -1,169 +1,92 @@
-# Requirements: project-structure
+# Requirements: skill-migration
 
 ## 目标
 
-构建一个 **AI 智能单元管理仓库**：统一存储、管理可复用的 AI 辅助能力单元（ai-unit），并提供将其发布、安装到 Node.js 项目的机制（当前仅支持 Claude）。
-
-一个 ai-unit 是一组可协同工作的 AI 辅助能力的集合。每个 ai-unit 有明确的能力描述和对其他 ai-unit 的依赖声明。
-
----
-
-## 三层结构
-
-```
-开发仓库（ai-scaffold）         ← ai-unit 的开发和维护
-    ↓ publish  ↑ pull（低优先级）
-本地仓库（~/.aisf/）             ← 已发布的可运行版本 + 全局 AI 配置
-    ↓ setup    ↑ push（低优先级）
-目标项目                         ← 使用 ai-unit 能力的 Node.js 项目
-```
-
-目标项目不直接访问开发仓库，只与本地仓库交互。
+将现有 skill（`confirm-intent`、`quick-ship`、`smart-review`）迁移到 ai-unit 架构，
+完成后清理老架构产物，并统一重命名约定使其与原先命名对齐。
 
 ---
 
-## ai-unit 模型
+## 背景
 
-### 能力描述
+Phase 1（架构需求见 `requirements-arch.md`）已完成 ai-unit 架构的核心实现（PoC 验证通过）。
+当前代码库中仍存在以老架构方式组织的 skill，需逐步迁移。
 
-每个 ai-unit 应声明：
+**待迁移 skill（`skills/` 目录下，非 `archive/`）：**
 
-- **名称与描述**：这个单元做什么，解决什么问题
-- **提供的能力**：安装后，用户/AI 能获得哪些新能力（如可调用的命令、自动生效的规则）
-- **适用场景**：推荐在什么类型的项目或工作流中使用
-- **依赖**：依赖哪些其他 ai-unit（安装时自动检查）
-
-### 组件类型
-
-一个 ai-unit 可包含以下一种或多种组件：
-
-| 类型           | 描述                                          | 安装目标（目标项目）       |
-| -------------- | --------------------------------------------- | -------------------------- |
-| **skill**      | AI 可调用的命令（slash command）              | 目标项目本地 skill 目录    |
-| **rule guard** | AI 行为约束规则，可配置适用文件范围           | 目标项目 Claude 规则目录   |
-| **script**     | 可直接运行的脚本（如 pre-commit hook）        | 注册到目标项目对应 hook    |
-| **resource**   | 文件模板等静态资源，供 skill/rule/script 引用 | 不直接安装，由其他组件使用；随引用它的组件一并卸载 |
-
-### 依赖关系
-
-- ai-unit 可声明对其他 ai-unit 的依赖
-- 部分 ai-unit 作为公共基础单元，可被多个其他单元依赖（如 hook 管理能力）
-- 安装时自动解析依赖，提示用户一并安装
+| skill          | 路径                                         |
+| -------------- | -------------------------------------------- |
+| confirm-intent | `skills/confirm-intent/SK-confirm-intent.md` |
+| quick-ship     | `skills/quick-ship/SK-quick-ship.md`         |
+| smart-review   | `skills/smart-review/SK-smart-review.md`     |
 
 ---
 
 ## 功能需求
 
-### 开发仓库中的操作
+### Step 1：迁移 skill 到 ai-unit 架构
 
-#### publish（发布）
+将上述 3 个 skill 改造为符合 ai-unit 结构，移入 `units/`（重命名后的顶层目录，见 Step 3）：
 
-在开发仓库中运行，将 ai-unit 发布到本地仓库和全局 AI 配置：
+- 为每个 skill 创建对应的 `unit.json`（参考 `poc-unit` 结构）
+- 按 ai-unit 目录约定组织内容（`skills/`、`rules/`（如有）、`resources/`（如有））
+- 将 skill 文件从 SK-\*.md 格式转换为 ai-unit 的 SKILL.md 格式（如需调整）
+- 更新 `units.json` 注册表，将新 unit 加入拓扑顺序
 
-- 发布后，本地仓库（`~/.aisf/`）包含所有 ai-unit 的可运行版本
-- script 组件以可直接执行的形式发布，无需安装依赖、无需 TypeScript 编译环境
-- 全局管理命令（如 setup）发布到全局 AI 配置，在任意 AI session 中可用
-- 仅发布可安装内容，开发资源（文档、测试等）不包含在内
-- 幂等：重复发布覆盖旧版本，不产生重复条目
+### Step 2：建立项目内部 gate 规则
 
-> **待分析**：script 独立运行的依赖打包方案（bundle vs 限制使用内置模块）
+在 `.claude/rules/ai-scaffold/` 下建立三个 gate 规则文件，约束本项目 `units/` 目录下各类文件的命名和格式：
 
-#### clean（清理）
+- `skill-gate.md`：约束 `units/*/skills/` 下的 skill 文件
+- `script-gate.md`：��束 `units/*/scripts/` 下的 TypeScript 脚本
+- `rule-gate.md`：约束 `units/*/rules/` 下的 rule guard 文件
 
-在开发仓库中运行，清空本地仓库和全局 AI 配置中由本仓库发布的所有内容：
+这些规则仅作用于本项目开发，不随 unit 安装同步到目标项目。
+现有 `.claude/rules/skill-rules.md` 和 `ts-script-commands.md` 的内容迁移至对应 gate 文件后删除。
 
-- 清理后，全局管理命令不再可用；目标项目中依赖全局命令的操作（如 setup）将无法执行
-- 目标项目中已安装的内容**不受影响**（已安装即独立）
+### Step 3：清理老架构产物
 
----
+迁移完成后，删除老架构遗留内容：
 
-### 目标项目中的操作
+- 删除 `skills/` 顶层目录（迁移完成后仅剩 `skill-format.md` 等非 unit 文件，按实际情况处理）
+- 评估并清理老架构相关脚本、配置（如旧版 `pnpm register` 逻辑残留等）
 
-#### setup（配置）
+### Step 4：重命名约定统一
 
-在目标项目中运行，统一管理已安装的 ai-unit（包含安装、更新、卸载）：
+按以下映射执行全局重命名，使代码库与原先命名约定对齐：
 
-1. 列出本地仓库中所有可用 ai-unit，标注每个的当前状态：
-   - 未安装
-   - 已安装（最新）
-   - 已安装（内容有变更，**默认选中更新**）
-2. 用户调整选择（勾选要安装的、取消勾选要卸载的）
-3. 若有依赖未满足，自动展示并提示一并处理（含依赖单元的选择确认）
-4. 对所有待安装/更新单元（含步骤 3 中新增的依赖单元）中需要配置的组件，系统尝试自动检测推荐值；无法自动确定时提示用户输入
-5. 执行变更，报告结果
+| 当前名称                            | 目标名称                          | 范围                         |
+| ----------------------------------- | --------------------------------- | ---------------------------- |
+| `ai-units/` 目录                    | `units/`                          | 顶层目录                     |
+| `aisf` 前缀                         | `aisk` 前缀                       | 所有脚本、命令、路径、变量名 |
+| `~/.aisf/`                          | `~/.aisk/`                        | 本地仓库路径                 |
+| `AISF:CUSTOM` 边界符                | `AISK:CUSTOM`                     | 模板文件及已安装文件         |
+| `pnpm pub` 脚本                     | `pnpm register`                   | package.json scripts         |
+| `scripts/buildx.ts` + `pnpm buildx` | `scripts/build.ts` + `pnpm build` | 脚本文件及 package.json      |
 
-**卸载行为**：取消勾选已安装单元即触发卸载。卸载为安装的逆向操作：移除 skill 目录、rule guard 文件、hook 条目；resource 文件随引用它的组件一并移除。
-
----
-
-### 定制化机制
-
-部分 ai-unit 组件在安装时需要根据目标项目进行调整，不能直接复制：
-
-- **rule guard** 的 `paths`：指定规则适用的文件范围（如 `**/*.test.ts`），需根据项目实际文件结构配置
-- 未来可能有其他组件存在类似的项目级参数
-
-定制化的行为要求：
-
-- **安装时**：系统检测目标项目特征，给出推荐值；用户可确认或修改
-- **更新时**：更新组件主体内容，**保留用户之前的定制配置**，不覆盖
-- **定制项与主体分离**：定制配置与 ai-unit 的主体内容需要可区分，以支持独立更新
-
----
-
-## 非功能需求
-
-- **执行效率**：命令执行时，优先用脚本实现可确定性强的部分（简单逻辑用 shell，复杂逻辑用 Node.js），AI 指令仅用于需要智能判断的交互环节
-
----
-
-## 约束
-
-- 当前仅支持 **Node.js 项目**（目标项目需有 `package.json`）
-- 当前仅支持 **Claude**（不考虑 Codex 或其他 AI 工具）
-- **全局 AI 配置路径**：`~/.claude/skills/aisf:` 前缀（Claude Code skill 目录约定）
-- **script hook 管理**：假定目标项目使用 [lefthook](https://github.com/evilmartians/lefthook)；目标项目需已初始化 lefthook
-
----
-
-## 技术风险
-
-以下风险可能影响核心功能的可行性，建议在设计阶段提前验证：
-
-### 风险 1：定制化与可更新性的兼容
-
-**问题**：rule guard 的 paths 等定制参数，在 update 时如何保留用户修改，同时更新组件主体内容。
-
-**设计方案**：在模板文件中嵌入 `AISF:CUSTOM` 边界符标记定制区块（YAML 用 `#`，Markdown 用 `<!-- -->`），边界符在已安装文件中保留。更新时 AI 按 `name` 属性配对提取用户值并注入新模板，经人工确认后写入。
-
-**设计阶段验证**：边界符 merge 在文件结构大幅变更时的可靠性。
-
-### 风险 2：幂等性保证
-
-**问题**：setup 可能被多次执行，需保证每次执行后系统状态一致，不产生重复条目（如 hook 中重复注册同一脚本）。
-
-**需要验证**：各安装目标（hook 条目、规则文件、skill 文件）的幂等写入策略是否可统一处理，还是需要逐类实现。
+其他重命名视发现情况补充。
 
 ---
 
 ## 范围外
 
-- ai-unit 版本管理
-- 多开发仓库管理
-- Codex 及其他 AI 工具支持
-- pull（本地仓库 → 开发仓库）—— 低优先级，本次不实现
-- push（目标项目 → 本地仓库）—— 低优先级，本次不实现
+- `archive/skills/` 中旧 skill 的迁移评估（单独任务，低优先级）
+
+---
+
+## 约束
+
+- 重命名需全局一致，不允许混用（如 `aisk` 和 `aisf` 同时存在）
+- 迁移后的 skill 需通过 `pnpm register` 安装验证（端到端可用）
 
 ---
 
 ## 验收标准
 
-1. `publish` 后，全局管理命令在任意 AI session 可用；本地仓库包含所有 ai-unit 的可运行内容
-2. `clean` 后，全局管理命令不可用；已安装到目标项目的内容不受影响
-3. `setup` 能正确展示三种状态（未安装 / 已安装最新 / 内容有变更），默认对有变更的单元执行更新
-4. `setup` 安装完成后，目标项目具备对应 AI 能力（skill 可调用、rule guard 生效、pre-commit hook 在 git commit 时执行）
-5. `setup` 卸载后，对应能力移除，相关文件不再存在
-6. `setup` 更新后，组件更新至新内容，用户定制配置保留
-7. 安装有依赖的 ai-unit 时，系统能识别并引导用户处理依赖
-8. 重复执行 `setup` 不产生重复条目或文件冲突（幂等）
-9. 重复执行 `publish` 不产生重复全局命令条目（幂等）
+1. `confirm-intent`、`quick-ship`、`smart-review` 均以 ai-unit 形式存在于 `units/` 下，可通过 `pnpm register` 安装
+2. 安装后，3 个 skill 在目标项目中可正常调用
+3. `.claude/rules/ai-scaffold/` 下存在 `skill-gate.md`、`script-gate.md`、`rule-gate.md`，旧规则文件已删除
+4. `skills/` 顶层目录不再包含待安装的 skill（老架构产物已清理）
+5. 代码库中不再出现 `aisf` 前缀或 `~/.aisf/` 路径
+6. `pnpm register` 和 `pnpm build` 命令正常工作，`pub` 和 `buildx` 别名不再存在
+7. `units/units.json` 注册表包含所有迁移后的 unit

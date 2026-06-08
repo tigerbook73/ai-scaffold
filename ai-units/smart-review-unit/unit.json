@@ -1,0 +1,13 @@
+{
+  "name": "smart-review-unit",
+  "description": "对指定文件、模块或目录进行迭代式审查和修复。",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      {
+        "name": "smart-review",
+        "file": "skills/smart-review.md"
+      }
+    ]
+  }
+}

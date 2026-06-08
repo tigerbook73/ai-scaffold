@@ -7,8 +7,9 @@
 
 ## Document Index
 
-- `requirements.md` — 需求：ai-unit 模型、三层结构、publish/clean/setup、验收标准
-- `design.md` — Phase 1 设计：目录结构、PoC 单元、publish、setup add、clean
+- `requirements-arch.md` — 架构需求（Phase 1，已完成）：ai-unit 模型、三层结构、register/setup/clean、验收标准
+- `requirements.md` — 迁移需求（当前）：skill 迁移、gate 规则、老架构清理、命名约定统一
+- `design.md` — 迁移设计（当前）：4 步骤骨架，各步目标与验证方式
 
 ## Current Phase
 
@@ -16,23 +17,38 @@ implementation (in_progress)
 
 ## Current Step
 
-Step 4（done）— 全部步骤完成
+Step 1：迁移 skill 到 ai-unit 架构
 
-## Requirements Phase
+## Requirements Phase（架构）
 
 - status: done
 - notes:
-  - requirements.md 已完成，覆盖 ai-unit 模型、目录结构、安装机制、全局命令边界、验收标准
+  - requirements-arch.md 已完成，覆盖 ai-unit 模型、目录结构、安装机制、全局命令边界、验收标准
+  - Phase 1 PoC 实现完成（4 步骤全部 done）
 
-## Design Phase
+## Requirements Phase（迁移）
 
-- status: in_progress
+- status: done
 - notes:
-  - Phase 1 设计完成：4 步骤，覆盖目录结构、PoC 单元定义、publish、setup add、clean
+  - requirements.md 已完成，4 步骤：skill 迁移、gate 规则建立、老架构清理、重命名统一
 
-## Implementation Phase
+## Design Phase（迁移）
 
+- status: done
+- notes:
+  - design.md Step 1 TBD 已细化（unit 结构、verification 命令）
+  - Steps 2–4 细化推迟至各步实施前
+
+## Implementation Phase（迁移）
+
+### Step 1：迁移 skill 到 ai-unit 架构
+
+- step-type: final
 - status: in_progress
+
+## Implementation Phase（Phase 1 PoC）
+
+- status: done
 
 ### Step 1: 目录结构 + PoC 单元定义
 
