@@ -9,15 +9,13 @@
 - 必须存在活跃（未完成）的状态记录；若未找到或已完成，提示用户先运行 `create-walkthrough`
 - 上下文作用范围为当前 session；每次新 session 开始时重新运行以恢复走读状态
 - **静默准备**：读取和验证状态时不作解说；仅在输出警告或恢复摘要时才输出文本
-- **状态脚本**：读取 `~/.ai-skills/config.json` 获取 `{repo}`。Index 操作通过以下方式执行：
-  `{repo}/node_modules/.bin/tsx {repo}/skills/walkthrough/resource/walkthrough-state.ts <cmd> [--options]`
-- **组文件**：通过 Read 工具直接读取 `{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md`
+- **状态脚本**：Index 操作通过以下方式执行：
+  `node .aisk/walkthrough/scripts/walkthrough-state.js <cmd> [--options]`
+- **组文件**：通过 Read 工具直接读取 `{cwd}/.aisk/walkthrough/state/{stateKey}/g{N}.md`
 
 ## 步骤
 
 ### 第一步 — 定位状态
-
-读取 `~/.ai-skills/config.json` 获取 `{repo}`。
 
 确定 state key：
 
@@ -52,6 +50,6 @@ Progress: G{index.currentGroup} / {index.totalGroups}, {done count} group(s) don
 
 ### 第四步 — 进入走读循环
 
-读取 `{repo}/skills/walkthrough/resource/walkthrough-loop.md`。
+读取 `.aisk/walkthrough/resources/walkthrough-loop.md`。
 从"显示当前组"处开始执行其中的指令。
 （walkthrough-loop 会自行读取并输出 g{currentGroup}.md —— 此处无需重复）

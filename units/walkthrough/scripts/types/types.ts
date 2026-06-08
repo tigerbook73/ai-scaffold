@@ -14,6 +14,8 @@ export interface Index {
   targetHash: string;
   checkedOut: boolean;
   intent: string;
+  walkIntent?: "learning" | "review";
+  references?: string;
   created: string;
   totalGroups: number;
   currentGroup: number;

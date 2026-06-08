@@ -1,0 +1,55 @@
+{
+  "name": "task",
+  "description": "管理结构化开发任务：创建任务文档、恢复任务上下文、验证步骤和完成任务",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      {
+        "name": "complete-task",
+        "file": "skills/complete-task.md"
+      },
+      {
+        "name": "create-task",
+        "file": "skills/create-task.md"
+      },
+      {
+        "name": "start-task",
+        "file": "skills/start-task.md"
+      },
+      {
+        "name": "verify-step",
+        "file": "skills/verify-step.md"
+      },
+      {
+        "name": "verify-task",
+        "file": "skills/verify-task.md"
+      }
+    ],
+    "resources": [
+      {
+        "name": "design",
+        "file": "resources/design.md"
+      },
+      {
+        "name": "readme",
+        "file": "resources/readme.md"
+      },
+      {
+        "name": "requirements-feature",
+        "file": "resources/requirements-feature.md"
+      },
+      {
+        "name": "requirements-refactor",
+        "file": "resources/requirements-refactor.md"
+      },
+      {
+        "name": "task-context",
+        "file": "resources/task-context.md"
+      },
+      {
+        "name": "task-state",
+        "file": "resources/task-state.md"
+      }
+    ]
+  }
+}

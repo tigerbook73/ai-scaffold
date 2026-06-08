@@ -11,10 +11,10 @@
 - 每个 state key（从当前分支派生）只允许一个活跃走读；若已存在，提示用户选择恢复或覆盖
 - 签出前工作树必须干净
 - **静默准备**：不作解说地完成所有设置步骤；仅在提问或展示内容时输出文本
-- **状态脚本**：读取 `~/.ai-skills/config.json` 获取 `{repo}`。Index 操作通过以下方式执行：
-  `{repo}/node_modules/.bin/tsx {repo}/skills/walkthrough/resource/walkthrough-state.ts <cmd> [--options]`
-- **组文件**：通过 Write 工具直接写入 `g{N}.md`；通过 Read 工具读取。路径：`{cwd}/.ai-skills/walkthrough/{stateKey}/g{N}.md`
-- **策略**：分组和展示规则见 `{repo}/skills/walkthrough/resource/strategy.md`；在第五步时读取
+- **状态脚本**：Index 操作通过以下方式执行：
+  `node .aisk/walkthrough/scripts/walkthrough-state.js <cmd> [--options]`
+- **组文件**：通过 Write 工具直接写入 `g{N}.md`；通过 Read 工具读取。路径：`{cwd}/.aisk/walkthrough/state/{stateKey}/g{N}.md`
+- **策略**：分组和展示规则见 `.aisk/walkthrough/resources/strategy.md`；在第五步时读取
 
 ## 输入
 
@@ -29,8 +29,6 @@
 ## 步骤
 
 ### 第一步 — 解析 state key
-
-读取 `~/.ai-skills/config.json` 获取 `{repo}`。
 
 获取当前分支：`git branch --show-current`。
 
@@ -156,11 +154,11 @@ git ls-files --others --exclude-standard    # 未跟踪文件；通过 Read 工�
 git diff -U15                               # 未暂存变更（staged vs unstaged 细分）
 ```
 
-**上下文文档**：立即读取 `{repo}/skills/walkthrough/resource/strategy.md`，然后按其"分析策略"章节确定要读取哪些上下文文档及读取顺序。
+**上下文文档**：立即读取 `.aisk/walkthrough/resources/strategy.md`，然后按其"分析策略"章节确定要读取哪些上下文文档及读取顺序。
 
 ### 第六步 — 完整分析
 
-若尚未加载，读取 `{repo}/skills/walkthrough/resource/strategy.md`。
+若尚未加载，读取 `.aisk/walkthrough/resources/strategy.md`。
 
 利用 diff、上下文文档、`{walkIntent}` 和 `{references}`，生成：
 
@@ -225,6 +223,6 @@ Change intent: {intent}
 
 ### 第九步 — 进入走读循环
 
-读取 `{repo}/skills/walkthrough/resource/walkthrough-loop.md`。
+读取 `.aisk/walkthrough/resources/walkthrough-loop.md`。
 从"显示当前组"处开始执行其中的指令。
 （walkthrough-loop 按需生成并输出 g1.md —— 此处无需重复）

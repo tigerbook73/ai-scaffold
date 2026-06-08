@@ -31,7 +31,7 @@ wtgroup finish    # 结束走读
 ## 状态文件布局
 
 ```
-{cwd}/.ai-skills/walkthrough/{stateKey}/
+{cwd}/.aisk/walkthrough/state/{stateKey}/
   index.json   ← 进度元数据（由 walkthrough-state.ts 管理）
   g1.md        ← 第 1 组的走读内容（首次访问时生成）
   g2.md        ← 第 2 组的走读内容（首次访问时生成）
@@ -42,7 +42,7 @@ wtgroup finish    # 结束走读
 
 ## 资源文件
 
-- `resource/strategy.md` — 分析、分组和展示策略（可独立调整，无需修改 skill 流程文件）
-- `resource/walkthrough-loop.md` — `create-walkthrough` 和 `start-walkthrough` 共用的交互式循环
-- `resource/walkthrough-state.ts` — 管理 `index.json` 的 CLI 脚本
-- `resource/types.ts` — 状态 index 的 TypeScript 类型定义
+- `resources/strategy.md` — 分析、分组和展示策略（可独立调整，无需修改 skill 流程文件）
+- `resources/walkthrough-loop.md` — `create-walkthrough` 和 `start-walkthrough` 共用的交互式循环
+- `scripts/walkthrough-state.ts` — 管理 `index.json` 的 CLI 脚本
+- `scripts/types.ts` — 状态 index 的 TypeScript 类型定义

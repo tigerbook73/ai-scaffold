@@ -1,1 +1,10 @@
-["confirm-intent", "poc-dep", "poc", "quick-ship", "smart-review", "test-review-gate"]
+[
+  "confirm-intent",
+  "poc-dep",
+  "poc",
+  "quick-ship",
+  "smart-review",
+  "task",
+  "test-review-gate",
+  "walkthrough"
+]

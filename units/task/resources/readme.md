@@ -62,8 +62,8 @@ docs/tasks/{task-name}/
 
 `create-task` 用于搭建任务文档的模板：
 
-- `resource/task-context.md` — 任务工作模式上下文模板（同时安装为 CLAUDE.md 和 AGENTS.md）
-- `resource/task-state.md` — task-state.md 格式模板
-- `resource/requirements-feature.md` — feature 类需求文档的必要章节格式规范
-- `resource/requirements-refactor.md` — refactor 类需求文档的必要章节格式规范
-- `resource/design.md` — 设计步骤文档的必要章节格式规范（Step Type、Auto/Manual Verification）
+- `resources/task-context.md` — 任务工作模式上下文模板（同时安装为 CLAUDE.md 和 AGENTS.md）
+- `resources/task-state.md` — task-state.md 格式模板
+- `resources/requirements-feature.md` — feature 类需求文档的必要章节格式规范
+- `resources/requirements-refactor.md` — refactor 类需求文档的必要章节格式规范
+- `resources/design.md` — 设计步骤文档的必要章节格式规范（Step Type、Auto/Manual Verification）

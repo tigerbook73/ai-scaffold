@@ -78,7 +78,7 @@ test("removes rule entry when file no longer exists in rules/", () => {
  *   - [PASS] derives name from directory name when creating unit.json
  *   - [PASS] defaults dependencies to empty array when absent from existing unit.json
  *   - [PASS] omits hook when no existing entry for the script
- *   - [PASS] ignores test and spec files when discovering scripts
+ *   - [PASS] ignores test, spec, and nested files when discovering scripts
  */
 test("derives name from directory name when creating unit.json", () => {
   const dir = makeTempDir();
@@ -126,13 +126,15 @@ test("omits hook when no existing entry for the script", () => {
   }
 });
 
-test("ignores test and spec files when discovering scripts", () => {
+test("ignores test, spec, and nested files when discovering scripts", () => {
   const dir = makeTempDir();
   try {
     mkdirSync(join(dir, "scripts"));
+    mkdirSync(join(dir, "scripts", "types"));
     writeFileSync(join(dir, "scripts", "check-test-review.ts"), "// hook script");
     writeFileSync(join(dir, "scripts", "check-test-review.test.ts"), "// test script");
     writeFileSync(join(dir, "scripts", "check-test-review.spec.ts"), "// spec script");
+    writeFileSync(join(dir, "scripts", "types", "types.ts"), "// nested type helper");
     writeUnit(dir, {
       name: "x",
       description: "d",
@@ -142,6 +144,7 @@ test("ignores test and spec files when discovering scripts", () => {
           { name: "check-test-review", file: "scripts/check-test-review.ts", hook: "pre-commit" },
           { name: "check-test-review.test", file: "scripts/check-test-review.test.ts" },
           { name: "check-test-review.spec", file: "scripts/check-test-review.spec.ts" },
+          { name: "types", file: "scripts/types/types.ts" },
         ],
       },
     });

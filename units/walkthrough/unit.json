@@ -1,0 +1,37 @@
+{
+  "name": "walkthrough",
+  "description": "创建和恢复结构化代码走读，按变更分组生成可导航的讲解状态",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      {
+        "name": "create-walkthrough",
+        "file": "skills/create-walkthrough.md"
+      },
+      {
+        "name": "start-walkthrough",
+        "file": "skills/start-walkthrough.md"
+      }
+    ],
+    "scripts": [
+      {
+        "name": "walkthrough-state",
+        "file": "scripts/walkthrough-state.ts"
+      }
+    ],
+    "resources": [
+      {
+        "name": "readme",
+        "file": "resources/readme.md"
+      },
+      {
+        "name": "strategy",
+        "file": "resources/strategy.md"
+      },
+      {
+        "name": "walkthrough-loop",
+        "file": "resources/walkthrough-loop.md"
+      }
+    ]
+  }
+}

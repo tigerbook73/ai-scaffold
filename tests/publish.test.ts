@@ -4,7 +4,7 @@
  * @ai-generated
  * @reviewed-by
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -119,14 +119,15 @@ test("publishUnit cleans stale files when re-published", () => {
 
 /**
  * @test-suite  publishUnit script compilation
- * @target      Publish.run() → compileScripts(): esbuild bundles .ts → .js
+ * @target      Publish.run() → compileUnitScripts(): esbuild bundles declared .ts scripts → .js
  * @strategy    integration; creates real .ts entry, verifies compiled .js output
  * @cases
- *   - [PASS] compiles .ts to .js with CJS format and strips TypeScript syntax
+ *   - [PASS] compiles declared .ts scripts to .js with CJS format and strips TypeScript syntax
  *   - [PASS] compiled output is executable by node
  *   - [PASS] non-.ts files in scripts/ are not copied to dest
+ *   - [PASS] nested .ts files in scripts/ are not compiled
  */
-test("publishUnit compiles scripts/*.ts to .js with CJS format and strips TypeScript syntax", () => {
+test("publishUnit compiles declared scripts/*.ts to .js with CJS format and strips TypeScript syntax", () => {
   const dir = makeTempDir();
   try {
     makeRepoSkeleton(dir);
@@ -134,7 +135,11 @@ test("publishUnit compiles scripts/*.ts to .js with CJS format and strips TypeSc
     mkdirSync(join(unitDir, "scripts"), { recursive: true });
     writeFileSync(
       join(unitDir, "unit.json"),
-      JSON.stringify({ name: "my-unit", dependencies: [], components: {} }),
+      JSON.stringify({
+        name: "my-unit",
+        dependencies: [],
+        components: { scripts: [{ name: "hook", file: "scripts/hook.ts" }] },
+      }),
     );
     writeFileSync(
       join(unitDir, "scripts", "hook.ts"),
@@ -168,7 +173,11 @@ test("compiled unit script is executable by node", () => {
     mkdirSync(join(unitDir, "scripts"), { recursive: true });
     writeFileSync(
       join(unitDir, "unit.json"),
-      JSON.stringify({ name: "my-unit", dependencies: [], components: {} }),
+      JSON.stringify({
+        name: "my-unit",
+        dependencies: [],
+        components: { scripts: [{ name: "hook", file: "scripts/hook.ts" }] },
+      }),
     );
     writeFileSync(
       join(unitDir, "scripts", "hook.ts"),
@@ -178,7 +187,7 @@ test("compiled unit script is executable by node", () => {
     makePublish(dir).run();
 
     const outJs = join(dir, ".aisk", "units", "my-unit", "scripts", "hook.js");
-    const output = execSync(`node "${outJs}"`, { encoding: "utf8" });
+    const output = execFileSync("node", [outJs], { encoding: "utf8" });
     expect(output.trim()).toBe("hook-ok");
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -193,7 +202,11 @@ test("publishUnit does not copy non-.ts files from scripts/", () => {
     mkdirSync(join(unitDir, "scripts"), { recursive: true });
     writeFileSync(
       join(unitDir, "unit.json"),
-      JSON.stringify({ name: "my-unit", dependencies: [], components: {} }),
+      JSON.stringify({
+        name: "my-unit",
+        dependencies: [],
+        components: { scripts: [{ name: "hook", file: "scripts/hook.ts" }] },
+      }),
     );
     writeFileSync(join(unitDir, "scripts", "hook.ts"), "process.exit(0);\n");
     writeFileSync(join(unitDir, "scripts", "readme.md"), "should not be copied");
@@ -201,6 +214,38 @@ test("publishUnit does not copy non-.ts files from scripts/", () => {
     makePublish(dir).run();
 
     expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "readme.md"))).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("publishUnit does not compile nested .ts files from scripts/", () => {
+  const dir = makeTempDir();
+  try {
+    makeRepoSkeleton(dir);
+    const unitDir = join(dir, "units", "my-unit");
+    mkdirSync(join(unitDir, "scripts"), { recursive: true });
+    mkdirSync(join(unitDir, "scripts", "types"), { recursive: true });
+    writeFileSync(
+      join(unitDir, "unit.json"),
+      JSON.stringify({
+        name: "my-unit",
+        dependencies: [],
+        components: { scripts: [{ name: "hook", file: "scripts/hook.ts" }] },
+      }),
+    );
+    writeFileSync(join(unitDir, "scripts", "hook.ts"), "process.exit(0);\n");
+    writeFileSync(join(unitDir, "scripts", "hook.test.ts"), "process.exit(0);\n");
+    writeFileSync(join(unitDir, "scripts", "types", "types.ts"), "export type X = string;\n");
+
+    makePublish(dir).run();
+
+    expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "hook.js"))).toBe(true);
+    expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "hook.test.js"))).toBe(
+      false,
+    );
+    expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "types.js"))).toBe(false);
+    expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "types"))).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

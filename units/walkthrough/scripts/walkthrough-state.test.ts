@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { expect, test } from "vitest";
 
-const repoRoot = resolve(__dirname, "../../../..");
+const repoRoot = resolve(__dirname, "../../..");
 const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
 const scriptPath = join(__dirname, "walkthrough-state.ts");
 
@@ -57,9 +57,9 @@ test("init creates index.json when called with valid key and index", () => {
       dir,
     );
     expect(result.status).toBe(0);
-    expect(existsSync(join(dir, ".ai-skills", "walkthrough", "test-branch", "index.json"))).toBe(
-      true,
-    );
+    expect(
+      existsSync(join(dir, ".aisk", "walkthrough", "state", "test-branch", "index.json")),
+    ).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -313,7 +313,7 @@ test("finish sets status to completed and preserves state directory", () => {
     expect(result.status).toBe(0);
     const state = JSON.parse(run(["read", "--key", "k"], dir).stdout) as typeof BASE_INDEX;
     expect(state.status).toBe("completed");
-    expect(existsSync(join(dir, ".ai-skills", "walkthrough", "k"))).toBe(true);
+    expect(existsSync(join(dir, ".aisk", "walkthrough", "state", "k"))).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -333,7 +333,7 @@ test("delete removes state directory when key exists", () => {
     run(["init", "--key", "k", "--index", JSON.stringify(BASE_INDEX)], dir);
     const result = run(["delete", "--key", "k"], dir);
     expect(result.status).toBe(0);
-    expect(existsSync(join(dir, ".ai-skills", "walkthrough", "k"))).toBe(false);
+    expect(existsSync(join(dir, ".aisk", "walkthrough", "state", "k"))).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

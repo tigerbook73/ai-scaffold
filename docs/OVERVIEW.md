@@ -69,9 +69,11 @@ units/{unit}/
 | `confirm-intent`   | 执行前确认用户预期结果的 Codex skill     |
 | `quick-ship`       | 审查变更、创建分支、提交、PR、合并的流程 |
 | `smart-review`     | 对文件、模块或目录进行迭代式审查和修复   |
+| `task`             | 结构化开发任务的创建、恢复、验证和完成   |
 | `poc`              | 覆盖 skill/rule/script/resource 的 PoC   |
 | `poc-dep`          | `poc` 的依赖 unit                        |
 | `test-review-gate` | 测试审查规则、pre-commit hook 和 CI 工具 |
+| `walkthrough`      | 结构化代码走读的创建、恢复和导航         |
 
 全局顺序由 `units/units.json` 维护，依赖总是排在被依赖方之前。
 

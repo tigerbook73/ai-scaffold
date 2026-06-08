@@ -17,9 +17,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from "fs";
 import { join } from "path";
 import { cac } from "cac";
-import type { Index } from "./types";
+import type { Index } from "./types/types";
 
-const BASE_DIR = join(process.cwd(), ".ai-skills", "walkthrough");
+const BASE_DIR = join(process.cwd(), ".aisk", "walkthrough", "state");
 
 class WalkthroughState {
   private stateDir(key: string): string {

@@ -17,8 +17,8 @@
 
 以下自然语言指令在任务工作模式下有效：
 
-- **plan requirements / refresh requirements** —— 若 `requirements.md` 不存在，创建它并将其添加到 `task-state.md` 的 Document Index；填写或更新其内容；读取 `{repo}/skills/task/resource/requirements-{task-type}.md` 了解必要章节；刷新时保留用户已写内容，仅填写缺失章节或补入对话中讨论的变更；同步 task-state.md 的 Requirements Phase 状态
-- **plan design / refresh design** —— 若 `design.md` 不存在，创建它并将其添加到 `task-state.md` 的 Document Index；根据需求生成或更新内容；必须将工作拆解为有编号的步骤；读取 `{repo}/skills/task/resource/design.md` 了解每步骤的必要章节格式；同步 task-state.md：Design Phase 状态 → `in_progress`，Current Phase → `design (in_progress)`，为 Implementation Phase 中每个步骤添加条目并设置 `step-type`
+- **plan requirements / refresh requirements** —— 若 `requirements.md` 不存在，创建它并将其添加到 `task-state.md` 的 Document Index；填写或更新其内容；读取 `.aisk/task/resources/requirements-{task-type}.md` 了解必要章节；刷新时保留用户已写内容，仅填写缺失章节或补入对话中讨论的变更；同步 task-state.md 的 Requirements Phase 状态
+- **plan design / refresh design** —— 若 `design.md` 不存在，创建它并将其添加到 `task-state.md` 的 Document Index；根据需求生成或更新内容；必须将工作拆解为有编号的步骤；读取 `.aisk/task/resources/design.md` 了解每步骤的必要章节格式；同步 task-state.md：Design Phase 状态 → `in_progress`，Current Phase → `design (in_progress)`，为 Implementation Phase 中每个步骤添加条目并设置 `step-type`
 - **start implementation / implement step N** —— 按设计文档开始第 N 步的编码；先检查步骤的 **Step Type**：`final` 步骤必须产出生产质量的代码和测试 —— 源码、测试文件或文件名中不得出现步骤标记（`// Step N:`、`TODO(step-N):` 等）；文件名使用最终生产名称（如 `user.test.ts`，而非 `step2-user.test.ts`）；与实现同步编写测试（或按设计委托）；若后续步骤修改同一模块，可在同一测试文件中修改早期步骤的测试 —— 这是预期行为；`intermediate` 步骤可产出过渡代码 —— 在源码或设计中注明哪个步骤会最终完成它；更新 task-state.md 的 Current Step
 - **commit** —— 生成符合 Conventional Commits 规范的提交信息；更新已完成步骤的 task-state.md（记录 commit hash，将状态设为 done）
   - 步骤提交格式：`{type}(step-N): {step-title}`（type 与分支类型一致：feat / refactor）

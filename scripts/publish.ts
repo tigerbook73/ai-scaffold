@@ -1,7 +1,16 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
 import { join, extname, resolve } from "path";
 import { homedir } from "os";
 import { buildSync } from "esbuild";
+import type { UnitJson } from "../global/scripts/installer-types";
 
 interface AisfConfig {
   repoPath: string;
@@ -49,6 +58,7 @@ export class Publish {
   private publishUnit(unitSrcDir: string, unitName: string): void {
     const unitJsonPath = join(unitSrcDir, "unit.json");
     if (!existsSync(unitJsonPath)) return;
+    const unitJson = JSON.parse(readFileSync(unitJsonPath, "utf8")) as UnitJson;
 
     const destDir = join(this.aiskHome, "units", unitName);
     if (existsSync(destDir)) rmSync(destDir, { recursive: true, force: true });
@@ -63,7 +73,7 @@ export class Publish {
 
     const scriptsSrc = join(unitSrcDir, "scripts");
     if (existsSync(scriptsSrc)) {
-      this.compileScripts(scriptsSrc, join(destDir, "scripts"));
+      this.compileUnitScripts(unitJson, scriptsSrc, join(destDir, "scripts"));
     }
 
     console.log(`  unit: ${unitName}`);
@@ -115,6 +125,19 @@ export class Publish {
     mkdirSync(destDir, { recursive: true });
     for (const file of readdirSync(srcDir).filter((f) => extname(f) === ".ts")) {
       this.bundle(join(srcDir, file), join(destDir, file.replace(/\.ts$/, ".js")));
+    }
+  }
+
+  private compileUnitScripts(unitJson: UnitJson, srcDir: string, destDir: string): void {
+    const scripts = unitJson.components.scripts ?? [];
+    if (scripts.length === 0) return;
+
+    mkdirSync(destDir, { recursive: true });
+    for (const script of scripts) {
+      this.bundle(
+        join(srcDir, script.file.replace(/^scripts\//, "")),
+        join(destDir, `${script.name}.js`),
+      );
     }
   }
 
