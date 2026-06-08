@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "fs";
-import { basename, dirname, join } from "path";
+import { dirname, join } from "path";
 import { homedir } from "os";
 import { cac } from "cac";
 import { addPreCommitHook, removePreCommitHook } from "./precommit-lefthook";
@@ -78,7 +78,11 @@ export class Installer {
       .map((dir) => {
         const unitJson = this.readUnitJson(dir);
         if (!unitJson) return null;
-        return { name: dir, description: unitJson.description ?? "", installed: dir in installed.units };
+        return {
+          name: dir,
+          description: unitJson.description ?? "",
+          installed: dir in installed.units,
+        };
       })
       .filter((u): u is NonNullable<typeof u> => u !== null);
   }
@@ -129,8 +133,12 @@ export class Installer {
 
     resolveTransitive(selectedNames);
 
-    const to_remove = this.sortByGlobalOrder([...installedNames].filter((n) => !fullRequired.has(n)));
-    const to_install = this.sortByGlobalOrder([...fullRequired].filter((n) => !installedNames.has(n)));
+    const to_remove = this.sortByGlobalOrder(
+      [...installedNames].filter((n) => !fullRequired.has(n)),
+    );
+    const to_install = this.sortByGlobalOrder(
+      [...fullRequired].filter((n) => !installedNames.has(n)),
+    );
     const to_update = this.sortByGlobalOrder(selectedNames.filter((n) => installedNames.has(n)));
     const order = this.sortByGlobalOrder([...to_install, ...to_update]);
 
@@ -195,7 +203,11 @@ export class Installer {
    * @param optionalNames Typed component names the user selected.
    * @returns Array of items describing each hasCustom component that needs AI-generated content.
    */
-  private buildPrepareItems(unitName: string, unitJson: UnitJson, optionalNames: string[]): PrepareItem[] {
+  private buildPrepareItems(
+    unitName: string,
+    unitJson: UnitJson,
+    optionalNames: string[],
+  ): PrepareItem[] {
     const entry = this.readInstalled().units[unitName];
     const items: PrepareItem[] = [];
 
@@ -213,7 +225,14 @@ export class Installer {
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
       mkdirSync(dirname(targetPath), { recursive: true });
       const currentPath = entry?.components.skills.find((c) => c.name === comp.name)?.path;
-      items.push({ componentType: "skill", templatePath, targetPath, currentPath, tempPath, exists: existsSync(targetPath) });
+      items.push({
+        componentType: "skill",
+        templatePath,
+        targetPath,
+        currentPath,
+        tempPath,
+        exists: existsSync(targetPath),
+      });
     }
 
     for (const comp of unitJson.components.rules ?? []) {
@@ -224,7 +243,14 @@ export class Installer {
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
       mkdirSync(dirname(targetPath), { recursive: true });
       const currentPath = entry?.components.rules.find((c) => c.name === comp.name)?.path;
-      items.push({ componentType: "rule", templatePath, targetPath, currentPath, tempPath, exists: existsSync(targetPath) });
+      items.push({
+        componentType: "rule",
+        templatePath,
+        targetPath,
+        currentPath,
+        tempPath,
+        exists: existsSync(targetPath),
+      });
     }
 
     for (const comp of unitJson.components.resources ?? []) {
@@ -235,7 +261,14 @@ export class Installer {
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
       mkdirSync(dirname(targetPath), { recursive: true });
       const currentPath = entry?.components.resources.find((c) => c.name === comp.name)?.path;
-      items.push({ componentType: "resource", templatePath, targetPath, currentPath, tempPath, exists: existsSync(targetPath) });
+      items.push({
+        componentType: "resource",
+        templatePath,
+        targetPath,
+        currentPath,
+        tempPath,
+        exists: existsSync(targetPath),
+      });
     }
 
     return items;
@@ -444,26 +477,38 @@ export class Installer {
     for (const comp of entry.components.skills) {
       if (!newSkillNames.has(comp.name)) {
         const fullPath = join(this.cwd, comp.path);
-        if (existsSync(fullPath)) { rmSync(fullPath); this.tryRemoveEmptyDir(fullPath); }
+        if (existsSync(fullPath)) {
+          rmSync(fullPath);
+          this.tryRemoveEmptyDir(fullPath);
+        }
       }
     }
     for (const comp of entry.components.rules) {
       if (!newRuleNames.has(comp.name)) {
         const fullPath = join(this.cwd, comp.path);
-        if (existsSync(fullPath)) { rmSync(fullPath); this.tryRemoveEmptyDir(fullPath); }
+        if (existsSync(fullPath)) {
+          rmSync(fullPath);
+          this.tryRemoveEmptyDir(fullPath);
+        }
       }
     }
     for (const comp of entry.components.resources) {
       if (!newResourceNames.has(comp.name)) {
         const fullPath = join(this.cwd, comp.path);
-        if (existsSync(fullPath)) { rmSync(fullPath); this.tryRemoveEmptyDir(fullPath); }
+        if (existsSync(fullPath)) {
+          rmSync(fullPath);
+          this.tryRemoveEmptyDir(fullPath);
+        }
       }
     }
     for (const comp of entry.components.scripts) {
       if (!newScriptNames.has(comp.name)) {
         removePreCommitHook(this.cwd, `aisf-${unitName}-${comp.name}`);
         const fullPath = join(this.cwd, comp.path);
-        if (existsSync(fullPath)) { rmSync(fullPath); this.tryRemoveEmptyDir(fullPath); }
+        if (existsSync(fullPath)) {
+          rmSync(fullPath);
+          this.tryRemoveEmptyDir(fullPath);
+        }
       }
     }
   }
@@ -515,7 +560,10 @@ export class Installer {
       cpSync(src, destFile);
     }
 
-    return { name: spec.name, path: join(".claude", "skills", `aisf-${unitName}-${spec.name}`, "SKILL.md") };
+    return {
+      name: spec.name,
+      path: join(".claude", "skills", `aisf-${unitName}-${spec.name}`, "SKILL.md"),
+    };
   }
 
   /**
@@ -550,7 +598,10 @@ export class Installer {
       cpSync(templatePath, destFile);
     }
 
-    return { name: spec.name, path: join(".claude", "rules", `aisf-${unitName}`, `${spec.name}.md`) };
+    return {
+      name: spec.name,
+      path: join(".claude", "rules", `aisf-${unitName}`, `${spec.name}.md`),
+    };
   }
 
   /**
@@ -677,8 +728,11 @@ if (require.main === module) {
     .action(() => new Installer().listUnits());
 
   cli
-    .command("resolve <...units>", "Resolve transitive deps and output install order")
-    .action((units: string[]) => new Installer().checkDeps(units));
+    .command(
+      "resolve [...units]",
+      "Resolve transitive deps and output install order; no args means uninstall all",
+    )
+    .action((units: string[]) => new Installer().checkDeps(units ?? []));
 
   cli
     .command("prepare <unit>", "Return hasCustom component info and pre-create target dirs")

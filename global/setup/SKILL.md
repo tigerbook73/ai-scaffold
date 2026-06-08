@@ -51,7 +51,9 @@ node ~/.aisf/global/installer.js list
 
 ### 2. 依赖解析与变更计算
 
-选中完成后，将**完整的期望选中列表**传给 resolve，由 installer 负责计算 changeset 并解析依赖：
+**若选中列表为空**（用户全部删除），跳过 resolve 调用，直接以所有已安装的 unit 作为 `to_remove`，`to_install`、`to_update`、`auto`、`order` 均为空，进入步骤 3。
+
+否则，将**完整的期望选中列表**传给 resolve，由 installer 负责计算 changeset 并解析依赖：
 
 ```
 node ~/.aisf/global/installer.js resolve {所有选中的 unit 名称，空格分隔}
