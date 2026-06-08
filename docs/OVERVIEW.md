@@ -139,7 +139,7 @@ pnpm exec vitest run units/test-review-gate/scripts/check-test-review.test.ts
 职责：
 
 1. 校验 `~/.aisk/config.json` 是否由当前仓库发布
-2. 删除 `~/.aisk/units/`、`~/.aisk/global/` 和 `~/.aisk/config.json`
+2. 删除 `~/.aisk/` 下的所有内容，但保留 `~/.aisk/` 目录
 3. 删除 `~/.claude/skills/` 下由本仓库发布的 `aisk:*` 全局管理 skill
 
 ## 目标项目安装器

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, rmSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
@@ -7,15 +7,21 @@ interface AisfConfig {
   publishedAt: string;
 }
 
-class Clean {
+interface CleanOptions {
+  repoRoot?: string;
+  aiskHome?: string;
+  claudeSkillsDir?: string;
+}
+
+export class Clean {
   private readonly repoRoot: string;
   private readonly aiskHome: string;
   private readonly claudeSkillsDir: string;
 
-  constructor() {
-    this.repoRoot = resolve(__dirname, "..");
-    this.aiskHome = join(homedir(), ".aisk");
-    this.claudeSkillsDir = join(homedir(), ".claude", "skills");
+  constructor({ repoRoot, aiskHome, claudeSkillsDir }: CleanOptions = {}) {
+    this.repoRoot = repoRoot ?? resolve(__dirname, "..");
+    this.aiskHome = aiskHome ?? join(homedir(), ".aisk");
+    this.claudeSkillsDir = claudeSkillsDir ?? join(homedir(), ".claude", "skills");
   }
 
   run(): void {
@@ -35,15 +41,11 @@ class Clean {
 
     console.log("Cleaning ~/.aisk/ and ~/.claude/skills/aisk:* ...\n");
 
-    for (const subdir of ["units", "global"]) {
-      const target = join(this.aiskHome, subdir);
-      if (existsSync(target)) {
-        rmSync(target, { recursive: true, force: true });
-        console.log(`  Removed: ~/.aisk/${subdir}/`);
-      }
+    mkdirSync(this.aiskHome, { recursive: true });
+    for (const entry of readdirSync(this.aiskHome)) {
+      rmSync(join(this.aiskHome, entry), { recursive: true, force: true });
+      console.log(`  Removed: ~/.aisk/${entry}`);
     }
-    rmSync(configPath, { force: true });
-    console.log("  Removed: ~/.aisk/config.json");
 
     if (existsSync(this.claudeSkillsDir)) {
       for (const entry of readdirSync(this.claudeSkillsDir)) {
@@ -58,4 +60,6 @@ class Clean {
   }
 }
 
-new Clean().run();
+if (require.main === module) {
+  new Clean().run();
+}
