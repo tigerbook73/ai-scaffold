@@ -24,9 +24,7 @@ Use `AISK:CUSTOM` blocks for frontmatter fields that should be customized per-pr
 
 ```yaml
 ---
-# AISK:CUSTOM name="paths" hint="describe how to derive the value"
 paths: ["**/*.placeholder"]
-# AISK:CUSTOM:END
 description: short description of what this rule does
 ---
 ```

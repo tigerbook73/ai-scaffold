@@ -10,9 +10,9 @@
 export interface UnitSkillEntry {
   name: string;
   file: string;
-  /** Whether this component requires AI-generated custom content before installation. */
+  /** Whether this component contains AISF:CUSTOM blocks requiring user customization. */
   hasCustom?: boolean;
-  /** If set, the component is optional and must be explicitly selected to be installed. */
+  /** If set, the component is optional. */
   condition?: string;
 }
 
@@ -22,7 +22,7 @@ export interface UnitRuleEntry {
   file: string;
   hasCustom?: boolean;
   condition?: string;
-  /** Hint shown to the AI when generating custom content for this rule. */
+  /** Hint shown when the AISF:CUSTOM block needs to be filled. */
   hint?: string;
 }
 
@@ -66,6 +66,8 @@ export interface InstalledComponent {
   name: string;
   /** Project-relative path of the installed file. */
   path: string;
+  /** Customization status for hasCustom components. undefined = no AISF:CUSTOM blocks. */
+  customStatus?: "todo" | "done";
 }
 
 /** Installation record for a single unit, written into .aisk/installed.json. */
@@ -85,29 +87,98 @@ export interface InstalledJson {
   units: Record<string, InstalledEntry>;
 }
 
-// ─── prepare command output ───────────────────────────────────────────────────
+// ─── command output types ─────────────────────────────────────────────────────
 
-/**
- * One item in the array returned by `installer prepare`.
- * Describes a hasCustom component that needs AI-generated content before installation.
- * The caller writes rendered content to `tempPath`, then calls `installer install`.
- */
-export interface PrepareItem {
-  componentType: "skill" | "rule" | "resource";
-  /** Path to the unit's source template file. */
-  templatePath: string;
-  /** Final destination path where the component will be installed. */
-  targetPath: string;
-  /**
-   * Previously installed path for this component name, if recorded in installed.json.
-   * Present when the component was installed before, even if the path changed since the last install.
-   * Use this to read existing content when generating updated content.
-   */
-  currentPath?: string;
-  /** Temporary staging path — write rendered content here; install() moves it to targetPath. */
-  tempPath: string;
-  /** Whether targetPath already exists (true = update, false = first install). */
-  exists: boolean;
+/** Result for a single installed/updated/removed component. */
+export interface ComponentOpResult {
+  type: "skill" | "rule" | "script" | "resource";
+  name: string;
+  path: string;
+  /** Customization status; undefined means no AISF:CUSTOM blocks. */
+  customStatus?: "todo" | "done";
+  /** lefthook hook name if this script was registered. */
+  hook?: string;
+  /** Whether this component is optional (has a condition field). */
+  optional?: boolean;
+}
+
+/** Result for a single unit in a batch add/update operation. */
+export interface UnitOpResult {
+  name: string;
+  /** True if this unit was auto-added as a transitive dependency. */
+  autoDep?: boolean;
+  components: ComponentOpResult[];
+}
+
+/** A unit that failed to process. */
+export interface FailedUnit {
+  name: string;
+  reason: string;
+}
+
+/** Output of the add command. */
+export interface AddResult {
+  added: UnitOpResult[];
+  updated: UnitOpResult[];
+  failed: FailedUnit[];
+}
+
+/** Output of the remove command. */
+export interface RemoveResult {
+  removed: UnitOpResult[];
+  failed: FailedUnit[];
+}
+
+/** Output of the update command. */
+export interface UpdateResult {
+  updated: UnitOpResult[];
+  failed: FailedUnit[];
+}
+
+/** A file with pending todo customization, grouped by unit. */
+export interface RefreshTodoUnit {
+  unit: string;
+  files: string[];
+}
+
+/** Output of the refresh command (silent mode omits this). */
+export interface RefreshResult {
+  todo: RefreshTodoUnit[];
+}
+
+/** A component entry in the show command output. */
+export interface ShowComponentResult {
+  type: "skill" | "rule" | "script" | "resource";
+  name: string;
+  optional: boolean;
+  condition?: string;
+  /** Present only for installed components. */
+  customStatus?: "todo" | "done";
+  hook?: string;
+  installed: boolean;
+}
+
+/** Output of the show command. */
+export interface ShowResult {
+  name: string;
+  description: string;
+  dependencies: string[];
+  installed: boolean;
+  components: ShowComponentResult[];
+}
+
+/** A unit entry in the list command output. */
+export interface ListUnit {
+  name: string;
+  description: string;
+  installed: boolean;
+  /** True if any installed component has customStatus "todo". */
+  hasTodo?: boolean;
+}
+
+/** Output of the list command. */
+export interface ListResult {
+  units: ListUnit[];
 }
 
 // ─── resolve command output ───────────────────────────────────────────────────
@@ -134,11 +205,13 @@ export interface ResolveResult {
 /** Resolved install spec for a skill component (condition stripped — filter-only field). */
 export interface SkillSpec extends Omit<UnitSkillEntry, "condition"> {
   type: "skill";
+  optional?: boolean;
 }
 
 /** Resolved install spec for a rule component. */
 export interface RuleSpec extends Omit<UnitRuleEntry, "condition"> {
   type: "rule";
+  optional?: boolean;
 }
 
 /** Resolved install spec for a pre-commit script component. */
@@ -149,7 +222,23 @@ export interface ScriptSpec extends UnitScriptEntry {
 /** Resolved install spec for a resource component. */
 export interface ResourceSpec extends Omit<UnitResourceEntry, "condition"> {
   type: "resource";
+  optional?: boolean;
 }
 
 /** Union of all resolved component spec types. */
 export type ComponentSpec = SkillSpec | RuleSpec | ScriptSpec | ResourceSpec;
+
+// ─── AISF:CUSTOM block (installer-internal) ───────────────────────────────────
+
+/** A parsed AISF:CUSTOM block found in an installed component file. */
+export interface CustomBlock {
+  name: string;
+  status: "todo" | "done";
+  hint: string;
+  /** 0-indexed line number of the start marker. */
+  startLine: number;
+  /** 0-indexed line number of the end marker. */
+  endLine: number;
+  /** Lines between start and end markers (exclusive). */
+  content: string[];
+}

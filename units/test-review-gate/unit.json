@@ -15,6 +15,10 @@
         "file": "scripts/check-test-cases.ts"
       },
       {
+        "name": "check-test-review.test",
+        "file": "scripts/check-test-review.test.ts"
+      },
+      {
         "name": "check-test-review",
         "file": "scripts/check-test-review.ts",
         "hook": "pre-commit"

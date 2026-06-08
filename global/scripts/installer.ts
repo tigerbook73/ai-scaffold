@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "fs";
-import { dirname, join } from "path";
+import { dirname, join, relative } from "path";
 import { homedir } from "os";
 import { cac } from "cac";
 import { addPreCommitHook, removePreCommitHook } from "./precommit-lefthook";
@@ -17,21 +17,114 @@ import type {
   InstalledComponent,
   InstalledEntry,
   InstalledJson,
-  SkillSpec,
-  RuleSpec,
   ScriptSpec,
-  ResourceSpec,
   ComponentSpec,
-  PrepareItem,
+  CustomBlock,
+  AddResult,
+  RemoveResult,
+  UpdateResult,
+  RefreshResult,
+  ShowResult,
+  ListResult,
+  ComponentOpResult,
   ResolveResult,
 } from "./installer-types";
 
-export type { PrepareItem, ResolveResult };
+export type { ResolveResult, AddResult, RemoveResult, UpdateResult, RefreshResult, ShowResult };
+
+// ─── AISF:CUSTOM block utilities ─────────────────────────────────────────────
+
+const CUSTOM_START_RE =
+  /^(#|<!--)\s*AISF:CUSTOM\s+name="([^"]+)"\s+status="([^"]+)"\s+hint="([^"]*)".*$/;
+const CUSTOM_END_HASH_RE = /^#\s*AISF:CUSTOM:END/;
+const CUSTOM_END_HTML_RE = /^<!--\s*AISF:CUSTOM:END/;
+
+/** Parse all AISF:CUSTOM blocks from file content. */
+function parseCustomBlocks(content: string): CustomBlock[] {
+  const lines = content.split("\n");
+  const blocks: CustomBlock[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const m = CUSTOM_START_RE.exec(lines[i]);
+    if (m) {
+      const commentStyle = m[1] as "#" | "<!--";
+      const name = m[2];
+      const status = m[3] as "todo" | "done";
+      const hint = m[4];
+      const startLine = i;
+      const endRe = commentStyle === "#" ? CUSTOM_END_HASH_RE : CUSTOM_END_HTML_RE;
+
+      const contentLines: string[] = [];
+      i++;
+      while (i < lines.length && !endRe.test(lines[i])) {
+        contentLines.push(lines[i]);
+        i++;
+      }
+
+      blocks.push({ name, status, hint, startLine, endLine: i, content: contentLines });
+    }
+    i++;
+  }
+
+  return blocks;
+}
+
+/** Merge done blocks from oldContent into newTemplate, preserving new template hints. */
+function mergeCustomContent(oldContent: string, newTemplate: string): string {
+  const oldBlocks = parseCustomBlocks(oldContent);
+  const doneMap = new Map<string, string[]>();
+  for (const b of oldBlocks) {
+    if (b.status === "done") doneMap.set(b.name, b.content);
+  }
+
+  if (doneMap.size === 0) return newTemplate;
+
+  const lines = newTemplate.split("\n");
+  const result: string[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const m = CUSTOM_START_RE.exec(lines[i]);
+    if (m) {
+      const commentStyle = m[1] as "#" | "<!--";
+      const name = m[2];
+      const endRe = commentStyle === "#" ? CUSTOM_END_HASH_RE : CUSTOM_END_HTML_RE;
+      const doneContent = doneMap.get(name);
+      const newStatus = doneContent ? "done" : "todo";
+
+      // Rewrite start line with updated status, keeping everything else
+      result.push(lines[i].replace(/status="[^"]+"/, `status="${newStatus}"`));
+
+      if (doneContent) {
+        // Skip new template's block content
+        i++;
+        while (i < lines.length && !endRe.test(lines[i])) i++;
+        // Insert done content from old file
+        result.push(...doneContent);
+      } else {
+        // Keep new template content as-is
+        i++;
+        while (i < lines.length && !endRe.test(lines[i])) {
+          result.push(lines[i]);
+          i++;
+        }
+      }
+
+      if (i < lines.length) result.push(lines[i]); // END line
+    } else {
+      result.push(lines[i]);
+    }
+    i++;
+  }
+
+  return result.join("\n");
+}
 
 // ─── Installer ───────────────────────────────────────────────────────────────
 
 /**
- * Core installer that manages unit lifecycle (list, resolve, prepare, install, uninstall)
+ * Core installer that manages unit lifecycle (list, add, remove, update, refresh, show)
  * for a given project directory.
  */
 export class Installer {
@@ -49,18 +142,857 @@ export class Installer {
     this.aiskHome = aiskHome;
   }
 
-  /** Outputs JSON listing all available units with their install status. */
-  listUnits(): void {
-    const units = this.getUnitList();
-    process.stdout.write(JSON.stringify({ units }, null, 2) + "\n");
+  // ─── Public API ────────────────────────────────────────────────────────────
+
+  /** List all available units with their install and customization status. */
+  list(): void {
+    const installed = this.readInstalled();
+    const unitList = this.getUnitList();
+
+    const units: ListResult["units"] = unitList.map((u) => {
+      const entry = installed.units[u.name];
+      const hasTodo = entry
+        ? [
+            ...entry.components.skills,
+            ...entry.components.rules,
+            ...entry.components.resources,
+          ].some((c) => c.customStatus === "todo")
+        : undefined;
+
+      return {
+        name: u.name,
+        description: u.description,
+        installed: u.installed,
+        ...(hasTodo ? { hasTodo: true } : {}),
+      };
+    });
+
+    process.stdout.write(JSON.stringify({ units } satisfies ListResult, null, 2) + "\n");
   }
 
   /**
-   * Scans ~/.aisk/units/ and returns metadata for every available unit,
-   * ordered by the pre-computed global order from ~/.aisk/units.json.
-   *
-   * @returns Array of unit descriptors in dependency-stable order.
+   * Add one or more units. "all" installs all available units.
+   * If a unit is already installed, it is updated instead.
+   * Transitive dependencies that are not installed are auto-installed.
    */
+  add(names: string[]): void {
+    const installed = this.readInstalled();
+    const available = this.getUnitList().map((u) => u.name);
+    const availableSet = new Set(available);
+
+    const requestedNames = names.includes("all")
+      ? available.filter((n) => !installed.units[n])
+      : names;
+
+    const result: AddResult = { added: [], updated: [], failed: [] };
+
+    // Validate and split
+    const toInstall: string[] = [];
+    const toUpdate: string[] = [];
+
+    for (const name of requestedNames) {
+      if (!availableSet.has(name)) {
+        result.failed.push({ name, reason: "unit 不在注册表中" });
+        continue;
+      }
+      if (installed.units[name]) {
+        toUpdate.push(name);
+      } else {
+        toInstall.push(name);
+      }
+    }
+
+    // Resolve transitive deps for fresh installs (only install uninstalled deps)
+    const { order, autoDeps } = this.resolveFreshDeps(
+      toInstall,
+      new Set(Object.keys(installed.units)),
+      result,
+    );
+
+    // Process fresh installs in dep order
+    for (const name of order) {
+      try {
+        const comps = this.installUnitAllComponents(name);
+        result.added.push({ name, autoDep: autoDeps.has(name), components: comps });
+      } catch (e) {
+        result.failed.push({ name, reason: String(e) });
+      }
+    }
+
+    // Process converts-to-update
+    for (const name of toUpdate) {
+      try {
+        const comps = this.updateUnitComponents(name);
+        result.updated.push({ name, components: comps });
+      } catch (e) {
+        result.failed.push({ name, reason: String(e) });
+      }
+    }
+
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+  }
+
+  /**
+   * Remove one or more installed units. "all" removes all installed units.
+   * Fails per-unit if not installed.
+   */
+  remove(names: string[]): void {
+    const installed = this.readInstalled();
+
+    const requestedNames = names.includes("all") ? Object.keys(installed.units) : names;
+
+    const result: RemoveResult = { removed: [], failed: [] };
+
+    for (const name of requestedNames) {
+      if (!installed.units[name]) {
+        result.failed.push({ name, reason: "unit 未安装" });
+        continue;
+      }
+      try {
+        const comps = this.removeUnitComponents(name);
+        result.removed.push({ name, components: comps });
+      } catch (e) {
+        result.failed.push({ name, reason: String(e) });
+      }
+    }
+
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+  }
+
+  /**
+   * Update one or more installed units. "all" updates all installed units.
+   * Fails per-unit if not installed. Optional components that are not on disk are skipped.
+   * AISF:CUSTOM done blocks are merged into the new template.
+   */
+  update(names: string[]): void {
+    const installed = this.readInstalled();
+    const availableSet = new Set(this.getUnitList().map((u) => u.name));
+
+    const requestedNames = names.includes("all") ? Object.keys(installed.units) : names;
+
+    const result: UpdateResult = { updated: [], failed: [] };
+
+    for (const name of requestedNames) {
+      if (!installed.units[name]) {
+        result.failed.push({ name, reason: "unit 未安装" });
+        continue;
+      }
+      if (!availableSet.has(name)) {
+        result.failed.push({ name, reason: "unit 不在注册表中" });
+        continue;
+      }
+      try {
+        const comps = this.updateUnitComponents(name);
+        result.updated.push({ name, components: comps });
+      } catch (e) {
+        result.failed.push({ name, reason: String(e) });
+      }
+    }
+
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+  }
+
+  /**
+   * Scan all installed component files for AISF:CUSTOM block status,
+   * sync customStatus back to installed.json, and clean up orphaned hooks.
+   * In silent mode (internal calls), produces no output.
+   */
+  refresh(silent = false): void {
+    const installed = this.readInstalled();
+    const todoUnits: RefreshResult["todo"] = [];
+    let anyChanged = false;
+
+    for (const [unitName, entry] of Object.entries(installed.units)) {
+      const todoFiles: string[] = [];
+      let changed = false;
+
+      for (const compList of [
+        entry.components.skills,
+        entry.components.rules,
+        entry.components.resources,
+      ]) {
+        for (const comp of compList) {
+          const absPath = join(this.cwd, comp.path);
+
+          if (!existsSync(absPath)) {
+            // File was manually deleted — clear customStatus
+            if (comp.customStatus !== undefined) {
+              comp.customStatus = undefined;
+              changed = true;
+            }
+            continue;
+          }
+
+          const scanned = this.scanCustomStatus(absPath);
+          if (scanned !== comp.customStatus) {
+            comp.customStatus = scanned;
+            changed = true;
+          }
+          if (scanned === "todo") {
+            todoFiles.push(comp.path);
+          }
+        }
+      }
+
+      // Clean up hooks for scripts whose files no longer exist
+      for (const comp of entry.components.scripts) {
+        const absPath = join(this.cwd, comp.path);
+        if (!existsSync(absPath)) {
+          removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
+        }
+      }
+
+      if (changed) anyChanged = true;
+
+      if (todoFiles.length > 0) {
+        todoUnits.push({ unit: unitName, files: todoFiles });
+      }
+    }
+
+    const installedPath = join(this.cwd, ".aisk", "installed.json");
+    if (anyChanged && existsSync(installedPath)) {
+      writeFileSync(installedPath, JSON.stringify(installed, null, 2) + "\n");
+    }
+
+    if (!silent) {
+      process.stdout.write(
+        JSON.stringify({ todo: todoUnits } satisfies RefreshResult, null, 2) + "\n",
+      );
+    }
+  }
+
+  /** Show details for a single unit including component status. */
+  show(unitName: string): void {
+    const unitJson = this.readUnitJson(unitName);
+    if (!unitJson) {
+      console.error(`Error: unit "${unitName}" not found in ~/.aisk/units/`);
+      process.exit(1);
+    }
+
+    const installed = this.readInstalled();
+    const entry = installed.units[unitName];
+
+    const components: ShowResult["components"] = [];
+
+    for (const comp of unitJson.components.skills ?? []) {
+      const ic = entry?.components.skills.find((c) => c.name === comp.name);
+      components.push({
+        type: "skill",
+        name: comp.name,
+        optional: !!comp.condition,
+        condition: comp.condition,
+        customStatus: ic?.customStatus,
+        installed: !!ic,
+      });
+    }
+    for (const comp of unitJson.components.rules ?? []) {
+      const ic = entry?.components.rules.find((c) => c.name === comp.name);
+      components.push({
+        type: "rule",
+        name: comp.name,
+        optional: !!comp.condition,
+        condition: comp.condition,
+        customStatus: ic?.customStatus,
+        installed: !!ic,
+      });
+    }
+    for (const comp of unitJson.components.scripts ?? []) {
+      const ic = entry?.components.scripts.find((c) => c.name === comp.name);
+      components.push({
+        type: "script",
+        name: comp.name,
+        optional: false,
+        hook: comp.hook,
+        installed: !!ic,
+      });
+    }
+    for (const comp of unitJson.components.resources ?? []) {
+      const ic = entry?.components.resources.find((c) => c.name === comp.name);
+      components.push({
+        type: "resource",
+        name: comp.name,
+        optional: !!comp.condition,
+        condition: comp.condition,
+        customStatus: ic?.customStatus,
+        installed: !!ic,
+      });
+    }
+
+    const result: ShowResult = {
+      name: unitName,
+      description: unitJson.description ?? "",
+      dependencies: unitJson.dependencies,
+      installed: !!entry,
+      components,
+    };
+
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+  }
+
+  /**
+   * Computes the full changeset for the given desired state and outputs it as JSON.
+   * The desired state is the complete list of unit names the user wants installed.
+   */
+  resolve(selectedNames: string[]): void {
+    const result = this.resolveDeps(selectedNames);
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+  }
+
+  /** Reads and parses .aisk/installed.json from the project directory. */
+  readInstalled(): InstalledJson {
+    const installedPath = join(this.cwd, ".aisk", "installed.json");
+    if (!existsSync(installedPath)) return { units: {} };
+    return JSON.parse(readFileSync(installedPath, "utf8")) as InstalledJson;
+  }
+
+  // ─── Unit-level operations ─────────────────────────────────────────────────
+
+  /**
+   * Install a unit with ALL components (required + optional).
+   * Copies files directly from templates; scans AISF:CUSTOM blocks for customStatus.
+   */
+  private installUnitAllComponents(unitName: string): ComponentOpResult[] {
+    const unitJson = this.readUnitJson(unitName)!;
+    const specs = this.resolveComponents(unitJson, null);
+
+    const comps: InstalledEntry["components"] = {
+      skills: [],
+      rules: [],
+      scripts: [],
+      resources: [],
+    };
+    const results: ComponentOpResult[] = [];
+
+    for (const spec of specs) {
+      switch (spec.type) {
+        case "skill": {
+          const ic = this.copyComponentDirect(
+            join(this.aiskHome, "units", unitName, spec.file),
+            join(this.cwd, ".claude", "skills", `aisk-${unitName}-${spec.name}`, "SKILL.md"),
+            spec.name,
+            spec.hasCustom,
+          );
+          comps.skills.push(ic);
+          results.push({
+            type: "skill",
+            name: spec.name,
+            path: ic.path,
+            customStatus: ic.customStatus,
+          });
+          break;
+        }
+        case "rule": {
+          const ic = this.copyComponentDirect(
+            join(this.aiskHome, "units", unitName, spec.file),
+            join(this.cwd, ".claude", "rules", `aisk-${unitName}`, `${spec.name}.md`),
+            spec.name,
+            spec.hasCustom,
+          );
+          comps.rules.push(ic);
+          results.push({
+            type: "rule",
+            name: spec.name,
+            path: ic.path,
+            customStatus: ic.customStatus,
+            optional: spec.optional,
+          });
+          break;
+        }
+        case "script": {
+          const ic = this.installScript(unitName, spec);
+          comps.scripts.push(ic);
+          results.push({ type: "script", name: spec.name, path: ic.path, hook: spec.hook });
+          break;
+        }
+        case "resource": {
+          const ic = this.copyComponentDirect(
+            join(this.aiskHome, "units", unitName, spec.file),
+            join(this.cwd, ".aisk", unitName, spec.file),
+            spec.name,
+            spec.hasCustom,
+          );
+          comps.resources.push(ic);
+          results.push({
+            type: "resource",
+            name: spec.name,
+            path: ic.path,
+            customStatus: ic.customStatus,
+            optional: spec.optional,
+          });
+          break;
+        }
+      }
+    }
+
+    this.updateInstalled(unitName, comps);
+    this.ensureGitignores();
+    return results;
+  }
+
+  /**
+   * Update an installed unit.
+   * Optional components: checked by file existence; skipped if not on disk.
+   * hasCustom components: done blocks merged from existing file into new template.
+   */
+  private updateUnitComponents(unitName: string): ComponentOpResult[] {
+    const unitJson = this.readUnitJson(unitName)!;
+    const entry = this.readInstalled().units[unitName];
+
+    // For optional components, only include those already recorded in installed.json
+    const installedOptionals = this.getInstalledOptionalNames(unitJson, entry);
+    const specs = this.resolveComponents(unitJson, installedOptionals);
+
+    this.removeOrphans(unitName, unitJson, installedOptionals);
+
+    const comps: InstalledEntry["components"] = {
+      skills: [],
+      rules: [],
+      scripts: [],
+      resources: [],
+    };
+    const results: ComponentOpResult[] = [];
+
+    for (const spec of specs) {
+      switch (spec.type) {
+        case "skill": {
+          const destFile = join(
+            this.cwd,
+            ".claude",
+            "skills",
+            `aisk-${unitName}-${spec.name}`,
+            "SKILL.md",
+          );
+          const existingPath = entry?.components.skills.find((c) => c.name === spec.name)?.path;
+          const ic = this.updateComponentDirect(
+            join(this.aiskHome, "units", unitName, spec.file),
+            destFile,
+            spec.name,
+            spec.hasCustom,
+            existingPath ? join(this.cwd, existingPath) : undefined,
+          );
+          comps.skills.push(ic);
+          results.push({
+            type: "skill",
+            name: spec.name,
+            path: ic.path,
+            customStatus: ic.customStatus,
+          });
+          break;
+        }
+        case "rule": {
+          const destFile = join(
+            this.cwd,
+            ".claude",
+            "rules",
+            `aisk-${unitName}`,
+            `${spec.name}.md`,
+          );
+          const existingPath = entry?.components.rules.find((c) => c.name === spec.name)?.path;
+          const ic = this.updateComponentDirect(
+            join(this.aiskHome, "units", unitName, spec.file),
+            destFile,
+            spec.name,
+            spec.hasCustom,
+            existingPath ? join(this.cwd, existingPath) : undefined,
+          );
+          comps.rules.push(ic);
+          results.push({
+            type: "rule",
+            name: spec.name,
+            path: ic.path,
+            customStatus: ic.customStatus,
+            optional: spec.optional,
+          });
+          break;
+        }
+        case "script": {
+          const ic = this.installScript(unitName, spec);
+          comps.scripts.push(ic);
+          results.push({ type: "script", name: spec.name, path: ic.path, hook: spec.hook });
+          break;
+        }
+        case "resource": {
+          const destFile = join(this.cwd, ".aisk", unitName, spec.file);
+          const existingPath = entry?.components.resources.find((c) => c.name === spec.name)?.path;
+          const ic = this.updateComponentDirect(
+            join(this.aiskHome, "units", unitName, spec.file),
+            destFile,
+            spec.name,
+            spec.hasCustom,
+            existingPath ? join(this.cwd, existingPath) : undefined,
+          );
+          comps.resources.push(ic);
+          results.push({
+            type: "resource",
+            name: spec.name,
+            path: ic.path,
+            customStatus: ic.customStatus,
+            optional: spec.optional,
+          });
+          break;
+        }
+      }
+    }
+
+    this.updateInstalled(unitName, comps);
+    this.ensureGitignores();
+    return results;
+  }
+
+  /** Remove all components of an installed unit and clean up hooks. */
+  private removeUnitComponents(unitName: string): ComponentOpResult[] {
+    const installed = this.readInstalled();
+    const entry = installed.units[unitName];
+    const results: ComponentOpResult[] = [];
+
+    for (const comp of [
+      ...entry.components.skills,
+      ...entry.components.rules,
+      ...entry.components.resources,
+    ]) {
+      const fullPath = join(this.cwd, comp.path);
+      if (existsSync(fullPath)) {
+        rmSync(fullPath);
+        this.tryRemoveEmptyDir(fullPath);
+      }
+      results.push({ type: "skill", name: comp.name, path: comp.path });
+    }
+
+    for (const comp of entry.components.scripts) {
+      removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
+      const fullPath = join(this.cwd, comp.path);
+      if (existsSync(fullPath)) {
+        rmSync(fullPath);
+        this.tryRemoveEmptyDir(fullPath);
+      }
+      results.push({ type: "script", name: comp.name, path: comp.path });
+    }
+
+    delete installed.units[unitName];
+    writeFileSync(
+      join(this.cwd, ".aisk", "installed.json"),
+      JSON.stringify(installed, null, 2) + "\n",
+    );
+
+    return results;
+  }
+
+  // ─── Component-level copy/update ───────────────────────────────────────────
+
+  /**
+   * Copy a file directly from src to dest, creating parent dirs.
+   * If hasCustom, scans dest for AISF:CUSTOM block status after copy.
+   */
+  private copyComponentDirect(
+    src: string,
+    dest: string,
+    compName: string,
+    hasCustom?: boolean,
+  ): InstalledComponent {
+    if (!existsSync(src)) throw new Error(`source file not found: ${src}`);
+    mkdirSync(dirname(dest), { recursive: true });
+    cpSync(src, dest);
+    const path = relative(this.cwd, dest);
+    const customStatus = hasCustom ? this.scanCustomStatus(dest) : undefined;
+    return { name: compName, path, customStatus };
+  }
+
+  /**
+   * Update a component file, merging AISF:CUSTOM done blocks from the existing file.
+   * Falls back to direct copy if the file doesn't exist yet or has no done blocks.
+   */
+  private updateComponentDirect(
+    src: string,
+    dest: string,
+    compName: string,
+    hasCustom?: boolean,
+    existingFilePath?: string,
+  ): InstalledComponent {
+    if (!existsSync(src)) throw new Error(`source file not found: ${src}`);
+    mkdirSync(dirname(dest), { recursive: true });
+
+    // Read current file content for merging (prefer existing path, fallback to dest)
+    const currentPath = existingFilePath ?? dest;
+    if (hasCustom && existsSync(currentPath)) {
+      const oldContent = readFileSync(currentPath, "utf8");
+      const newTemplate = readFileSync(src, "utf8");
+      const merged = mergeCustomContent(oldContent, newTemplate);
+      writeFileSync(dest, merged);
+    } else {
+      cpSync(src, dest);
+    }
+
+    const path = relative(this.cwd, dest);
+    const customStatus = hasCustom ? this.scanCustomStatus(dest) : undefined;
+    return { name: compName, path, customStatus };
+  }
+
+  /**
+   * Copy a compiled script to .aisk/{unit}/scripts/ and register its hook.
+   */
+  private installScript(unitName: string, spec: ScriptSpec): InstalledComponent {
+    const srcJs = join(this.aiskHome, "units", unitName, "scripts", `${spec.name}.js`);
+    if (!existsSync(srcJs)) throw new Error(`compiled script not found: ${srcJs}`);
+
+    const destDir = join(this.cwd, ".aisk", unitName, "scripts");
+    mkdirSync(destDir, { recursive: true });
+    const destFile = join(destDir, `${spec.name}.js`);
+    cpSync(srcJs, destFile);
+
+    const relPath = join(".aisk", unitName, "scripts", `${spec.name}.js`);
+    if (spec.hook) {
+      const paramStr = (spec.params ?? []).map((p) => `{${p}}`).join(" ");
+      const runCmd = paramStr ? `node ${relPath} ${paramStr}` : `node ${relPath}`;
+      addPreCommitHook(this.cwd, `aisk-${unitName}-${spec.name}`, runCmd);
+    }
+
+    return { name: spec.name, path: relPath };
+  }
+
+  // ─── Dependency resolution ─────────────────────────────────────────────────
+
+  /**
+   * Resolve transitive deps for a fresh-install list.
+   * Only adds uninstalled deps; already-installed deps are silently skipped.
+   * Failed lookups are pushed to result.failed and excluded from order.
+   */
+  private resolveFreshDeps(
+    names: string[],
+    installedSet: Set<string>,
+    result: AddResult,
+  ): { order: string[]; autoDeps: Set<string> } {
+    const toInstall = new Set<string>(names);
+    const autoDeps = new Set<string>();
+
+    const expand = (name: string) => {
+      const unitJson = this.readUnitJson(name);
+      if (!unitJson) {
+        result.failed.push({ name, reason: "unit 不在注册表中" });
+        toInstall.delete(name);
+        return;
+      }
+      for (const dep of unitJson.dependencies) {
+        if (!installedSet.has(dep) && !toInstall.has(dep)) {
+          toInstall.add(dep);
+          autoDeps.add(dep);
+          expand(dep);
+        }
+      }
+    };
+
+    for (const name of [...names]) expand(name);
+
+    const order = this.sortByGlobalOrder([...toInstall]);
+    return { order, autoDeps };
+  }
+
+  /** Full dep resolution for resolve command (desired-state model). */
+  private resolveDeps(selectedNames: string[]): ResolveResult {
+    const installed = this.readInstalled();
+    const installedNames = new Set(Object.keys(installed.units));
+    const selectedSet = new Set(selectedNames);
+    const fullRequired = new Set<string>(selectedNames);
+    const auto = new Set<string>();
+
+    const resolveTransitive = (names: string[]) => {
+      for (const name of names) {
+        const unitJson = this.readUnitJson(name);
+        if (!unitJson) {
+          console.error(`Error: unit "${name}" not found in ~/.aisk/units/`);
+          process.exit(1);
+        }
+        for (const dep of unitJson.dependencies) {
+          if (!fullRequired.has(dep)) {
+            fullRequired.add(dep);
+            if (!selectedSet.has(dep)) auto.add(dep);
+            resolveTransitive([dep]);
+          }
+        }
+      }
+    };
+
+    resolveTransitive(selectedNames);
+
+    const globalOrder = this.readGlobalOrder();
+    const sort = (ns: string[]) => this.sortByGlobalOrder(ns, globalOrder);
+    const to_remove = sort([...installedNames].filter((n) => !fullRequired.has(n)));
+    const to_install = sort([...fullRequired].filter((n) => !installedNames.has(n)));
+    const to_update = sort(selectedNames.filter((n) => installedNames.has(n)));
+    const order = sort([...to_install, ...to_update]);
+
+    return { to_remove, to_install, to_update, order, auto: sort([...auto]) };
+  }
+
+  // ─── Optional component helpers ────────────────────────────────────────────
+
+  /** Return typed names for optional components recorded in installed.json for this unit. */
+  private getInstalledOptionalNames(unitJson: UnitJson, entry: InstalledEntry): string[] {
+    const names: string[] = [];
+    for (const c of unitJson.components.skills ?? []) {
+      if (c.condition && entry.components.skills.some((ic) => ic.name === c.name)) {
+        names.push(`skill:${c.name}`);
+      }
+    }
+    for (const c of unitJson.components.rules ?? []) {
+      if (c.condition && entry.components.rules.some((ic) => ic.name === c.name)) {
+        names.push(`rule:${c.name}`);
+      }
+    }
+    for (const c of unitJson.components.resources ?? []) {
+      if (c.condition && entry.components.resources.some((ic) => ic.name === c.name)) {
+        names.push(`resource:${c.name}`);
+      }
+    }
+    return names;
+  }
+
+  // ─── Component resolution & orphan removal ─────────────────────────────────
+
+  // null = include all optionals (used for fresh install); string[] = only the named ones
+  private resolveComponents(unitJson: UnitJson, optionalNames: string[] | null): ComponentSpec[] {
+    const selected = (key: string) => optionalNames === null || optionalNames.includes(key);
+    const specs: ComponentSpec[] = [];
+
+    for (const comp of unitJson.components.skills ?? []) {
+      if (!comp.condition || selected(`skill:${comp.name}`)) {
+        specs.push({
+          type: "skill",
+          name: comp.name,
+          file: comp.file,
+          hasCustom: comp.hasCustom,
+          optional: !!comp.condition,
+        });
+      }
+    }
+    for (const comp of unitJson.components.rules ?? []) {
+      if (!comp.condition || selected(`rule:${comp.name}`)) {
+        specs.push({
+          type: "rule",
+          name: comp.name,
+          file: comp.file,
+          hasCustom: comp.hasCustom,
+          hint: comp.hint,
+          optional: !!comp.condition,
+        });
+      }
+    }
+    for (const comp of unitJson.components.scripts ?? []) {
+      specs.push({
+        type: "script",
+        name: comp.name,
+        file: comp.file,
+        hook: comp.hook,
+        params: comp.params,
+      });
+    }
+    for (const comp of unitJson.components.resources ?? []) {
+      if (!comp.condition || selected(`resource:${comp.name}`)) {
+        specs.push({
+          type: "resource",
+          name: comp.name,
+          file: comp.file,
+          hasCustom: comp.hasCustom,
+          optional: !!comp.condition,
+        });
+      }
+    }
+
+    return specs;
+  }
+
+  private removeOrphans(unitName: string, unitJson: UnitJson, optionalNames: string[]): void {
+    const installed = this.readInstalled();
+    const entry = installed.units[unitName];
+    if (!entry) return;
+
+    const newSkillNames = new Set(
+      (unitJson.components.skills ?? [])
+        .filter((c) => !c.condition || optionalNames.includes(`skill:${c.name}`))
+        .map((c) => c.name),
+    );
+    const newRuleNames = new Set(
+      (unitJson.components.rules ?? [])
+        .filter((c) => !c.condition || optionalNames.includes(`rule:${c.name}`))
+        .map((c) => c.name),
+    );
+    const newResourceNames = new Set(
+      (unitJson.components.resources ?? [])
+        .filter((c) => !c.condition || optionalNames.includes(`resource:${c.name}`))
+        .map((c) => c.name),
+    );
+    const newScriptNames = new Set((unitJson.components.scripts ?? []).map((c) => c.name));
+
+    for (const comp of entry.components.skills) {
+      if (!newSkillNames.has(comp.name)) this.deleteFile(join(this.cwd, comp.path));
+    }
+    for (const comp of entry.components.rules) {
+      if (!newRuleNames.has(comp.name)) this.deleteFile(join(this.cwd, comp.path));
+    }
+    for (const comp of entry.components.resources) {
+      if (!newResourceNames.has(comp.name)) this.deleteFile(join(this.cwd, comp.path));
+    }
+    for (const comp of entry.components.scripts) {
+      if (!newScriptNames.has(comp.name)) {
+        removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
+        this.deleteFile(join(this.cwd, comp.path));
+      }
+    }
+  }
+
+  // ─── File system utilities ─────────────────────────────────────────────────
+
+  private deleteFile(fullPath: string): void {
+    if (existsSync(fullPath)) {
+      rmSync(fullPath);
+      this.tryRemoveEmptyDir(fullPath);
+    }
+  }
+
+  private tryRemoveEmptyDir(fullPath: string): void {
+    const parentDir = dirname(fullPath);
+    try {
+      if (readdirSync(parentDir).length === 0) rmdirSync(parentDir);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Scan a file for AISF:CUSTOM blocks and return the aggregate customStatus. */
+  private scanCustomStatus(filePath: string): "todo" | "done" | undefined {
+    if (!existsSync(filePath)) return undefined;
+    const blocks = parseCustomBlocks(readFileSync(filePath, "utf8"));
+    if (blocks.length === 0) return undefined;
+    return blocks.some((b) => b.status === "todo") ? "todo" : "done";
+  }
+
+  private ensureGitignores(): void {
+    const entries: Array<{ dir: string; content: string }> = [
+      { dir: join(this.cwd, ".aisk"), content: "*\n" },
+      { dir: join(this.cwd, ".claude"), content: "skills/aisk-*/\nrules/aisk-*/\n" },
+    ];
+    for (const { dir, content } of entries) {
+      mkdirSync(dir, { recursive: true });
+      const gitignorePath = join(dir, ".gitignore");
+      if (!existsSync(gitignorePath)) writeFileSync(gitignorePath, content);
+    }
+  }
+
+  // ─── Data access ───────────────────────────────────────────────────────────
+
+  private updateInstalled(unitName: string, components: InstalledEntry["components"]): void {
+    const installedPath = join(this.cwd, ".aisk", "installed.json");
+    mkdirSync(join(this.cwd, ".aisk"), { recursive: true });
+    const data = this.readInstalled();
+    data.units[unitName] = { installedAt: new Date().toISOString(), components };
+    writeFileSync(installedPath, JSON.stringify(data, null, 2) + "\n");
+  }
+
+  private readUnitJson(unitName: string): UnitJson | null {
+    const path = join(this.aiskHome, "units", unitName, "unit.json");
+    if (!existsSync(path)) return null;
+    return JSON.parse(readFileSync(path, "utf8")) as UnitJson;
+  }
+
   private getUnitList(): Array<{ name: string; description: string; installed: boolean }> {
     const unitsDir = join(this.aiskHome, "units");
     if (!existsSync(unitsDir)) return [];
@@ -87,634 +1019,20 @@ export class Installer {
       .filter((u): u is NonNullable<typeof u> => u !== null);
   }
 
-  /**
-   * Computes the full changeset for the given desired state and outputs it as JSON.
-   * The desired state is the complete list of unit names the user wants installed.
-   *
-   * @param selectedNames Full list of unit names in the desired installed state.
-   */
-  checkDeps(selectedNames: string[]): void {
-    const result = this.resolveDeps(selectedNames);
-    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
-  }
-
-  /**
-   * Computes the full changeset by comparing the desired state against the current
-   * installed state. Resolves transitive dependencies automatically.
-   *
-   * @param selectedNames Full desired state — the unit names the user wants installed.
-   * @returns Complete changeset including to_remove, to_install, to_update, order, and auto.
-   */
-  private resolveDeps(selectedNames: string[]): ResolveResult {
-    const installed = this.readInstalled();
-    const installedNames = new Set(Object.keys(installed.units));
-    const selectedSet = new Set(selectedNames);
-
-    // Expand selected units with all their transitive dependencies
-    const fullRequired = new Set<string>(selectedNames);
-    const auto = new Set<string>();
-
-    const resolveTransitive = (names: string[]) => {
-      for (const name of names) {
-        const unitJson = this.readUnitJson(name);
-        if (!unitJson) {
-          console.error(`Error: unit "${name}" not found in ~/.aisk/units/`);
-          process.exit(1);
-        }
-        for (const dep of unitJson.dependencies) {
-          if (!fullRequired.has(dep)) {
-            fullRequired.add(dep);
-            if (!selectedSet.has(dep)) auto.add(dep);
-            resolveTransitive([dep]);
-          }
-        }
-      }
-    };
-
-    resolveTransitive(selectedNames);
-
-    const to_remove = this.sortByGlobalOrder(
-      [...installedNames].filter((n) => !fullRequired.has(n)),
-    );
-    const to_install = this.sortByGlobalOrder(
-      [...fullRequired].filter((n) => !installedNames.has(n)),
-    );
-    const to_update = this.sortByGlobalOrder(selectedNames.filter((n) => installedNames.has(n)));
-    const order = this.sortByGlobalOrder([...to_install, ...to_update]);
-
-    return { to_remove, to_install, to_update, order, auto: this.sortByGlobalOrder([...auto]) };
-  }
-
-  /**
-   * Sorts the given unit names by the pre-computed global order from ~/.aisk/units.json.
-   * Units not present in the order file are appended sorted lexicographically.
-   *
-   * @param names Unit names to sort.
-   * @returns Sorted copy of the input array.
-   */
-  private sortByGlobalOrder(names: string[]): string[] {
-    const order = this.readGlobalOrder();
-    const index = new Map(order.map((n, i) => [n, i]));
-    return [...names].sort((a, b) => {
-      const ai = index.get(a) ?? Infinity;
-      const bi = index.get(b) ?? Infinity;
-      return ai !== bi ? ai - bi : a.localeCompare(b);
-    });
-  }
-
-  /**
-   * Reads the pre-computed global unit order from ~/.aisk/units.json.
-   * Falls back to an empty array (callers handle the missing-order case via localeCompare).
-   */
   private readGlobalOrder(): string[] {
     const orderPath = join(this.aiskHome, "units.json");
     if (!existsSync(orderPath)) return [];
     return JSON.parse(readFileSync(orderPath, "utf8")) as string[];
   }
 
-  /**
-   * Returns info for all hasCustom components that will be installed so the AI can
-   * generate their content into temp files before calling install.
-   * Only includes optional components (those with a condition) if they appear in optionalNames.
-   * Also cleans up any orphaned .aisk-tmp-* files from previous interrupted runs.
-   *
-   * @param unitName      Name of the unit to prepare.
-   * @param optionalNames Typed component names the user selected, e.g. ["rule:poc-rule"].
-   */
-  prepare(unitName: string, optionalNames: string[] = []): void {
-    this.cleanOrphanTempFiles();
-
-    const unitJson = this.readUnitJson(unitName);
-    if (!unitJson) {
-      console.error(`Error: unit "${unitName}" not found in ~/.aisk/units/`);
-      process.exit(1);
-    }
-
-    const items = this.buildPrepareItems(unitName, unitJson, optionalNames);
-    process.stdout.write(JSON.stringify(items, null, 2) + "\n");
-  }
-
-  /**
-   * Builds the PrepareItem list for all hasCustom components in the given unit.
-   * Looks up previously installed paths from installed.json to populate `currentPath`.
-   *
-   * @param unitName      Name of the unit being prepared.
-   * @param unitJson      Parsed unit.json for the unit.
-   * @param optionalNames Typed component names the user selected.
-   * @returns Array of items describing each hasCustom component that needs AI-generated content.
-   */
-  private buildPrepareItems(
-    unitName: string,
-    unitJson: UnitJson,
-    optionalNames: string[],
-  ): PrepareItem[] {
-    const entry = this.readInstalled().units[unitName];
-    const items: PrepareItem[] = [];
-
-    for (const comp of unitJson.components.skills ?? []) {
-      if (!comp.hasCustom) continue;
-      if (comp.condition && !optionalNames.includes(`skill:${comp.name}`)) continue;
-      const templatePath = join(this.aiskHome, "units", unitName, comp.file);
-      const targetPath = join(
-        this.cwd,
-        ".claude",
-        "skills",
-        `aisk-${unitName}-${comp.name}`,
-        "SKILL.md",
-      );
-      const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
-      mkdirSync(dirname(targetPath), { recursive: true });
-      const currentPath = entry?.components.skills.find((c) => c.name === comp.name)?.path;
-      items.push({
-        componentType: "skill",
-        templatePath,
-        targetPath,
-        currentPath,
-        tempPath,
-        exists: existsSync(targetPath),
-      });
-    }
-
-    for (const comp of unitJson.components.rules ?? []) {
-      if (!comp.hasCustom) continue;
-      if (comp.condition && !optionalNames.includes(`rule:${comp.name}`)) continue;
-      const templatePath = join(this.aiskHome, "units", unitName, comp.file);
-      const targetPath = join(this.cwd, ".claude", "rules", `aisk-${unitName}`, `${comp.name}.md`);
-      const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
-      mkdirSync(dirname(targetPath), { recursive: true });
-      const currentPath = entry?.components.rules.find((c) => c.name === comp.name)?.path;
-      items.push({
-        componentType: "rule",
-        templatePath,
-        targetPath,
-        currentPath,
-        tempPath,
-        exists: existsSync(targetPath),
-      });
-    }
-
-    for (const comp of unitJson.components.resources ?? []) {
-      if (!comp.hasCustom) continue;
-      if (comp.condition && !optionalNames.includes(`resource:${comp.name}`)) continue;
-      const templatePath = join(this.aiskHome, "units", unitName, comp.file);
-      const targetPath = join(this.cwd, ".aisk", unitName, comp.file);
-      const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
-      mkdirSync(dirname(targetPath), { recursive: true });
-      const currentPath = entry?.components.resources.find((c) => c.name === comp.name)?.path;
-      items.push({
-        componentType: "resource",
-        templatePath,
-        targetPath,
-        currentPath,
-        tempPath,
-        exists: existsSync(targetPath),
-      });
-    }
-
-    return items;
-  }
-
-  /**
-   * Builds the staging temp-file path for a hasCustom component.
-   *
-   * @param targetPath Final destination path of the component file.
-   * @param unitName   Name of the owning unit.
-   * @param compName   Component name within the unit.
-   * @returns Absolute path to the temporary staging file.
-   */
-  private makeTempPath(targetPath: string, unitName: string, compName: string): string {
-    return join(dirname(targetPath), `.aisk-tmp-${unitName}-${compName}`);
-  }
-
-  /** Removes any .aisk-tmp-* staging files left behind by interrupted install runs. */
-  private cleanOrphanTempFiles(): void {
-    for (const dir of [join(this.cwd, ".claude"), join(this.cwd, ".aisk")]) {
-      if (existsSync(dir)) this.removeTempFilesIn(dir);
-    }
-  }
-
-  /**
-   * Recursively walks `dir` and deletes any file whose name starts with ".aisk-tmp-".
-   *
-   * @param dir Absolute path to the directory to scan.
-   */
-  private removeTempFilesIn(dir: string): void {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const fullPath = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        this.removeTempFilesIn(fullPath);
-      } else if (entry.name.startsWith(".aisk-tmp-")) {
-        rmSync(fullPath);
-      }
-    }
-  }
-
-  /**
-   * Uninstalls all components for a unit and removes its entry from installed.json.
-   *
-   * @param unitName Name of the unit to uninstall.
-   */
-  uninstall(unitName: string): void {
-    const installed = this.readInstalled();
-    const entry = installed.units[unitName];
-    if (!entry) {
-      console.error(`Error: unit "${unitName}" is not installed`);
-      process.exit(1);
-    }
-
-    for (const comp of [
-      ...entry.components.skills,
-      ...entry.components.rules,
-      ...entry.components.resources,
-    ]) {
-      const fullPath = join(this.cwd, comp.path);
-      if (existsSync(fullPath)) {
-        rmSync(fullPath);
-        this.tryRemoveEmptyDir(fullPath);
-      }
-    }
-
-    for (const comp of entry.components.scripts) {
-      removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
-      const fullPath = join(this.cwd, comp.path);
-      if (existsSync(fullPath)) {
-        rmSync(fullPath);
-        this.tryRemoveEmptyDir(fullPath);
-      }
-    }
-
-    delete installed.units[unitName];
-    writeFileSync(
-      join(this.cwd, ".aisk", "installed.json"),
-      JSON.stringify(installed, null, 2) + "\n",
-    );
-    console.log(`Uninstalled: ${unitName}`);
-  }
-
-  /**
-   * Installs a unit by reading its component list from unit.json.
-   * Required components (no condition) are always installed.
-   * Optional components (have a condition) are installed only if their typed name
-   * appears in optionalNames, e.g. ["rule:poc-rule", "resource:config"].
-   * Previously installed components that are no longer selected are removed.
-   *
-   * @param unitName      Name of the unit to install.
-   * @param optionalNames Typed component names the user selected for this install.
-   */
-  install(unitName: string, optionalNames: string[]): void {
-    const unitJson = this.readUnitJson(unitName);
-    if (!unitJson) {
-      console.error(`Error: unit "${unitName}" not found in ~/.aisk/units/`);
-      process.exit(1);
-    }
-
-    const specs = this.resolveComponents(unitJson, optionalNames);
-    this.removeOrphans(unitName, unitJson, optionalNames);
-
-    const installedComps: InstalledEntry["components"] = {
-      skills: [],
-      rules: [],
-      scripts: [],
-      resources: [],
-    };
-
-    for (const spec of specs) {
-      switch (spec.type) {
-        case "skill":
-          installedComps.skills.push(this.installSkill(unitName, spec));
-          break;
-        case "rule":
-          installedComps.rules.push(this.installRule(unitName, spec));
-          break;
-        case "script":
-          installedComps.scripts.push(this.installScript(unitName, spec));
-          break;
-        case "resource":
-          installedComps.resources.push(this.installResource(unitName, spec));
-          break;
-      }
-    }
-
-    this.updateInstalled(unitName, installedComps);
-    this.ensureGitignores();
-    console.log(`Installed: ${unitName}`);
-  }
-
-  /**
-   * Builds the list of ComponentSpecs to install based on unit.json and the selected optionals.
-   *
-   * @param unitJson      Parsed unit.json for the unit being installed.
-   * @param optionalNames Typed component names the user selected (e.g. ["rule:poc-rule"]).
-   * @returns Flat list of resolved component specs to pass to the individual install methods.
-   */
-  private resolveComponents(unitJson: UnitJson, optionalNames: string[]): ComponentSpec[] {
-    const specs: ComponentSpec[] = [];
-
-    for (const comp of unitJson.components.skills ?? []) {
-      if (!comp.condition || optionalNames.includes(`skill:${comp.name}`)) {
-        specs.push({ type: "skill", name: comp.name, file: comp.file, hasCustom: comp.hasCustom });
-      }
-    }
-    for (const comp of unitJson.components.rules ?? []) {
-      if (!comp.condition || optionalNames.includes(`rule:${comp.name}`)) {
-        specs.push({ type: "rule", name: comp.name, file: comp.file, hasCustom: comp.hasCustom });
-      }
-    }
-    for (const comp of unitJson.components.scripts ?? []) {
-      specs.push({
-        type: "script",
-        name: comp.name,
-        file: comp.file,
-        hook: comp.hook,
-        params: comp.params,
-      });
-    }
-    for (const comp of unitJson.components.resources ?? []) {
-      if (!comp.condition || optionalNames.includes(`resource:${comp.name}`)) {
-        specs.push({
-          type: "resource",
-          name: comp.name,
-          file: comp.file,
-          hasCustom: comp.hasCustom,
-        });
-      }
-    }
-
-    return specs;
-  }
-
-  /**
-   * Removes components that were previously installed but are no longer in scope —
-   * either because they were removed from unit.json or because an optional was deselected.
-   * Matches by component name so that path changes (renames) are correctly detected.
-   *
-   * @param unitName      Name of the unit being re-installed.
-   * @param unitJson      Current unit.json content (defines the new desired state).
-   * @param optionalNames Optional component names selected for this install run.
-   */
-  private removeOrphans(unitName: string, unitJson: UnitJson, optionalNames: string[]): void {
-    const installed = this.readInstalled();
-    const entry = installed.units[unitName];
-    if (!entry) return;
-
-    const newSkillNames = new Set(
-      (unitJson.components.skills ?? [])
-        .filter((c) => !c.condition || optionalNames.includes(`skill:${c.name}`))
-        .map((c) => c.name),
-    );
-    const newRuleNames = new Set(
-      (unitJson.components.rules ?? [])
-        .filter((c) => !c.condition || optionalNames.includes(`rule:${c.name}`))
-        .map((c) => c.name),
-    );
-    const newResourceNames = new Set(
-      (unitJson.components.resources ?? [])
-        .filter((c) => !c.condition || optionalNames.includes(`resource:${c.name}`))
-        .map((c) => c.name),
-    );
-    const newScriptNames = new Set((unitJson.components.scripts ?? []).map((c) => c.name));
-
-    for (const comp of entry.components.skills) {
-      if (!newSkillNames.has(comp.name)) {
-        const fullPath = join(this.cwd, comp.path);
-        if (existsSync(fullPath)) {
-          rmSync(fullPath);
-          this.tryRemoveEmptyDir(fullPath);
-        }
-      }
-    }
-    for (const comp of entry.components.rules) {
-      if (!newRuleNames.has(comp.name)) {
-        const fullPath = join(this.cwd, comp.path);
-        if (existsSync(fullPath)) {
-          rmSync(fullPath);
-          this.tryRemoveEmptyDir(fullPath);
-        }
-      }
-    }
-    for (const comp of entry.components.resources) {
-      if (!newResourceNames.has(comp.name)) {
-        const fullPath = join(this.cwd, comp.path);
-        if (existsSync(fullPath)) {
-          rmSync(fullPath);
-          this.tryRemoveEmptyDir(fullPath);
-        }
-      }
-    }
-    for (const comp of entry.components.scripts) {
-      if (!newScriptNames.has(comp.name)) {
-        removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
-        const fullPath = join(this.cwd, comp.path);
-        if (existsSync(fullPath)) {
-          rmSync(fullPath);
-          this.tryRemoveEmptyDir(fullPath);
-        }
-      }
-    }
-  }
-
-  /**
-   * Removes the parent directory of `fullPath` if it is now empty.
-   * Silently ignores errors (e.g. non-empty dirs, permission issues).
-   *
-   * @param fullPath Absolute path to the file that was just deleted.
-   */
-  private tryRemoveEmptyDir(fullPath: string): void {
-    const parentDir = dirname(fullPath);
-    try {
-      if (readdirSync(parentDir).length === 0) rmdirSync(parentDir);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  /**
-   * Copies a skill component into .claude/skills/aisk-{unit}-{name}/SKILL.md.
-   * For hasCustom skills, reads content from the AI-written temp file instead of the template.
-   *
-   * @param unitName Name of the owning unit.
-   * @param spec     Resolved skill spec from unit.json.
-   * @returns Installed component record with name and project-relative path.
-   */
-  private installSkill(unitName: string, spec: SkillSpec): InstalledComponent {
-    const destDir = join(this.cwd, ".claude", "skills", `aisk-${unitName}-${spec.name}`);
-    mkdirSync(destDir, { recursive: true });
-    const destFile = join(destDir, "SKILL.md");
-
-    if (spec.hasCustom) {
-      const tempPath = this.makeTempPath(destFile, unitName, spec.name);
-      if (!existsSync(tempPath)) {
-        console.error(
-          `Error: temp file not found for skill "${spec.name}" — run prepare first: ${tempPath}`,
-        );
-        process.exit(1);
-      }
-      cpSync(tempPath, destFile);
-      rmSync(tempPath);
-    } else {
-      const src = join(this.aiskHome, "units", unitName, spec.file);
-      if (!existsSync(src)) {
-        console.error(`Error: skill file not found: ${src}`);
-        process.exit(1);
-      }
-      cpSync(src, destFile);
-    }
-
-    return {
-      name: spec.name,
-      path: join(".claude", "skills", `aisk-${unitName}-${spec.name}`, "SKILL.md"),
-    };
-  }
-
-  /**
-   * Copies a rule component into .claude/rules/aisk-{unit}/{name}.md.
-   * For hasCustom rules, reads content from the AI-written temp file instead of the template.
-   *
-   * @param unitName Name of the owning unit.
-   * @param spec     Resolved rule spec from unit.json.
-   * @returns Installed component record with name and project-relative path.
-   */
-  private installRule(unitName: string, spec: RuleSpec): InstalledComponent {
-    const destDir = join(this.cwd, ".claude", "rules", `aisk-${unitName}`);
-    mkdirSync(destDir, { recursive: true });
-    const destFile = join(destDir, `${spec.name}.md`);
-
-    if (spec.hasCustom) {
-      const tempPath = this.makeTempPath(destFile, unitName, spec.name);
-      if (!existsSync(tempPath)) {
-        console.error(
-          `Error: temp file not found for rule "${spec.name}" — run prepare first: ${tempPath}`,
-        );
-        process.exit(1);
-      }
-      cpSync(tempPath, destFile);
-      rmSync(tempPath);
-    } else {
-      const templatePath = join(this.aiskHome, "units", unitName, spec.file);
-      if (!existsSync(templatePath)) {
-        console.error(`Error: rule template not found: ${templatePath}`);
-        process.exit(1);
-      }
-      cpSync(templatePath, destFile);
-    }
-
-    return {
-      name: spec.name,
-      path: join(".claude", "rules", `aisk-${unitName}`, `${spec.name}.md`),
-    };
-  }
-
-  /**
-   * Copies a compiled script into .aisk/{unit}/scripts/{name}.js and registers
-   * it as a lefthook pre-commit hook with the specified params as template args.
-   *
-   * @param unitName Name of the owning unit.
-   * @param spec     Resolved script spec from unit.json.
-   * @returns Installed component record with name and project-relative path.
-   */
-  private installScript(unitName: string, spec: ScriptSpec): InstalledComponent {
-    const srcJs = join(this.aiskHome, "units", unitName, "scripts", `${spec.name}.js`);
-    if (!existsSync(srcJs)) {
-      console.error(`Error: compiled script not found: ${srcJs}`);
-      process.exit(1);
-    }
-    const destDir = join(this.cwd, ".aisk", unitName, "scripts");
-    mkdirSync(destDir, { recursive: true });
-    const destFile = join(destDir, `${spec.name}.js`);
-    cpSync(srcJs, destFile);
-    const relPath = join(".aisk", unitName, "scripts", `${spec.name}.js`);
-    const paramStr = (spec.params ?? []).map((p) => `{${p}}`).join(" ");
-    const runCmd = paramStr ? `node ${relPath} ${paramStr}` : `node ${relPath}`;
-    addPreCommitHook(this.cwd, `aisk-${unitName}-${spec.name}`, runCmd);
-    return { name: spec.name, path: relPath };
-  }
-
-  /**
-   * Copies a resource file into .aisk/{unit}/{spec.file}.
-   * For hasCustom resources, reads content from the AI-written temp file instead of the source.
-   *
-   * @param unitName Name of the owning unit.
-   * @param spec     Resolved resource spec from unit.json.
-   * @returns Installed component record with name and project-relative path.
-   */
-  private installResource(unitName: string, spec: ResourceSpec): InstalledComponent {
-    const destFile = join(this.cwd, ".aisk", unitName, spec.file);
-    mkdirSync(dirname(destFile), { recursive: true });
-
-    if (spec.hasCustom) {
-      const tempPath = this.makeTempPath(destFile, unitName, spec.name);
-      if (!existsSync(tempPath)) {
-        console.error(
-          `Error: temp file not found for resource "${spec.name}" — run prepare first: ${tempPath}`,
-        );
-        process.exit(1);
-      }
-      cpSync(tempPath, destFile);
-      rmSync(tempPath);
-    } else {
-      const srcFile = join(this.aiskHome, "units", unitName, spec.file);
-      if (!existsSync(srcFile)) {
-        console.error(`Error: resource file not found: ${srcFile}`);
-        process.exit(1);
-      }
-      cpSync(srcFile, destFile);
-    }
-
-    return { name: spec.name, path: join(".aisk", unitName, spec.file) };
-  }
-
-  /**
-   * Creates .gitignore files inside .aisk/ and .claude/ to prevent aisk-managed
-   * files from being accidentally committed to the project repository.
-   */
-  private ensureGitignores(): void {
-    const entries: Array<{ dir: string; content: string }> = [
-      { dir: join(this.cwd, ".aisk"), content: "*\n" },
-      { dir: join(this.cwd, ".claude"), content: "skills/aisk-*/\nrules/aisk-*/\n" },
-    ];
-    for (const { dir, content } of entries) {
-      mkdirSync(dir, { recursive: true });
-      const gitignorePath = join(dir, ".gitignore");
-      if (!existsSync(gitignorePath)) {
-        writeFileSync(gitignorePath, content);
-      }
-    }
-  }
-
-  /**
-   * Reads and parses .aisk/installed.json from the project directory.
-   * Returns an empty record if the file does not exist.
-   */
-  readInstalled(): InstalledJson {
-    const installedPath = join(this.cwd, ".aisk", "installed.json");
-    if (!existsSync(installedPath)) return { units: {} };
-    return JSON.parse(readFileSync(installedPath, "utf8")) as InstalledJson;
-  }
-
-  /**
-   * Writes the updated installation record for a unit into .aisk/installed.json.
-   *
-   * @param unitName   Name of the unit that was just installed.
-   * @param components Installed component records grouped by component type.
-   */
-  private updateInstalled(unitName: string, components: InstalledEntry["components"]): void {
-    const installedPath = join(this.cwd, ".aisk", "installed.json");
-    mkdirSync(join(this.cwd, ".aisk"), { recursive: true });
-    const data = this.readInstalled();
-    data.units[unitName] = { installedAt: new Date().toISOString(), components };
-    writeFileSync(installedPath, JSON.stringify(data, null, 2) + "\n");
-  }
-
-  /**
-   * Reads and parses the unit.json manifest for the given unit from ~/.aisk/units/.
-   *
-   * @param unitName Name of the unit whose manifest to load.
-   * @returns Parsed UnitJson, or null if the file does not exist.
-   */
-  private readUnitJson(unitName: string): UnitJson | null {
-    const unitJsonPath = join(this.aiskHome, "units", unitName, "unit.json");
-    if (!existsSync(unitJsonPath)) return null;
-    return JSON.parse(readFileSync(unitJsonPath, "utf8")) as UnitJson;
+  private sortByGlobalOrder(names: string[], order?: string[]): string[] {
+    const ord = order ?? this.readGlobalOrder();
+    const index = new Map(ord.map((n, i) => [n, i]));
+    return [...names].sort((a, b) => {
+      const ai = index.get(a) ?? Infinity;
+      const bi = index.get(b) ?? Infinity;
+      return ai !== bi ? ai - bi : a.localeCompare(b);
+    });
   }
 }
 
@@ -724,56 +1042,37 @@ if (require.main === module) {
   const cli = cac("installer");
 
   cli
-    .command("list", "List all available units with install status")
-    .action(() => new Installer().listUnits());
+    .command("list", "List all available units with install and customization status")
+    .action(() => new Installer().list());
+
+  cli
+    .command("add [...units]", 'Install units; use "all" to install all available units')
+    .action((units: string[]) => new Installer().add(units ?? []));
+
+  cli
+    .command("remove [...units]", 'Uninstall units; use "all" to remove all installed units')
+    .action((units: string[]) => new Installer().remove(units ?? []));
+
+  cli
+    .command("update [...units]", 'Update installed units; use "all" to update all')
+    .action((units: string[]) => new Installer().update(units ?? []));
+
+  cli
+    .command("refresh", "Sync customStatus from disk, output TODO list, clean orphaned hooks")
+    .option("--silent", "Suppress output (used for internal pre-operation refresh)")
+    .action((options: { silent?: boolean }) => new Installer().refresh(options.silent ?? false));
+
+  cli
+    .command("show <unit>", "Show unit details and component status")
+    .action((unit: string) => new Installer().show(unit));
 
   cli
     .command(
       "resolve [...units]",
-      "Resolve transitive deps and output install order; no args means uninstall all",
+      "Resolve transitive deps and output changeset; no args means uninstall all",
     )
-    .action((units: string[]) => new Installer().checkDeps(units ?? []));
-
-  cli
-    .command("prepare <unit>", "Return hasCustom component info and pre-create target dirs")
-    .option("--optional <json>", "JSON array of selected optional component names")
-    .action((unit: string, options: { optional?: string }) => {
-      const optionalNames = parseOptional(options.optional);
-      new Installer().prepare(unit, optionalNames);
-    });
-
-  cli
-    .command("uninstall <unit>", "Uninstall a unit from the current project")
-    .action((unit: string) => new Installer().uninstall(unit));
-
-  cli
-    .command("install <unit>", "Install a unit into the current project")
-    .option(
-      "--optional <json>",
-      'JSON array of selected optional component names, e.g. ["rule:poc-rule"]',
-    )
-    .action((unit: string, options: { optional?: string }) => {
-      const optionalNames = parseOptional(options.optional);
-      new Installer().install(unit, optionalNames);
-    });
+    .action((units: string[]) => new Installer().resolve(units ?? []));
 
   cli.help();
   cli.parse();
-}
-
-/**
- * Parses the raw `--optional` CLI argument into a string array.
- * Exits with an error if the value is not valid JSON.
- *
- * @param raw Raw string value from the --optional flag, or undefined if not provided.
- * @returns Parsed array of optional component names, or an empty array.
- */
-function parseOptional(raw: string | undefined): string[] {
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw) as string[];
-  } catch {
-    console.error("Error: --optional must be a valid JSON array");
-    process.exit(1);
-  }
 }

@@ -10,9 +10,9 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { expect, test } from "vitest";
 
-const repoRoot = resolve(__dirname, "..");
+const repoRoot = resolve(__dirname, "../../../..");
 const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
-const scriptPath = join(repoRoot, "src", "walkthrough", "walkthrough-state.ts");
+const scriptPath = join(__dirname, "walkthrough-state.ts");
 
 const BASE_INDEX = {
   stateKey: "test-branch",

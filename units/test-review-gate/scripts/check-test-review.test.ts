@@ -10,9 +10,9 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect, test } from "vitest";
 
-const repoRoot = resolve(__dirname, "..");
+const repoRoot = resolve(__dirname, "../../..");
 const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
-const scriptPath = join(repoRoot, "src", "test-review-gate", "check-test-review.ts");
+const scriptPath = join(__dirname, "check-test-review.ts");
 
 function initRepo(dir: string): void {
   execSync("git init", { cwd: dir });

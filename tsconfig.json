@@ -12,7 +12,6 @@
     "scripts/**/*.ts",
     "global/**/*.ts",
     "utils/**/*.ts",
-    "src/**/*.ts",
     "tests/**/*.ts",
     "units/*/scripts/**/*.ts"
   ]
