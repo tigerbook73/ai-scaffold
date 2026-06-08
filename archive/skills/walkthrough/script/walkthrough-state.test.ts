@@ -57,7 +57,9 @@ test("init creates index.json when called with valid key and index", () => {
       dir,
     );
     expect(result.status).toBe(0);
-    expect(existsSync(join(dir, ".ai-skills", "walkthrough", "test-branch", "index.json"))).toBe(true);
+    expect(existsSync(join(dir, ".ai-skills", "walkthrough", "test-branch", "index.json"))).toBe(
+      true,
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
