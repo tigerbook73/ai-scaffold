@@ -1,9 +1,7 @@
 {
   "name": "poc-unit",
   "description": "PoC unit covering all four component types (skill, rule, script, resource); validates full installation flow",
-  "dependencies": [
-    "poc-dep-unit"
-  ],
+  "dependencies": ["poc-dep-unit"],
   "components": {
     "skills": [
       {
@@ -15,6 +13,7 @@
       {
         "name": "poc-rule-nextjs",
         "file": "rules/poc-rule-nextjs.md",
+        "condition": "仅当本项目使用Next.js框架时，安装本规则",
         "hint": "扫描项目中的测试文件找出实际使用的文件后缀和目录结构，推荐合适的 glob patterns",
         "hasCustom": true
       },

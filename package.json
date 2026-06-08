@@ -33,19 +33,15 @@
     "esbuild": "^0.28.0",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
-    "lint-staged": "^17.0.5",
+    "lefthook": "^2.1.9",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4",
     "vitest": "^4.1.8"
   },
-  "lint-staged": {
-    "*.{ts,js}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{md,json,yaml,yml}": [
-      "prettier --write"
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "lefthook"
     ]
   }
 }
