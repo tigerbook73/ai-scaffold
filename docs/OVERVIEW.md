@@ -100,7 +100,7 @@ Vitest 测试可直接使用：
 
 ```bash
 pnpm exec vitest run tests/build.test.ts
-pnpm exec vitest run units/test-review-gate/scripts/check-test-review.test.ts
+pnpm exec vitest run units/test-review-gate/scripts/check-reviewed-by-commit-marker.test.ts
 ```
 
 ## 发布流程

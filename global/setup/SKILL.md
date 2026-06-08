@@ -76,7 +76,8 @@ node ~/.aisk/global/installer.js <subcommand> [units...]
 已添加：
   test-review-gate
     rule:   .claude/rules/aisk-trg/test-review-gate.md    [installed]
-    script: .aisk/trg/scripts/check-test-review.js        [installed, hook: pre-commit]
+    script: .aisk/trg/scripts/check-reviewed-by-commit-marker.js [installed, hook: pre-commit]
+    script: .aisk/trg/scripts/check-test-cases-match-it.js       [installed, hook: pre-commit]
 
 已更新：
   poc

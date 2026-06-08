@@ -1,6 +1,6 @@
 {
   "name": "test-review-gate",
-  "description": "在测试文件上强制执行 @reviewed-by 注释和 @cases / it() 名称一致性约束，通过 pre-commit hook 和 Claude 规则实现",
+  "description": "在测试文件上强制执行 @reviewed-by 注释和 @cases / it() / test() 名称一致性约束，通过 pre-commit hook 和 Claude 规则实现",
   "dependencies": [],
   "components": {
     "rules": [
@@ -11,13 +11,16 @@
     ],
     "scripts": [
       {
-        "name": "check-test-cases",
-        "file": "scripts/check-test-cases.ts"
+        "name": "check-reviewed-by-commit-marker",
+        "file": "scripts/check-reviewed-by-commit-marker.ts",
+        "hook": "pre-commit",
+        "params": ["staged_files"]
       },
       {
-        "name": "check-test-review",
-        "file": "scripts/check-test-review.ts",
-        "hook": "pre-commit"
+        "name": "check-test-cases-match-it",
+        "file": "scripts/check-test-cases-match-it.ts",
+        "hook": "pre-commit",
+        "params": ["staged_files"]
       }
     ]
   }

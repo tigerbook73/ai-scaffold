@@ -125,9 +125,9 @@ test-review-gate 已实现；构建已忽略脚本目录中的测试文件；待
 - status: done
 - notes:
   - `units/test-review-gate/rules/test-review-gate.md` — 从 archive 复制，Claude 规则
-  - `units/test-review-gate/scripts/check-test-review.ts` — pre-commit hook（class 形式）
-  - `units/test-review-gate/scripts/check-test-cases.ts` — CI 工具（class 形式）
-  - `units/test-review-gate/scripts/check-test-review.test.ts` — 保留在 unit 脚本目录中作为源码测试
+  - `units/test-review-gate/scripts/check-reviewed-by-commit-marker.ts` — pre-commit hook，检查已声明的人工审查 marker
+  - `units/test-review-gate/scripts/check-test-cases-match-it.ts` — pre-commit hook，检查已声明审查字段的测试文件中 `@cases` / `it()` / `test()` 一致性
+  - `units/test-review-gate/scripts/check-reviewed-by-commit-marker.test.ts` — 保留在 unit 脚本目录中作为源码测试
   - `scripts/build.ts` — scripts 组件扫描忽略 `*.test.ts` / `*.spec.ts`
   - `tests/build.test.ts` — 覆盖测试/规格文件不会注册为 scripts 组件
   - `units/test-review-gate/unit.json` — 已创建并移除测试脚本组件

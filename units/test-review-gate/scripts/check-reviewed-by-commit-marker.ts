@@ -1,20 +1,21 @@
 /**
- * Enforces explicit review markers on staged test changes.
+ * Validates human review markers for staged test changes during pre-commit.
  *
- * The hook compares the staged file content against HEAD, so it validates what
- * will be committed rather than the working tree. Review counters must increase
- * whenever an existing test file changes.
+ * Application: install this script as a Git pre-commit hook. It compares staged
+ * test file content against HEAD, ignores files without an @reviewed-by field,
+ * and requires declared review markers to have a valid, incrementing counter.
  */
 import { execFileSync } from "child_process";
 
+const REVIEWED_BY_FIELD_RE = /@reviewed-by\b/;
 const REVIEWED_BY_RE = /@reviewed-by\s+.+@\s+\[(\d+)\]/;
 
-class CheckTestReview {
-  /** Check staged test/spec files and fail when their @reviewed-by counter is missing or stale. */
+class CheckReviewedByCommitMarker {
+  /** Check staged test/spec files and fail when a declared @reviewed-by marker is stale. */
   run(): void {
     const renames = new Map<string, string>();
     // Keep rename history so the previous marker is read from the old path when needed.
-    for (const line of execFileSync("git", ["diff", "--cached", "--name-status"])
+    for (const line of execFileSync("git", ["diff", "--cached", "--name-status", "-M"])
       .toString()
       .split("\n")) {
       const m = line.match(/^R\d*\t(.+)\t(.+)/);
@@ -39,6 +40,8 @@ class CheckTestReview {
         continue;
       }
 
+      if (!REVIEWED_BY_FIELD_RE.test(current)) continue;
+
       const currentMatch = current.match(REVIEWED_BY_RE);
 
       let prev: string | null = null;
@@ -52,7 +55,7 @@ class CheckTestReview {
 
       if (prev === null) {
         if (!currentMatch) {
-          failed.push(`  ${file}  (new file — @reviewed-by must be filled)`);
+          failed.push(`  ${file}  (new file declares @reviewed-by but has no valid marker)`);
         }
       } else {
         const prevMatch = prev.match(REVIEWED_BY_RE);
@@ -69,12 +72,12 @@ class CheckTestReview {
       console.error("\n❌  The following test files have not been reviewed:");
       console.error(failed.join("\n"));
       console.error(
-        "\nRequired format:  @reviewed-by Tom Zhang @ [N]  (N starts at 1, must be greater than before)",
+        "\nRequired format:  @reviewed-by (!HUMAN EDIT ONLY): Tom Zhang @ [N]  (N starts at 1, must be greater than before)",
       );
-      console.error("Example:          @reviewed-by Tom Zhang @ [3]\n");
+      console.error("Example:          @reviewed-by (!HUMAN EDIT ONLY): Tom Zhang @ [3]\n");
       process.exit(1);
     }
   }
 }
 
-new CheckTestReview().run();
+new CheckReviewedByCommitMarker().run();
