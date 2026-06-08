@@ -72,7 +72,7 @@ implementation (in_progress)
 
 - step-type: final
 - status: done
-- Commit: TBD
+- Commit: 6f900d7
 - Date: 2026-06-08
 - auto-check: pass
 - manual-check: pending（端到端：pnpm register → 测试项目 aisk:setup → 安装 unit → 验证可用）
