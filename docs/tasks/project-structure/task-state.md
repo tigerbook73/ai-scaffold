@@ -63,7 +63,7 @@ Step 4：重命名约定统一
 
 - step-type: intermediate
 - status: done
-- Commit: TBD
+- Commit: 8806a95
 - Date: 2026-06-08
 - auto-check: pass
 - manual-check: n/a
