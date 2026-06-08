@@ -8,5 +8,12 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["scripts/**/*.ts", "global/**/*.ts", "utils/**/*.ts", "src/**/*.ts", "tests/**/*.ts"]
+  "include": [
+    "scripts/**/*.ts",
+    "global/**/*.ts",
+    "utils/**/*.ts",
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "units/*/scripts/**/*.ts"
+  ]
 }

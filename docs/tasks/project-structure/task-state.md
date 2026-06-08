@@ -17,7 +17,7 @@ implementation (in_progress)
 
 ## Current Step
 
-完成（等待 Task Acceptance 验收）
+test-review-gate-unit 已实现；待提交、待更新测试
 
 ## Requirements Phase（架构）
 
@@ -116,6 +116,20 @@ implementation (in_progress)
 - Date: 2026-06-06
 - auto-check: pass
 - manual-check: pending（需人工确认 setup skill 不可用、目标项目内容不受影响）
+
+## Implementation Phase（附加：test-review-gate-unit）
+
+### Step 5：将 setup-test-review-gate 转换为 ai-unit
+
+- step-type: final
+- status: in_progress
+- notes:
+  - `units/test-review-gate-unit/rules/test-review-gate.md` — 从 archive 复制，Claude 规则
+  - `units/test-review-gate-unit/scripts/check-test-review.ts` — pre-commit hook（class 形式）
+  - `units/test-review-gate-unit/scripts/check-test-cases.ts` — CI 工具（class 形式）
+  - `units/test-review-gate-unit/unit.json` — 已创建
+  - `pnpm build` — 已注册至 units.json
+  - 待办：提交；更新 `tests/check-test-review.test.ts` 指向新路径
 
 ## Task Acceptance
 

@@ -40,10 +40,10 @@ interface FileReport {
 
 type State =
   | "idle"
-  | "in-suite-comment"   // inside /** ... @test-suite ... */
-  | "collecting-cases"   // past @cases line, gathering entries
-  | "pending-describe"   // comment closed, waiting for describe(
-  | "in-describe";       // inside the describe block
+  | "in-suite-comment" // inside /** ... @test-suite ... */
+  | "collecting-cases" // past @cases line, gathering entries
+  | "pending-describe" // comment closed, waiting for describe(
+  | "in-describe"; // inside the describe block
 
 function checkFile(filePath: string): SuiteMismatch[] {
   const lines = readFileSync(filePath, "utf-8").split("\n");
@@ -76,8 +76,7 @@ function checkFile(filePath: string): SuiteMismatch[] {
         if (t.includes("@test-suite")) {
           state = "in-suite-comment";
           suiteCommentLine = i + 1;
-          suiteName =
-            (t.match(/@test-suite\s+(.+)/) ?? [])[1]?.trim() ?? "(unnamed)";
+          suiteName = (t.match(/@test-suite\s+(.+)/) ?? [])[1]?.trim() ?? "(unnamed)";
           pendingCases = [];
           seenIts = [];
           braceDepth = 0;
@@ -229,7 +228,7 @@ function main() {
   }
 
   console.error(
-    "\nFix: keep @cases entries and it() names in sync, or remove @cases if this suite is untracked.\n"
+    "\nFix: keep @cases entries and it() names in sync, or remove @cases if this suite is untracked.\n",
   );
   process.exit(1);
 }
