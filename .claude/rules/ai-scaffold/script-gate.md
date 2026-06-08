@@ -1,7 +1,6 @@
 ---
 paths:
-  - "scripts/**/*.ts"
-  - "skills/*/resource/*.ts"
+  - "ai-units/*/scripts/*.ts"
 ---
 
 # TypeScript Script Conventions
@@ -13,4 +12,4 @@ paths:
 - **JSON output**: `JSON.stringify(data, null, 2) + '\n'` — always trailing newline
 - **Async**: synchronous by default; use `async run()` only when interactive prompts (readline) are required
 - **Types**: define interfaces for all data shapes; `strict` mode is already enabled in tsconfig
-- **tsconfig coverage**: `scripts/**/*.ts` and `skills/*/resource/*.ts` are included — new resource scripts at that path are automatically covered; deeper nesting requires updating `tsconfig.json`
+- **tsconfig coverage**: `scripts/**/*.ts` is included in tsconfig; unit scripts under `ai-units/*/scripts/*.ts` require updating `tsconfig.json` if type-checking is needed

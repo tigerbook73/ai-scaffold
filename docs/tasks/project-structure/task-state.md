@@ -17,7 +17,7 @@ implementation (in_progress)
 
 ## Current Step
 
-Step 1：迁移 skill 到 ai-unit 架构
+Step 3：清理老架构产物
 
 ## Requirements Phase（架构）
 
@@ -44,7 +44,25 @@ Step 1：迁移 skill 到 ai-unit 架构
 ### Step 1：迁移 skill 到 ai-unit 架构
 
 - step-type: final
-- status: in_progress
+- status: done
+- Commit: 9a37e81
+- Date: 2026-06-08
+- auto-check: pass
+- manual-check: pending（需在测试项目验证三个 skill 可调用）
+
+### Step 2：建立 gate 规则
+
+- step-type: final
+- status: done
+- Commit: TBD
+- Date: 2026-06-08
+- auto-check: pass
+- manual-check: pending（编辑 ai-units/poc-unit/skills/poc.md，确认 skill-gate 规则生效）
+
+### Step 3：清理老架构产物
+
+- step-type: intermediate
+- status: not_started
 
 ## Implementation Phase（Phase 1 PoC）
 

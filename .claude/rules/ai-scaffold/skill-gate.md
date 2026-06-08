@@ -1,22 +1,18 @@
 ---
 paths:
-  - "skills/**/SK-*.md"
+  - "ai-units/*/skills/*.md"
 ---
 
 # Skill File Conventions
 
-Canonical source-format rules live in `skills/skill-format.md`. Keep this Claude rule file aligned with that document.
-
 ## Placement
 
-SK files must be placed directly under `skills/*/` (one level deep). Files at `skills/SK-*.md` or `skills/*/resource/SK-*.md` are misplacements — flag and do not treat as valid skill commands.
-
-<!-- EXTRACT:skill-format:start -->
+Skill files must be placed directly under `ai-units/*/skills/` (one level deep). The file name must match the skill command name in kebab-case with a `.md` extension.
 
 ## 强制规则
 
 - **Language**: 文件内容必须和本模板使用的语言一致
-- **H1 标题**：`# command-name`，kebab-case —— 与文件名去掉 `SK-` 前缀和 `.md` 扩展名后一致
+- **H1 标题**：`# command-name`，kebab-case —— 与文件名去掉 `.md` 扩展名后一致
 - **描述**：H1 后空一行，然后写一句话摘要。若需要额外描述，再空一行后继续。
 - **输入**：skill 接受参数时必须包含；Compact 格式使用加粗 `**Input**` 标题，Structured 格式使用 `## Input` 节标题；输入结构明确时优先使用描述性参数名（`$skill-name`、`$file-path` 等）；开放式或模糊输入可使用 `$ARGUMENTS`；否则省略
 - **约束**：skill 有写操作或重要行为限制时必须包含；描述写入范围（已知时指定具体文件，否则描述边界）；否则省略
@@ -88,5 +84,3 @@ One-sentence description.
 
 - ... (omit this section if not needed)
 ```
-
-<!-- EXTRACT:skill-format:end -->
