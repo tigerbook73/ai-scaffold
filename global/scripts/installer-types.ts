@@ -1,6 +1,6 @@
 /**
- * Shared type definitions for the aisf installer.
- * Published as source (.ts) to ~/.aisf/global/installer-types.ts so that
+ * Shared type definitions for the aisk installer.
+ * Published as source (.ts) to ~/.aisk/global/installer-types.ts so that
  * skill files can reference authoritative type definitions at runtime.
  */
 
@@ -44,7 +44,7 @@ export interface UnitResourceEntry {
   condition?: string;
 }
 
-/** Parsed structure of ~/.aisf/units/{unit}/unit.json. */
+/** Parsed structure of ~/.aisk/units/{unit}/unit.json. */
 export interface UnitJson {
   name: string;
   description?: string;
@@ -68,7 +68,7 @@ export interface InstalledComponent {
   path: string;
 }
 
-/** Installation record for a single unit, written into .aisf/installed.json. */
+/** Installation record for a single unit, written into .aisk/installed.json. */
 export interface InstalledEntry {
   installedAt: string;
   /** Every installed file, grouped by component type and keyed by component name. */
@@ -80,7 +80,7 @@ export interface InstalledEntry {
   };
 }
 
-/** Shape of .aisf/installed.json — tracks all installed units in the project. */
+/** Shape of .aisk/installed.json — tracks all installed units in the project. */
 export interface InstalledJson {
   units: Record<string, InstalledEntry>;
 }

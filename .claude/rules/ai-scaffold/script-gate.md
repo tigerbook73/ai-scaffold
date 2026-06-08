@@ -1,6 +1,6 @@
 ---
 paths:
-  - "ai-units/*/scripts/*.ts"
+  - "units/*/scripts/*.ts"
 ---
 
 # TypeScript Script Conventions
@@ -12,4 +12,4 @@ paths:
 - **JSON output**: `JSON.stringify(data, null, 2) + '\n'` — always trailing newline
 - **Async**: synchronous by default; use `async run()` only when interactive prompts (readline) are required
 - **Types**: define interfaces for all data shapes; `strict` mode is already enabled in tsconfig
-- **tsconfig coverage**: `scripts/**/*.ts` is included in tsconfig; unit scripts under `ai-units/*/scripts/*.ts` require updating `tsconfig.json` if type-checking is needed
+- **tsconfig coverage**: `scripts/**/*.ts` is included in tsconfig; unit scripts under `units/*/scripts/*.ts` require updating `tsconfig.json` if type-checking is needed

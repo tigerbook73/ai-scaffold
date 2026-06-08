@@ -17,7 +17,7 @@ implementation (in_progress)
 
 ## Current Step
 
-Step 4：重命名约定统一
+完成（等待 Task Acceptance 验收）
 
 ## Requirements Phase（架构）
 
@@ -71,7 +71,11 @@ Step 4：重命名约定统一
 ### Step 4：重命名约定统一
 
 - step-type: final
-- status: not_started
+- status: done
+- Commit: TBD
+- Date: 2026-06-08
+- auto-check: pass
+- manual-check: pending（端到端：pnpm register → 测试项目 aisk:setup → 安装 unit → 验证可用）
 
 ## Implementation Phase（Phase 1 PoC）
 

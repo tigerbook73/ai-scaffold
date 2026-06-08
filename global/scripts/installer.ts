@@ -35,18 +35,18 @@ export type { PrepareItem, ResolveResult };
  * for a given project directory.
  */
 export class Installer {
-  /** Absolute path to the global aisf home directory (~/.aisf by default). */
-  readonly aisfHome: string;
+  /** Absolute path to the global aisk home directory (~/.aisk by default). */
+  readonly aiskHome: string;
   /** Absolute path to the target project directory. */
   readonly cwd: string;
 
   /**
    * @param cwd      Project root to install units into (defaults to process.cwd()).
-   * @param aisfHome Global aisf home directory (defaults to ~/.aisf).
+   * @param aiskHome Global aisk home directory (defaults to ~/.aisk).
    */
-  constructor(cwd = process.cwd(), aisfHome = join(homedir(), ".aisf")) {
+  constructor(cwd = process.cwd(), aiskHome = join(homedir(), ".aisk")) {
     this.cwd = cwd;
-    this.aisfHome = aisfHome;
+    this.aiskHome = aiskHome;
   }
 
   /** Outputs JSON listing all available units with their install status. */
@@ -56,13 +56,13 @@ export class Installer {
   }
 
   /**
-   * Scans ~/.aisf/units/ and returns metadata for every available unit,
-   * ordered by the pre-computed global order from ~/.aisf/units.json.
+   * Scans ~/.aisk/units/ and returns metadata for every available unit,
+   * ordered by the pre-computed global order from ~/.aisk/units.json.
    *
    * @returns Array of unit descriptors in dependency-stable order.
    */
   private getUnitList(): Array<{ name: string; description: string; installed: boolean }> {
-    const unitsDir = join(this.aisfHome, "units");
+    const unitsDir = join(this.aiskHome, "units");
     if (!existsSync(unitsDir)) return [];
 
     const installed = this.readInstalled();
@@ -118,7 +118,7 @@ export class Installer {
       for (const name of names) {
         const unitJson = this.readUnitJson(name);
         if (!unitJson) {
-          console.error(`Error: unit "${name}" not found in ~/.aisf/units/`);
+          console.error(`Error: unit "${name}" not found in ~/.aisk/units/`);
           process.exit(1);
         }
         for (const dep of unitJson.dependencies) {
@@ -146,7 +146,7 @@ export class Installer {
   }
 
   /**
-   * Sorts the given unit names by the pre-computed global order from ~/.aisf/units.json.
+   * Sorts the given unit names by the pre-computed global order from ~/.aisk/units.json.
    * Units not present in the order file are appended sorted lexicographically.
    *
    * @param names Unit names to sort.
@@ -163,11 +163,11 @@ export class Installer {
   }
 
   /**
-   * Reads the pre-computed global unit order from ~/.aisf/units.json.
+   * Reads the pre-computed global unit order from ~/.aisk/units.json.
    * Falls back to an empty array (callers handle the missing-order case via localeCompare).
    */
   private readGlobalOrder(): string[] {
-    const orderPath = join(this.aisfHome, "units.json");
+    const orderPath = join(this.aiskHome, "units.json");
     if (!existsSync(orderPath)) return [];
     return JSON.parse(readFileSync(orderPath, "utf8")) as string[];
   }
@@ -176,7 +176,7 @@ export class Installer {
    * Returns info for all hasCustom components that will be installed so the AI can
    * generate their content into temp files before calling install.
    * Only includes optional components (those with a condition) if they appear in optionalNames.
-   * Also cleans up any orphaned .aisf-tmp-* files from previous interrupted runs.
+   * Also cleans up any orphaned .aisk-tmp-* files from previous interrupted runs.
    *
    * @param unitName      Name of the unit to prepare.
    * @param optionalNames Typed component names the user selected, e.g. ["rule:poc-rule"].
@@ -186,7 +186,7 @@ export class Installer {
 
     const unitJson = this.readUnitJson(unitName);
     if (!unitJson) {
-      console.error(`Error: unit "${unitName}" not found in ~/.aisf/units/`);
+      console.error(`Error: unit "${unitName}" not found in ~/.aisk/units/`);
       process.exit(1);
     }
 
@@ -214,12 +214,12 @@ export class Installer {
     for (const comp of unitJson.components.skills ?? []) {
       if (!comp.hasCustom) continue;
       if (comp.condition && !optionalNames.includes(`skill:${comp.name}`)) continue;
-      const templatePath = join(this.aisfHome, "units", unitName, comp.file);
+      const templatePath = join(this.aiskHome, "units", unitName, comp.file);
       const targetPath = join(
         this.cwd,
         ".claude",
         "skills",
-        `aisf-${unitName}-${comp.name}`,
+        `aisk-${unitName}-${comp.name}`,
         "SKILL.md",
       );
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
@@ -238,8 +238,8 @@ export class Installer {
     for (const comp of unitJson.components.rules ?? []) {
       if (!comp.hasCustom) continue;
       if (comp.condition && !optionalNames.includes(`rule:${comp.name}`)) continue;
-      const templatePath = join(this.aisfHome, "units", unitName, comp.file);
-      const targetPath = join(this.cwd, ".claude", "rules", `aisf-${unitName}`, `${comp.name}.md`);
+      const templatePath = join(this.aiskHome, "units", unitName, comp.file);
+      const targetPath = join(this.cwd, ".claude", "rules", `aisk-${unitName}`, `${comp.name}.md`);
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
       mkdirSync(dirname(targetPath), { recursive: true });
       const currentPath = entry?.components.rules.find((c) => c.name === comp.name)?.path;
@@ -256,8 +256,8 @@ export class Installer {
     for (const comp of unitJson.components.resources ?? []) {
       if (!comp.hasCustom) continue;
       if (comp.condition && !optionalNames.includes(`resource:${comp.name}`)) continue;
-      const templatePath = join(this.aisfHome, "units", unitName, comp.file);
-      const targetPath = join(this.cwd, ".aisf", unitName, comp.file);
+      const templatePath = join(this.aiskHome, "units", unitName, comp.file);
+      const targetPath = join(this.cwd, ".aisk", unitName, comp.file);
       const tempPath = this.makeTempPath(targetPath, unitName, comp.name);
       mkdirSync(dirname(targetPath), { recursive: true });
       const currentPath = entry?.components.resources.find((c) => c.name === comp.name)?.path;
@@ -283,18 +283,18 @@ export class Installer {
    * @returns Absolute path to the temporary staging file.
    */
   private makeTempPath(targetPath: string, unitName: string, compName: string): string {
-    return join(dirname(targetPath), `.aisf-tmp-${unitName}-${compName}`);
+    return join(dirname(targetPath), `.aisk-tmp-${unitName}-${compName}`);
   }
 
-  /** Removes any .aisf-tmp-* staging files left behind by interrupted install runs. */
+  /** Removes any .aisk-tmp-* staging files left behind by interrupted install runs. */
   private cleanOrphanTempFiles(): void {
-    for (const dir of [join(this.cwd, ".claude"), join(this.cwd, ".aisf")]) {
+    for (const dir of [join(this.cwd, ".claude"), join(this.cwd, ".aisk")]) {
       if (existsSync(dir)) this.removeTempFilesIn(dir);
     }
   }
 
   /**
-   * Recursively walks `dir` and deletes any file whose name starts with ".aisf-tmp-".
+   * Recursively walks `dir` and deletes any file whose name starts with ".aisk-tmp-".
    *
    * @param dir Absolute path to the directory to scan.
    */
@@ -303,7 +303,7 @@ export class Installer {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
         this.removeTempFilesIn(fullPath);
-      } else if (entry.name.startsWith(".aisf-tmp-")) {
+      } else if (entry.name.startsWith(".aisk-tmp-")) {
         rmSync(fullPath);
       }
     }
@@ -335,7 +335,7 @@ export class Installer {
     }
 
     for (const comp of entry.components.scripts) {
-      removePreCommitHook(this.cwd, `aisf-${unitName}-${comp.name}`);
+      removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
       const fullPath = join(this.cwd, comp.path);
       if (existsSync(fullPath)) {
         rmSync(fullPath);
@@ -345,7 +345,7 @@ export class Installer {
 
     delete installed.units[unitName];
     writeFileSync(
-      join(this.cwd, ".aisf", "installed.json"),
+      join(this.cwd, ".aisk", "installed.json"),
       JSON.stringify(installed, null, 2) + "\n",
     );
     console.log(`Uninstalled: ${unitName}`);
@@ -364,7 +364,7 @@ export class Installer {
   install(unitName: string, optionalNames: string[]): void {
     const unitJson = this.readUnitJson(unitName);
     if (!unitJson) {
-      console.error(`Error: unit "${unitName}" not found in ~/.aisf/units/`);
+      console.error(`Error: unit "${unitName}" not found in ~/.aisk/units/`);
       process.exit(1);
     }
 
@@ -503,7 +503,7 @@ export class Installer {
     }
     for (const comp of entry.components.scripts) {
       if (!newScriptNames.has(comp.name)) {
-        removePreCommitHook(this.cwd, `aisf-${unitName}-${comp.name}`);
+        removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
         const fullPath = join(this.cwd, comp.path);
         if (existsSync(fullPath)) {
           rmSync(fullPath);
@@ -529,7 +529,7 @@ export class Installer {
   }
 
   /**
-   * Copies a skill component into .claude/skills/aisf-{unit}-{name}/SKILL.md.
+   * Copies a skill component into .claude/skills/aisk-{unit}-{name}/SKILL.md.
    * For hasCustom skills, reads content from the AI-written temp file instead of the template.
    *
    * @param unitName Name of the owning unit.
@@ -537,7 +537,7 @@ export class Installer {
    * @returns Installed component record with name and project-relative path.
    */
   private installSkill(unitName: string, spec: SkillSpec): InstalledComponent {
-    const destDir = join(this.cwd, ".claude", "skills", `aisf-${unitName}-${spec.name}`);
+    const destDir = join(this.cwd, ".claude", "skills", `aisk-${unitName}-${spec.name}`);
     mkdirSync(destDir, { recursive: true });
     const destFile = join(destDir, "SKILL.md");
 
@@ -552,7 +552,7 @@ export class Installer {
       cpSync(tempPath, destFile);
       rmSync(tempPath);
     } else {
-      const src = join(this.aisfHome, "units", unitName, spec.file);
+      const src = join(this.aiskHome, "units", unitName, spec.file);
       if (!existsSync(src)) {
         console.error(`Error: skill file not found: ${src}`);
         process.exit(1);
@@ -562,12 +562,12 @@ export class Installer {
 
     return {
       name: spec.name,
-      path: join(".claude", "skills", `aisf-${unitName}-${spec.name}`, "SKILL.md"),
+      path: join(".claude", "skills", `aisk-${unitName}-${spec.name}`, "SKILL.md"),
     };
   }
 
   /**
-   * Copies a rule component into .claude/rules/aisf-{unit}/{name}.md.
+   * Copies a rule component into .claude/rules/aisk-{unit}/{name}.md.
    * For hasCustom rules, reads content from the AI-written temp file instead of the template.
    *
    * @param unitName Name of the owning unit.
@@ -575,7 +575,7 @@ export class Installer {
    * @returns Installed component record with name and project-relative path.
    */
   private installRule(unitName: string, spec: RuleSpec): InstalledComponent {
-    const destDir = join(this.cwd, ".claude", "rules", `aisf-${unitName}`);
+    const destDir = join(this.cwd, ".claude", "rules", `aisk-${unitName}`);
     mkdirSync(destDir, { recursive: true });
     const destFile = join(destDir, `${spec.name}.md`);
 
@@ -590,7 +590,7 @@ export class Installer {
       cpSync(tempPath, destFile);
       rmSync(tempPath);
     } else {
-      const templatePath = join(this.aisfHome, "units", unitName, spec.file);
+      const templatePath = join(this.aiskHome, "units", unitName, spec.file);
       if (!existsSync(templatePath)) {
         console.error(`Error: rule template not found: ${templatePath}`);
         process.exit(1);
@@ -600,12 +600,12 @@ export class Installer {
 
     return {
       name: spec.name,
-      path: join(".claude", "rules", `aisf-${unitName}`, `${spec.name}.md`),
+      path: join(".claude", "rules", `aisk-${unitName}`, `${spec.name}.md`),
     };
   }
 
   /**
-   * Copies a compiled script into .aisf/{unit}/scripts/{name}.js and registers
+   * Copies a compiled script into .aisk/{unit}/scripts/{name}.js and registers
    * it as a lefthook pre-commit hook with the specified params as template args.
    *
    * @param unitName Name of the owning unit.
@@ -613,24 +613,24 @@ export class Installer {
    * @returns Installed component record with name and project-relative path.
    */
   private installScript(unitName: string, spec: ScriptSpec): InstalledComponent {
-    const srcJs = join(this.aisfHome, "units", unitName, "scripts", `${spec.name}.js`);
+    const srcJs = join(this.aiskHome, "units", unitName, "scripts", `${spec.name}.js`);
     if (!existsSync(srcJs)) {
       console.error(`Error: compiled script not found: ${srcJs}`);
       process.exit(1);
     }
-    const destDir = join(this.cwd, ".aisf", unitName, "scripts");
+    const destDir = join(this.cwd, ".aisk", unitName, "scripts");
     mkdirSync(destDir, { recursive: true });
     const destFile = join(destDir, `${spec.name}.js`);
     cpSync(srcJs, destFile);
-    const relPath = join(".aisf", unitName, "scripts", `${spec.name}.js`);
+    const relPath = join(".aisk", unitName, "scripts", `${spec.name}.js`);
     const paramStr = (spec.params ?? []).map((p) => `{${p}}`).join(" ");
     const runCmd = paramStr ? `node ${relPath} ${paramStr}` : `node ${relPath}`;
-    addPreCommitHook(this.cwd, `aisf-${unitName}-${spec.name}`, runCmd);
+    addPreCommitHook(this.cwd, `aisk-${unitName}-${spec.name}`, runCmd);
     return { name: spec.name, path: relPath };
   }
 
   /**
-   * Copies a resource file into .aisf/{unit}/{spec.file}.
+   * Copies a resource file into .aisk/{unit}/{spec.file}.
    * For hasCustom resources, reads content from the AI-written temp file instead of the source.
    *
    * @param unitName Name of the owning unit.
@@ -638,7 +638,7 @@ export class Installer {
    * @returns Installed component record with name and project-relative path.
    */
   private installResource(unitName: string, spec: ResourceSpec): InstalledComponent {
-    const destFile = join(this.cwd, ".aisf", unitName, spec.file);
+    const destFile = join(this.cwd, ".aisk", unitName, spec.file);
     mkdirSync(dirname(destFile), { recursive: true });
 
     if (spec.hasCustom) {
@@ -652,7 +652,7 @@ export class Installer {
       cpSync(tempPath, destFile);
       rmSync(tempPath);
     } else {
-      const srcFile = join(this.aisfHome, "units", unitName, spec.file);
+      const srcFile = join(this.aiskHome, "units", unitName, spec.file);
       if (!existsSync(srcFile)) {
         console.error(`Error: resource file not found: ${srcFile}`);
         process.exit(1);
@@ -660,17 +660,17 @@ export class Installer {
       cpSync(srcFile, destFile);
     }
 
-    return { name: spec.name, path: join(".aisf", unitName, spec.file) };
+    return { name: spec.name, path: join(".aisk", unitName, spec.file) };
   }
 
   /**
-   * Creates .gitignore files inside .aisf/ and .claude/ to prevent aisf-managed
+   * Creates .gitignore files inside .aisk/ and .claude/ to prevent aisk-managed
    * files from being accidentally committed to the project repository.
    */
   private ensureGitignores(): void {
     const entries: Array<{ dir: string; content: string }> = [
-      { dir: join(this.cwd, ".aisf"), content: "*\n" },
-      { dir: join(this.cwd, ".claude"), content: "skills/aisf-*/\nrules/aisf-*/\n" },
+      { dir: join(this.cwd, ".aisk"), content: "*\n" },
+      { dir: join(this.cwd, ".claude"), content: "skills/aisk-*/\nrules/aisk-*/\n" },
     ];
     for (const { dir, content } of entries) {
       mkdirSync(dir, { recursive: true });
@@ -682,37 +682,37 @@ export class Installer {
   }
 
   /**
-   * Reads and parses .aisf/installed.json from the project directory.
+   * Reads and parses .aisk/installed.json from the project directory.
    * Returns an empty record if the file does not exist.
    */
   readInstalled(): InstalledJson {
-    const installedPath = join(this.cwd, ".aisf", "installed.json");
+    const installedPath = join(this.cwd, ".aisk", "installed.json");
     if (!existsSync(installedPath)) return { units: {} };
     return JSON.parse(readFileSync(installedPath, "utf8")) as InstalledJson;
   }
 
   /**
-   * Writes the updated installation record for a unit into .aisf/installed.json.
+   * Writes the updated installation record for a unit into .aisk/installed.json.
    *
    * @param unitName   Name of the unit that was just installed.
    * @param components Installed component records grouped by component type.
    */
   private updateInstalled(unitName: string, components: InstalledEntry["components"]): void {
-    const installedPath = join(this.cwd, ".aisf", "installed.json");
-    mkdirSync(join(this.cwd, ".aisf"), { recursive: true });
+    const installedPath = join(this.cwd, ".aisk", "installed.json");
+    mkdirSync(join(this.cwd, ".aisk"), { recursive: true });
     const data = this.readInstalled();
     data.units[unitName] = { installedAt: new Date().toISOString(), components };
     writeFileSync(installedPath, JSON.stringify(data, null, 2) + "\n");
   }
 
   /**
-   * Reads and parses the unit.json manifest for the given unit from ~/.aisf/units/.
+   * Reads and parses the unit.json manifest for the given unit from ~/.aisk/units/.
    *
    * @param unitName Name of the unit whose manifest to load.
    * @returns Parsed UnitJson, or null if the file does not exist.
    */
   private readUnitJson(unitName: string): UnitJson | null {
-    const unitJsonPath = join(this.aisfHome, "units", unitName, "unit.json");
+    const unitJsonPath = join(this.aiskHome, "units", unitName, "unit.json");
     if (!existsSync(unitJsonPath)) return null;
     return JSON.parse(readFileSync(unitJsonPath, "utf8")) as UnitJson;
   }

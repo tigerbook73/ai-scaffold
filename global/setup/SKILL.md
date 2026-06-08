@@ -21,7 +21,7 @@
 运行：
 
 ```
-node ~/.aisf/global/installer.js list
+node ~/.aisk/global/installer.js list
 ```
 
 若命令失败，输出 installer 的错误并停止。
@@ -56,10 +56,10 @@ node ~/.aisf/global/installer.js list
 否则，将**完整的期望选中列表**传给 resolve，由 installer 负责计算 changeset 并解析依赖：
 
 ```
-node ~/.aisf/global/installer.js resolve {所有选中的 unit 名称，空格分隔}
+node ~/.aisk/global/installer.js resolve {所有选中的 unit 名称，空格分隔}
 ```
 
-输出结构见 `~/.aisf/global/installer-types.ts` → `ResolveResult`。
+输出结构见 `~/.aisk/global/installer-types.ts` → `ResolveResult`。
 
 **冲突检查**：若 `auto` 中的某 unit 出现在 `to_remove` 中，说明用户选择与依赖冲突，终止并提示：
 
@@ -90,7 +90,7 @@ node ~/.aisf/global/installer.js resolve {所有选中的 unit 名称，空格�
 
 ### 4. 可选组件确认
 
-对 `to_install ∪ to_update` 中的所有 unit，逐个直接读取 `~/.aisf/units/{unit}/unit.json`（结构见 `~/.aisf/global/installer-types.ts` → `UnitJson`），找出有 `condition` 字段的组件（即可选组件）：
+对 `to_install ∪ to_update` 中的所有 unit，逐个直接读取 `~/.aisk/units/{unit}/unit.json`（结构见 `~/.aisk/global/installer-types.ts` → `UnitJson`），找出有 `condition` 字段的组件（即可选组件）：
 
 - 根据 `condition` 字段描述，结合当前项目的 `package.json` 和文件结构判断是否推荐
 - 向用户展示判断结论和理由，格式：`{unit-name} / {component-name}（{component-type}）`  
@@ -106,12 +106,12 @@ node ~/.aisf/global/installer.js resolve {所有选中的 unit 名称，空格�
 **5a. 查询定制组件：**
 
 ```
-node ~/.aisf/global/installer.js prepare {unit-name} --optional '{选中的可选组件名 JSON 数组}'
+node ~/.aisk/global/installer.js prepare {unit-name} --optional '{选中的可选组件名 JSON 数组}'
 ```
 
 `--optional` 与步骤 4 用户确认的结果一致，格式为 `["rule:poc-rule", "resource:config"]`；无可选项时可省略。
 
-installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次将安装的组件（必装 + 已选可选项），输出 `PrepareItem[]`（字段定义见 `~/.aisf/global/installer-types.ts` → `PrepareItem`）。
+installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次将安装的组件（必装 + 已选可选项），输出 `PrepareItem[]`（字段定义见 `~/.aisk/global/installer-types.ts` → `PrepareItem`）。
 
 列表为空则跳过，直接进入步骤 6。
 
@@ -136,13 +136,13 @@ installer 从 `unit.json` 读取 `hasCustom: true` 的组件，仅返回本次�
 **卸载**（按 `to_remove` 列表，顺序不限）：
 
 ```
-node ~/.aisf/global/installer.js uninstall {unit-name}
+node ~/.aisk/global/installer.js uninstall {unit-name}
 ```
 
 **安装/更新**（按步骤 2 输出的 `order` 顺序）：
 
 ```
-node ~/.aisf/global/installer.js install {unit-name} --optional '{选中的可选组件名 JSON 数组}'
+node ~/.aisk/global/installer.js install {unit-name} --optional '{选中的可选组件名 JSON 数组}'
 ```
 
 `--optional` 格式为 `["rule:poc-rule", "resource:config"]`，无可选项时可省略。
@@ -152,7 +152,7 @@ installer 自行从 `unit.json` 读取完整组件配置：
 - 无 `condition` 的组件 → 必装
 - 有 `condition` 的组件 → 仅在 `--optional` 列表中时安装，否则若已安装则删除
 - 已安装组件中不再出现于 `unit.json` 的（版本升级移除的）→ 自动删除（孤立组件清理）
-- 有 `hasCustom: true` 的组件 → installer 按命名约定（`.aisf-tmp-{unit}-{comp}`）读取步骤 5 写入的临时文件并拷贝；若临时文件不存在，installer 报错退出
+- 有 `hasCustom: true` 的组件 → installer 按命名约定（`.aisk-tmp-{unit}-{comp}`）读取步骤 5 写入的临时文件并拷贝；若临时文件不存在，installer 报错退出
 
 执行完成后输出汇总报告：
 
@@ -162,14 +162,14 @@ installer 自行从 `unit.json` 读取完整组件配置：
 
 已安装：
   new-unit：
-    skill: .claude/skills/aisf-new-unit-foo/SKILL.md
+    skill: .claude/skills/aisk-new-unit-foo/SKILL.md
 
 已更新：
   poc-dep-unit（自动依赖）：
-    skill: .claude/skills/aisf-poc-dep-unit-poc-dep/SKILL.md
+    skill: .claude/skills/aisk-poc-dep-unit-poc-dep/SKILL.md
   poc-unit：
-    skill:    .claude/skills/aisf-poc-unit-poc/SKILL.md
-    rule:     .claude/rules/aisf-poc-unit/poc-rule.md
-    script:   .aisf/poc-unit/scripts/poc-hook.js（已注册到 lefthook pre-commit）
-    resource: .aisf/poc-unit/resources/readme.md
+    skill:    .claude/skills/aisk-poc-unit-poc/SKILL.md
+    rule:     .claude/rules/aisk-poc-unit/poc-rule.md
+    script:   .aisk/poc-unit/scripts/poc-hook.js（已注册到 lefthook pre-commit）
+    resource: .aisk/poc-unit/resources/readme.md
 ```

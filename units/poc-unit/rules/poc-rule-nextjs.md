@@ -1,7 +1,7 @@
 ---
-# AISF:CUSTOM name="paths" hint="扫描项目中的测试文件找出实际使用的文件后缀和目录结构，推荐合适的 glob patterns"
+# AISK:CUSTOM name="paths" hint="扫描项目中的测试文件找出实际使用的文件后缀和目录结构，推荐合适的 glob patterns"
 paths: ["**/*.poc-test.*"]
-# AISF:CUSTOM:END
+# AISK:CUSTOM:END
 description: poc Next.js 规则验证（PoC，可选）
 ---
 

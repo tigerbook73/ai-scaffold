@@ -1,5 +1,5 @@
 /**
- * @test-file   buildx
+ * @test-file   build
  * @description Verifies refreshUnit syncs unit.json from the filesystem while preserving manual fields, and checkDependencies validates unit references.
  * @ai-generated
  * @reviewed-by
@@ -9,10 +9,10 @@ import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { expect, test } from "vitest";
 
-import { checkDependencies, refreshUnit } from "../scripts/buildx";
+import { checkDependencies, refreshUnit } from "../scripts/build";
 
 function makeTempDir(): string {
-  return mkdtempSync(join(tmpdir(), "aisk-buildx-"));
+  return mkdtempSync(join(tmpdir(), "aisk-build-"));
 }
 
 function writeUnit(dir: string, data: object): void {
@@ -170,7 +170,12 @@ test("preserves hook and params on script from existing unit.json", () => {
       dependencies: [],
       components: {
         scripts: [
-          { name: "my-hook", file: "scripts/my-hook.ts", hook: "pre-commit", params: ["staged_files"] },
+          {
+            name: "my-hook",
+            file: "scripts/my-hook.ts",
+            hook: "pre-commit",
+            params: ["staged_files"],
+          },
         ],
       },
     });
@@ -178,9 +183,8 @@ test("preserves hook and params on script from existing unit.json", () => {
     refreshUnit(dir);
 
     const unit = readUnit(dir);
-    const script = (
-      unit.components as { scripts: Array<{ hook: string; params: string[] }> }
-    ).scripts[0];
+    const script = (unit.components as { scripts: Array<{ hook: string; params: string[] }> })
+      .scripts[0];
     expect(script.hook).toBe("pre-commit");
     expect(script.params).toEqual(["staged_files"]);
   } finally {
@@ -223,21 +227,21 @@ test("uses TODO as description when existing unit.json has none", () => {
 });
 
 /**
- * @test-suite  refreshUnit — AISF:CUSTOM extraction
+ * @test-suite  refreshUnit — AISK:CUSTOM extraction
  * @target      refreshUnit()
  * @strategy    unit; isolated temp dirs
  * @cases
- *   - [PASS] sets hasCustom true when rule file contains AISF:CUSTOM
- *   - [PASS] removes hasCustom when rule file no longer contains AISF:CUSTOM
- *   - [PASS] extracts hint from AISF:CUSTOM block in rule file
+ *   - [PASS] sets hasCustom true when rule file contains AISK:CUSTOM
+ *   - [PASS] removes hasCustom when rule file no longer contains AISK:CUSTOM
+ *   - [PASS] extracts hint from AISK:CUSTOM block in rule file
  */
-test("sets hasCustom true when rule file contains AISF:CUSTOM", () => {
+test("sets hasCustom true when rule file contains AISK:CUSTOM", () => {
   const dir = makeTempDir();
   try {
     mkdirSync(join(dir, "rules"));
     writeFileSync(
       join(dir, "rules", "my-rule.md"),
-      '# AISF:CUSTOM name="paths" hint="scan tests"\npaths: []\n# AISF:CUSTOM:END',
+      '# AISK:CUSTOM name="paths" hint="scan tests"\npaths: []\n# AISK:CUSTOM:END',
     );
     writeUnit(dir, {
       name: "x",
@@ -256,7 +260,7 @@ test("sets hasCustom true when rule file contains AISF:CUSTOM", () => {
   }
 });
 
-test("removes hasCustom when rule file no longer contains AISF:CUSTOM", () => {
+test("removes hasCustom when rule file no longer contains AISK:CUSTOM", () => {
   const dir = makeTempDir();
   try {
     mkdirSync(join(dir, "rules"));
@@ -278,13 +282,13 @@ test("removes hasCustom when rule file no longer contains AISF:CUSTOM", () => {
   }
 });
 
-test("extracts hint from AISF:CUSTOM block in rule file", () => {
+test("extracts hint from AISK:CUSTOM block in rule file", () => {
   const dir = makeTempDir();
   try {
     mkdirSync(join(dir, "rules"));
     writeFileSync(
       join(dir, "rules", "my-rule.md"),
-      '# AISF:CUSTOM name="paths" hint="scan test files for patterns"\npaths: []\n# AISF:CUSTOM:END',
+      '# AISK:CUSTOM name="paths" hint="scan test files for patterns"\npaths: []\n# AISK:CUSTOM:END',
     );
     writeUnit(dir, {
       name: "x",
@@ -405,10 +409,7 @@ test("returns true when all dependencies exist as unit directories", () => {
   try {
     mkdirSync(join(dir, "unit-a"));
     mkdirSync(join(dir, "unit-b"));
-    writeFileSync(
-      join(dir, "unit-a", "unit.json"),
-      JSON.stringify({ dependencies: ["unit-b"] }),
-    );
+    writeFileSync(join(dir, "unit-a", "unit.json"), JSON.stringify({ dependencies: ["unit-b"] }));
     writeFileSync(join(dir, "unit-b", "unit.json"), JSON.stringify({ dependencies: [] }));
 
     expect(checkDependencies(dir)).toBe(true);
@@ -449,14 +450,8 @@ test("returns false when multiple units have missing dependencies", () => {
   try {
     mkdirSync(join(dir, "unit-a"));
     mkdirSync(join(dir, "unit-b"));
-    writeFileSync(
-      join(dir, "unit-a", "unit.json"),
-      JSON.stringify({ dependencies: ["ghost-1"] }),
-    );
-    writeFileSync(
-      join(dir, "unit-b", "unit.json"),
-      JSON.stringify({ dependencies: ["ghost-2"] }),
-    );
+    writeFileSync(join(dir, "unit-a", "unit.json"), JSON.stringify({ dependencies: ["ghost-1"] }));
+    writeFileSync(join(dir, "unit-b", "unit.json"), JSON.stringify({ dependencies: ["ghost-2"] }));
 
     expect(checkDependencies(dir)).toBe(false);
   } finally {

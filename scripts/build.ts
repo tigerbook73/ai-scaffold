@@ -33,12 +33,12 @@ function nameFromFilename(filename: string): string {
 
 function hasAisfCustom(filePath: string): boolean {
   if (!existsSync(filePath)) return false;
-  return /AISF:CUSTOM/.test(readFileSync(filePath, "utf8"));
+  return /AISK:CUSTOM/.test(readFileSync(filePath, "utf8"));
 }
 
 function extractHint(filePath: string): string | undefined {
   if (!existsSync(filePath)) return undefined;
-  const match = readFileSync(filePath, "utf8").match(/AISF:CUSTOM.*?hint="([^"]+)"/);
+  const match = readFileSync(filePath, "utf8").match(/AISK:CUSTOM.*?hint="([^"]+)"/);
   return match?.[1];
 }
 
@@ -46,7 +46,7 @@ function extractHint(filePath: string): string | undefined {
  * Refreshes unit.json from the filesystem.
  * - Auto-discovers component files in skills/, rules/, scripts/, resources/
  * - Preserves manually-maintained fields: description, dependencies, rules[].condition, scripts[].hook/params
- * - Extracts rules[].hint from AISF:CUSTOM blocks
+ * - Extracts rules[].hint from AISK:CUSTOM blocks
  * - Removes deprecated fields (scope, provides, required)
  * Returns true if unit.json was updated, false if unchanged or unit.json does not exist.
  */
@@ -195,14 +195,14 @@ export function checkDependencies(unitsDir: string): boolean {
 
 if (require.main === module) {
   const repoRoot = resolve(__dirname, "..");
-  const unitsDir = join(repoRoot, "ai-units");
+  const unitsDir = join(repoRoot, "units");
 
   if (!existsSync(unitsDir)) {
-    console.error("Error: ai-units/ not found");
+    console.error("Error: units/ not found");
     process.exit(1);
   }
 
-  console.log("buildx: refreshing unit.json files...");
+  console.log("build: refreshing unit.json files...");
   let updatedCount = 0;
   for (const unitName of readdirSync(unitsDir)) {
     if (refreshUnit(join(unitsDir, unitName))) {
@@ -211,12 +211,12 @@ if (require.main === module) {
     }
   }
 
-  console.log("\nbuildx: checking dependencies...");
+  console.log("\nbuild: checking dependencies...");
   if (!checkDependencies(unitsDir)) {
     process.exit(1);
   }
 
   const order = computeGlobalOrder(unitsDir);
   writeFileSync(join(unitsDir, "units.json"), JSON.stringify(order, null, 2) + "\n");
-  console.log(`\nbuildx complete. ${updatedCount} unit(s) updated. Order: [${order.join(", ")}]`);
+  console.log(`\nbuild complete. ${updatedCount} unit(s) updated. Order: [${order.join(", ")}]`);
 }

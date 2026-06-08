@@ -10,27 +10,27 @@ interface AisfConfig {
 
 interface PublishOptions {
   repoRoot?: string;
-  aisfHome?: string;
+  aiskHome?: string;
   claudeSkillsDir?: string;
 }
 
 export class Publish {
   private readonly repoRoot: string;
-  private readonly aisfHome: string;
+  private readonly aiskHome: string;
   private readonly claudeSkillsDir: string;
 
-  constructor({ repoRoot, aisfHome, claudeSkillsDir }: PublishOptions = {}) {
+  constructor({ repoRoot, aiskHome, claudeSkillsDir }: PublishOptions = {}) {
     this.repoRoot = repoRoot ?? resolve(__dirname, "..");
-    this.aisfHome = aisfHome ?? join(homedir(), ".aisf");
+    this.aiskHome = aiskHome ?? join(homedir(), ".aisk");
     this.claudeSkillsDir = claudeSkillsDir ?? join(homedir(), ".claude", "skills");
   }
 
   run(): void {
-    console.log("Publishing to ~/.aisf/ ...\n");
+    console.log("Publishing to ~/.aisk/ ...\n");
 
-    const unitsDir = join(this.repoRoot, "ai-units");
+    const unitsDir = join(this.repoRoot, "units");
     if (!existsSync(unitsDir)) {
-      console.error("Error: ai-units/ directory not found");
+      console.error("Error: units/ directory not found");
       process.exit(1);
     }
 
@@ -50,7 +50,7 @@ export class Publish {
     const unitJsonPath = join(unitSrcDir, "unit.json");
     if (!existsSync(unitJsonPath)) return;
 
-    const destDir = join(this.aisfHome, "units", unitName);
+    const destDir = join(this.aiskHome, "units", unitName);
     if (existsSync(destDir)) rmSync(destDir, { recursive: true, force: true });
     mkdirSync(destDir, { recursive: true });
 
@@ -69,19 +69,19 @@ export class Publish {
     console.log(`  unit: ${unitName}`);
   }
 
-  /** Copies the pre-computed unit order from ai-units/units.json to ~/.aisf/units.json. */
+  /** Copies the pre-computed unit order from units/units.json to ~/.aisk/units.json. */
   private publishUnitsOrder(unitsDir: string): void {
     const src = join(unitsDir, "units.json");
     if (!existsSync(src)) return;
-    mkdirSync(this.aisfHome, { recursive: true });
-    cpSync(src, join(this.aisfHome, "units.json"));
+    mkdirSync(this.aiskHome, { recursive: true });
+    cpSync(src, join(this.aiskHome, "units.json"));
   }
 
   private publishGlobalScripts(): void {
     const globalScriptsDir = join(this.repoRoot, "global", "scripts");
     if (!existsSync(globalScriptsDir)) return;
 
-    const destDir = join(this.aisfHome, "global");
+    const destDir = join(this.aiskHome, "global");
     if (existsSync(destDir)) rmSync(destDir, { recursive: true, force: true });
     mkdirSync(destDir, { recursive: true });
 
@@ -104,10 +104,10 @@ export class Publish {
       if (entry === "scripts") continue;
       const skillSrc = join(globalDir, entry, "SKILL.md");
       if (!existsSync(skillSrc)) continue;
-      const destDir = join(this.claudeSkillsDir, `aisf:${entry}`);
+      const destDir = join(this.claudeSkillsDir, `aisk:${entry}`);
       mkdirSync(destDir, { recursive: true });
       cpSync(skillSrc, join(destDir, "SKILL.md"));
-      console.log(`  global: aisf:${entry}`);
+      console.log(`  global: aisk:${entry}`);
     }
   }
 
@@ -130,13 +130,13 @@ export class Publish {
   }
 
   private writeConfig(): void {
-    mkdirSync(this.aisfHome, { recursive: true });
+    mkdirSync(this.aiskHome, { recursive: true });
     const config: AisfConfig = {
       repoPath: this.repoRoot,
       publishedAt: new Date().toISOString(),
     };
-    writeFileSync(join(this.aisfHome, "config.json"), JSON.stringify(config, null, 2) + "\n");
-    console.log("  config: ~/.aisf/config.json");
+    writeFileSync(join(this.aiskHome, "config.json"), JSON.stringify(config, null, 2) + "\n");
+    console.log("  config: ~/.aisk/config.json");
   }
 }
 

@@ -13,9 +13,8 @@
 ## 常用命令
 
 ```bash
-pnpm register                 # Install skills globally (Claude Code + Codex)
-pnpm build                    # Compile TypeScript (tsconfig.build.json)
-pnpm buildx                   # Scan ai-units/ and update units.json + unit.json files
+pnpm register                 # Publish units to ~/.aisk/ (Claude Code + Codex)
+pnpm build                    # Scan units/ and update units.json + unit.json files
 pnpm create-skill -- <file>   # Promote a skill file to the repository
 pnpm lint:check               # ESLint check without modifying files
 pnpm lint:fix                 # ESLint fix for scripts, resources, and tests
@@ -32,13 +31,13 @@ node --import tsx --test --test-concurrency=1 --test-reporter=spec tests/<file>.
 ```
 
 修改 skill 文件或脚本后，提交前请运行 `pnpm verify`。
-无需手动维护 manifest —— 安装器会直接扫描 `ai-units/` 目录。
+无需手动维护 manifest —— 安装器会直接扫描 `units/` 目录。
 
 ## 当前架构
 
 ```text
 Local skill repository (this repo)
-    -> pnpm register           Claude Code + Codex installation (scans ai-units/ directly)
+    -> pnpm register           Publish units to ~/.aisk/ (build + publish)
 
 ~/.ai-skills/config.json       repository locator (shared by both agents)
 ~/.claude/commands/aisk/       Claude Code skill commands
@@ -49,12 +48,12 @@ Local skill repository (this repo)
 
 Claude 斜杠命令（如 `/aisk/create-task`）不是 Codex 命令。Codex 通过自然语言匹配已安装 SKILL.md frontmatter 中的 `description` 字段来选择 skill。
 
-Skill 以 ai-unit 形式组织在 `ai-units/` 目录下。每个 unit 包含 `unit.json` 和可选的 `skills/`、`rules/`、`scripts/`、`resources/` 子目录。
+Skill 以 ai-unit 形式组织在 `units/` 目录下。每个 unit 包含 `unit.json` 和可选的 `skills/`、`rules/`、`scripts/`、`resources/` 子目录。
 
 ## 关键文件
 
 - `scripts/scan-skills.ts`：扫描 `skills/` 目录（兼容旧格式），从 SK-\*.md 的 frontmatter 和 H1 推断目标元数据。
-- `scripts/buildx.ts`：扫描 `ai-units/`，自动刷新 `unit.json` 和 `units.json`，维护拓扑顺序。
+- `scripts/build.ts`：扫描 `units/`，自动刷新 `unit.json` 和 `units.json`，维护拓扑顺序。
 - `scripts/setup.ts`：统一安装入口 —— 运行 Claude Code + Codex 安装（即 `pnpm register`）。
 - `scripts/setup-claude.ts`：Claude 安装器 —— 扫描 skill 并安装至 `~/.claude/commands/aisk/`。
 - `scripts/setup-codex.ts`：Codex 安装器 —— 扫描 skill 并安装至 `~/.codex/skills/aisk-*/`。
@@ -69,4 +68,4 @@ Codex skill 元数据（name、description、shortDescription）由 `scripts/sca
 
 ## 无生成 Manifest 文件
 
-不存在中间 JSON manifest 文件。`pnpm register` 在安装时直接扫描 `ai-units/` 目录以处理两个 agent 目标。`pnpm buildx` 负责维护 unit 注册表，不生成安装 manifest。
+不存在中间 JSON manifest 文件。`pnpm register` 先运行 `pnpm build`（扫描 `units/`）再发布到 `~/.aisk/`。`pnpm build` 负责维护 unit 注册表，不生成安装 manifest。

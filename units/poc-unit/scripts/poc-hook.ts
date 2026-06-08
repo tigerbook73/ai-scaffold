@@ -11,7 +11,7 @@ if (args.includes("--dry-run")) {
 
 const stagedFiles = args.filter((a) => !a.startsWith("--"));
 
-const logDir = join(process.cwd(), ".aisf", "poc-unit");
+const logDir = join(process.cwd(), ".aisk", "poc-unit");
 const logFile = join(logDir, "hook-log.txt");
 
 mkdirSync(logDir, { recursive: true });

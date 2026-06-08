@@ -9,19 +9,19 @@ interface AisfConfig {
 
 class Clean {
   private readonly repoRoot: string;
-  private readonly aisfHome: string;
+  private readonly aiskHome: string;
   private readonly claudeSkillsDir: string;
 
   constructor() {
     this.repoRoot = resolve(__dirname, "..");
-    this.aisfHome = join(homedir(), ".aisf");
+    this.aiskHome = join(homedir(), ".aisk");
     this.claudeSkillsDir = join(homedir(), ".claude", "skills");
   }
 
   run(): void {
-    const configPath = join(this.aisfHome, "config.json");
+    const configPath = join(this.aiskHome, "config.json");
     if (!existsSync(configPath)) {
-      console.log("Nothing to clean: ~/.aisf/config.json not found.");
+      console.log("Nothing to clean: ~/.aisk/config.json not found.");
       return;
     }
 
@@ -33,21 +33,21 @@ class Clean {
       process.exit(1);
     }
 
-    console.log("Cleaning ~/.aisf/ and ~/.claude/skills/aisf:* ...\n");
+    console.log("Cleaning ~/.aisk/ and ~/.claude/skills/aisk:* ...\n");
 
     for (const subdir of ["units", "global"]) {
-      const target = join(this.aisfHome, subdir);
+      const target = join(this.aiskHome, subdir);
       if (existsSync(target)) {
         rmSync(target, { recursive: true, force: true });
-        console.log(`  Removed: ~/.aisf/${subdir}/`);
+        console.log(`  Removed: ~/.aisk/${subdir}/`);
       }
     }
     rmSync(configPath, { force: true });
-    console.log("  Removed: ~/.aisf/config.json");
+    console.log("  Removed: ~/.aisk/config.json");
 
     if (existsSync(this.claudeSkillsDir)) {
       for (const entry of readdirSync(this.claudeSkillsDir)) {
-        if (entry.startsWith("aisf:")) {
+        if (entry.startsWith("aisk:")) {
           rmSync(join(this.claudeSkillsDir, entry), { recursive: true, force: true });
           console.log(`  Removed: ~/.claude/skills/${entry}/`);
         }

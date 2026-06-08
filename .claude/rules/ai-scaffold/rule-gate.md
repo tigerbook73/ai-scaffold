@@ -1,6 +1,6 @@
 ---
 paths:
-  - "ai-units/*/rules/*.md"
+  - "units/*/rules/*.md"
 ---
 
 # Rule Guard File Conventions
@@ -9,7 +9,7 @@ Rule guard files are installed to the target project and activate as Claude rule
 
 ## Required Frontmatter
 
-Every rule guard file must have a `paths:` frontmatter field (plain YAML array or `AISF:CUSTOM` block):
+Every rule guard file must have a `paths:` frontmatter field (plain YAML array or `AISK:CUSTOM` block):
 
 ```yaml
 ---
@@ -18,15 +18,15 @@ paths:
 ---
 ```
 
-## AISF:CUSTOM Blocks
+## AISK:CUSTOM Blocks
 
-Use `AISF:CUSTOM` blocks for frontmatter fields that should be customized per-project during installation. The installer prompts the user to fill in the value:
+Use `AISK:CUSTOM` blocks for frontmatter fields that should be customized per-project during installation. The installer prompts the user to fill in the value:
 
 ```yaml
 ---
-# AISF:CUSTOM name="paths" hint="describe how to derive the value"
+# AISK:CUSTOM name="paths" hint="describe how to derive the value"
 paths: ["**/*.placeholder"]
-# AISF:CUSTOM:END
+# AISK:CUSTOM:END
 description: short description of what this rule does
 ---
 ```

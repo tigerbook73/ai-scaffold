@@ -1,13 +1,13 @@
 ---
 paths:
-  - "ai-units/*/skills/*.md"
+  - "units/*/skills/*.md"
 ---
 
 # Skill File Conventions
 
 ## Placement
 
-Skill files must be placed directly under `ai-units/*/skills/` (one level deep). The file name must match the skill command name in kebab-case with a `.md` extension.
+Skill files must be placed directly under `units/*/skills/` (one level deep). The file name must match the skill command name in kebab-case with a `.md` extension.
 
 ## 强制规则
 
