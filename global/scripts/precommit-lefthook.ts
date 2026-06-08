@@ -42,7 +42,10 @@ export function addPreCommitHook(
 
   if (!bounds) {
     const suffix = content.endsWith("\n") ? "" : "\n";
-    writeFileSync(lefthookPath, `${content}${suffix}\npre-commit:\n  commands:\n${commandLines.join("\n")}\n`);
+    writeFileSync(
+      lefthookPath,
+      `${content}${suffix}\npre-commit:\n  commands:\n${commandLines.join("\n")}\n`,
+    );
     return;
   }
 

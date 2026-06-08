@@ -78,6 +78,7 @@ test("removes rule entry when file no longer exists in rules/", () => {
  *   - [PASS] derives name from directory name when creating unit.json
  *   - [PASS] defaults dependencies to empty array when absent from existing unit.json
  *   - [PASS] omits hook when no existing entry for the script
+ *   - [PASS] ignores test and spec files when discovering scripts
  */
 test("derives name from directory name when creating unit.json", () => {
   const dir = makeTempDir();
@@ -120,6 +121,41 @@ test("omits hook when no existing entry for the script", () => {
     const unit = readUnit(dir);
     const script = (unit.components as { scripts: Array<Record<string, unknown>> }).scripts[0];
     expect(script.hook).toBeUndefined();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("ignores test and spec files when discovering scripts", () => {
+  const dir = makeTempDir();
+  try {
+    mkdirSync(join(dir, "scripts"));
+    writeFileSync(join(dir, "scripts", "check-test-review.ts"), "// hook script");
+    writeFileSync(join(dir, "scripts", "check-test-review.test.ts"), "// test script");
+    writeFileSync(join(dir, "scripts", "check-test-review.spec.ts"), "// spec script");
+    writeUnit(dir, {
+      name: "x",
+      description: "d",
+      dependencies: [],
+      components: {
+        scripts: [
+          { name: "check-test-review", file: "scripts/check-test-review.ts", hook: "pre-commit" },
+          { name: "check-test-review.test", file: "scripts/check-test-review.test.ts" },
+          { name: "check-test-review.spec", file: "scripts/check-test-review.spec.ts" },
+        ],
+      },
+    });
+
+    refreshUnit(dir);
+
+    const unit = readUnit(dir);
+    expect((unit.components as { scripts: unknown[] }).scripts).toEqual([
+      {
+        name: "check-test-review",
+        file: "scripts/check-test-review.ts",
+        hook: "pre-commit",
+      },
+    ]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

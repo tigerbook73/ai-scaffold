@@ -17,7 +17,7 @@ implementation (in_progress)
 
 ## Current Step
 
-test-review-gate-unit 已实现；待提交、待更新测试
+test-review-gate 已实现；构建已忽略脚本目录中的测试文件；待提交
 
 ## Requirements Phase（架构）
 
@@ -117,19 +117,22 @@ test-review-gate-unit 已实现；待提交、待更新测试
 - auto-check: pass
 - manual-check: pending（需人工确认 setup skill 不可用、目标项目内容不受影响）
 
-## Implementation Phase（附加：test-review-gate-unit）
+## Implementation Phase（附加：test-review-gate）
 
 ### Step 5：将 setup-test-review-gate 转换为 ai-unit
 
 - step-type: final
-- status: in_progress
+- status: done
 - notes:
-  - `units/test-review-gate-unit/rules/test-review-gate.md` — 从 archive 复制，Claude 规则
-  - `units/test-review-gate-unit/scripts/check-test-review.ts` — pre-commit hook（class 形式）
-  - `units/test-review-gate-unit/scripts/check-test-cases.ts` — CI 工具（class 形式）
-  - `units/test-review-gate-unit/unit.json` — 已创建
+  - `units/test-review-gate/rules/test-review-gate.md` — 从 archive 复制，Claude 规则
+  - `units/test-review-gate/scripts/check-test-review.ts` — pre-commit hook（class 形式）
+  - `units/test-review-gate/scripts/check-test-cases.ts` — CI 工具（class 形式）
+  - `units/test-review-gate/scripts/check-test-review.test.ts` — 保留在 unit 脚本目录中作为源码测试
+  - `scripts/build.ts` — scripts 组件扫描忽略 `*.test.ts` / `*.spec.ts`
+  - `tests/build.test.ts` — 覆盖测试/规格文件不会注册为 scripts 组件
+  - `units/test-review-gate/unit.json` — 已创建并移除测试脚本组件
   - `pnpm build` — 已注册至 units.json
-  - 待办：提交；更新 `tests/check-test-review.test.ts` 指向新路径
+  - auto-check: `pnpm exec vitest run tests/build.test.ts` pass；`pnpm typecheck` pass；`pnpm build` pass
 
 ## Task Acceptance
 

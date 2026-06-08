@@ -27,6 +27,10 @@ function scanFiles(dir: string, exts: string[]): string[] {
     .sort();
 }
 
+function isTestScript(filename: string): boolean {
+  return /\.(test|spec)\.ts$/.test(filename);
+}
+
 function nameFromFilename(filename: string): string {
   return basename(filename, extname(filename));
 }
@@ -77,14 +81,16 @@ export function refreshUnit(unitSrcDir: string): boolean {
     return entry;
   });
 
-  const scripts: UnitScriptEntry[] = scanFiles(join(unitSrcDir, "scripts"), [".ts"]).map((f) => {
-    const name = nameFromFilename(f);
-    const prev = existingScripts.get(name);
-    const entry: UnitScriptEntry = { name, file: `scripts/${f}` };
-    if (prev?.hook) entry.hook = prev.hook;
-    if (prev?.params?.length) entry.params = prev.params;
-    return entry;
-  });
+  const scripts: UnitScriptEntry[] = scanFiles(join(unitSrcDir, "scripts"), [".ts"])
+    .filter((f) => !isTestScript(f))
+    .map((f) => {
+      const name = nameFromFilename(f);
+      const prev = existingScripts.get(name);
+      const entry: UnitScriptEntry = { name, file: `scripts/${f}` };
+      if (prev?.hook) entry.hook = prev.hook;
+      if (prev?.params?.length) entry.params = prev.params;
+      return entry;
+    });
 
   const resources: UnitResourceEntry[] = scanFiles(join(unitSrcDir, "resources"), [".md"]).map(
     (f) => ({
