@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+/**
+ * Small hook used by the poc unit to prove script publishing and hook execution.
+ *
+ * It records the files passed by lefthook into project-local .aisk state; the
+ * behavior is intentionally simple so installer tests can assert the full path
+ * from unit script source to installed runnable hook.
+ */
 import { appendFileSync, mkdirSync } from "fs";
 import { join } from "path";
 

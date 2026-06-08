@@ -1,3 +1,10 @@
+/**
+ * Validates that documented @cases entries match the it() cases in each test suite.
+ *
+ * This hook intentionally uses a lightweight line scanner instead of parsing
+ * TypeScript AST because the contract lives in comments plus nearby describe()
+ * blocks. It reports mismatches without rewriting test files.
+ */
 import { readFileSync } from "fs";
 import { execFileSync } from "child_process";
 
@@ -16,6 +23,7 @@ interface FileReport {
 type State = "idle" | "in-suite-comment" | "collecting-cases" | "pending-describe" | "in-describe";
 
 class CheckTestCases {
+  /** Run the checker for explicit files, or discover test files when no args are passed. */
   run(): void {
     const inputFiles = process.argv.slice(2);
     const files = inputFiles.length > 0 ? inputFiles : this.findTestFiles();
@@ -64,6 +72,12 @@ class CheckTestCases {
     process.exit(1);
   }
 
+  /**
+   * Compare every @test-suite comment block in one file with the following describe() body.
+   *
+   * The state machine keeps comment parsing and describe-body parsing separate
+   * so unrelated comments or code between suites do not leak case names.
+   */
   private checkFile(filePath: string): SuiteMismatch[] {
     const lines = readFileSync(filePath, "utf-8").split("\n");
     const mismatches: SuiteMismatch[] = [];
@@ -81,6 +95,7 @@ class CheckTestCases {
       const t = raw.trim();
 
       if (state === "pending-describe" || state === "in-describe") {
+        // Brace depth is tracked only while waiting for or inside the target describe().
         for (const ch of raw) {
           if (ch === "{") braceDepth++;
           else if (ch === "}") braceDepth--;
@@ -122,6 +137,7 @@ class CheckTestCases {
             describeEntryDepth = braceDepth;
             state = "in-describe";
           } else if (t !== "" && !t.startsWith("//") && !t.startsWith("*") && !t.startsWith("/*")) {
+            // A real code line before describe() means the documented cases have no suite to bind to.
             if (pendingCases.length > 0) {
               mismatches.push({
                 suiteName,
@@ -160,6 +176,7 @@ class CheckTestCases {
     return mismatches;
   }
 
+  /** Find test/spec files while excluding dependency directories. */
   private findTestFiles(): string[] {
     const extensions = ["test.ts", "spec.ts", "test.js", "spec.js"];
     const results: string[] = [];

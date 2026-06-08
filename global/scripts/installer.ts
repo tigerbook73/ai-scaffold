@@ -1,3 +1,10 @@
+/**
+ * Runtime installer for published aisk units.
+ *
+ * This file is bundled into ~/.aisk/global/installer.js and then invoked from
+ * installed skills. It manages project-local generated files, hook registration,
+ * dependency resolution, and preservation of AISF:CUSTOM blocks during updates.
+ */
 import {
   cpSync,
   existsSync,
@@ -39,7 +46,12 @@ const CUSTOM_START_RE =
 const CUSTOM_END_HASH_RE = /^#\s*AISF:CUSTOM:END/;
 const CUSTOM_END_HTML_RE = /^<!--\s*AISF:CUSTOM:END/;
 
-/** Parse all AISF:CUSTOM blocks from file content. */
+/**
+ * Parse all AISF:CUSTOM blocks from file content.
+ *
+ * Supports both Markdown hash comments and HTML comments because rules/skills
+ * may need different comment syntaxes depending on where the template appears.
+ */
 function parseCustomBlocks(content: string): CustomBlock[] {
   const lines = content.split("\n");
   const blocks: CustomBlock[] = [];
@@ -70,7 +82,13 @@ function parseCustomBlocks(content: string): CustomBlock[] {
   return blocks;
 }
 
-/** Merge done blocks from oldContent into newTemplate, preserving new template hints. */
+/**
+ * Merge done blocks from oldContent into newTemplate, preserving new template hints.
+ *
+ * Only completed blocks are carried forward. TODO blocks deliberately keep the
+ * new template body so updated instructions can reach the user before they fill
+ * the customization region.
+ */
 function mergeCustomContent(oldContent: string, newTemplate: string): string {
   const oldBlocks = parseCustomBlocks(oldContent);
   const doneMap = new Map<string, string[]>();
@@ -93,17 +111,16 @@ function mergeCustomContent(oldContent: string, newTemplate: string): string {
       const doneContent = doneMap.get(name);
       const newStatus = doneContent ? "done" : "todo";
 
-      // Rewrite start line with updated status, keeping everything else
+      // Rewrite only status so fresh template metadata such as hint/name stays authoritative.
       result.push(lines[i].replace(/status="[^"]+"/, `status="${newStatus}"`));
 
       if (doneContent) {
-        // Skip new template's block content
+        // Replace template body with the user's completed content.
         i++;
         while (i < lines.length && !endRe.test(lines[i])) i++;
-        // Insert done content from old file
         result.push(...doneContent);
       } else {
-        // Keep new template content as-is
+        // Unfinished custom regions should receive any updated template guidance.
         i++;
         while (i < lines.length && !endRe.test(lines[i])) {
           result.push(lines[i]);
@@ -538,7 +555,7 @@ export class Installer {
     const unitJson = this.readUnitJson(unitName)!;
     const entry = this.readInstalled().units[unitName];
 
-    // For optional components, only include those already recorded in installed.json
+    // For optional components, update preserves the user's original install choice.
     const installedOptionals = this.getInstalledOptionalNames(unitJson, entry);
     const specs = this.resolveComponents(unitJson, installedOptionals);
 
@@ -711,7 +728,7 @@ export class Installer {
     if (!existsSync(src)) throw new Error(`source file not found: ${src}`);
     mkdirSync(dirname(dest), { recursive: true });
 
-    // Read current file content for merging (prefer existing path, fallback to dest)
+    // Prefer the recorded path so renamed components can still carry old custom content forward.
     const currentPath = existingFilePath ?? dest;
     if (hasCustom && existsSync(currentPath)) {
       const oldContent = readFileSync(currentPath, "utf8");
@@ -764,6 +781,8 @@ export class Installer {
     const toInstall = new Set<string>(names);
     const autoDeps = new Set<string>();
 
+    // Depth-first expansion is only used to collect the closure; final ordering
+    // is delegated to the precomputed global order shared by build/publish.
     const expand = (name: string) => {
       const unitJson = this.readUnitJson(name);
       if (!unitJson) {
@@ -786,7 +805,12 @@ export class Installer {
     return { order, autoDeps };
   }
 
-  /** Full dep resolution for resolve command (desired-state model). */
+  /**
+   * Full dep resolution for resolve command using a desired-state model.
+   *
+   * The selected names represent the complete target state. Any currently
+   * installed unit outside the transitive closure becomes a removal candidate.
+   */
   private resolveDeps(selectedNames: string[]): ResolveResult {
     const installed = this.readInstalled();
     const installedNames = new Set(Object.keys(installed.units));
@@ -848,7 +872,12 @@ export class Installer {
 
   // ─── Component resolution & orphan removal ─────────────────────────────────
 
-  // null = include all optionals (used for fresh install); string[] = only the named ones
+  /**
+   * Resolve unit.json component declarations into concrete install specs.
+   *
+   * optionalNames === null means fresh install and includes all optional
+   * components; otherwise only recorded optional components are preserved.
+   */
   private resolveComponents(unitJson: UnitJson, optionalNames: string[] | null): ComponentSpec[] {
     const selected = (key: string) => optionalNames === null || optionalNames.includes(key);
     const specs: ComponentSpec[] = [];
@@ -900,6 +929,7 @@ export class Installer {
     return specs;
   }
 
+  /** Remove files and hooks that existed in installed.json but no longer resolve from unit.json. */
   private removeOrphans(unitName: string, unitJson: UnitJson, optionalNames: string[]): void {
     const installed = this.readInstalled();
     const entry = installed.units[unitName];
@@ -941,6 +971,7 @@ export class Installer {
 
   // ─── File system utilities ─────────────────────────────────────────────────
 
+  /** Delete a generated file and prune its immediate directory when it becomes empty. */
   private deleteFile(fullPath: string): void {
     if (existsSync(fullPath)) {
       rmSync(fullPath);
@@ -948,6 +979,7 @@ export class Installer {
     }
   }
 
+  /** Best-effort cleanup for component wrapper directories after their file is removed. */
   private tryRemoveEmptyDir(fullPath: string): void {
     const parentDir = dirname(fullPath);
     try {
@@ -965,6 +997,7 @@ export class Installer {
     return blocks.some((b) => b.status === "todo") ? "todo" : "done";
   }
 
+  /** Ensure generated installer output stays out of the host project's git history. */
   private ensureGitignores(): void {
     const entries: Array<{ dir: string; content: string }> = [
       { dir: join(this.cwd, ".aisk"), content: "*\n" },
@@ -979,6 +1012,7 @@ export class Installer {
 
   // ─── Data access ───────────────────────────────────────────────────────────
 
+  /** Persist the latest component paths and customStatus for a unit. */
   private updateInstalled(unitName: string, components: InstalledEntry["components"]): void {
     const installedPath = join(this.cwd, ".aisk", "installed.json");
     mkdirSync(join(this.cwd, ".aisk"), { recursive: true });
@@ -987,12 +1021,14 @@ export class Installer {
     writeFileSync(installedPath, JSON.stringify(data, null, 2) + "\n");
   }
 
+  /** Read one published unit definition from ~/.aisk/units. */
   private readUnitJson(unitName: string): UnitJson | null {
     const path = join(this.aiskHome, "units", unitName, "unit.json");
     if (!existsSync(path)) return null;
     return JSON.parse(readFileSync(path, "utf8")) as UnitJson;
   }
 
+  /** List published units in registry order with their current project install state. */
   private getUnitList(): Array<{ name: string; description: string; installed: boolean }> {
     const unitsDir = join(this.aiskHome, "units");
     if (!existsSync(unitsDir)) return [];
@@ -1019,12 +1055,14 @@ export class Installer {
       .filter((u): u is NonNullable<typeof u> => u !== null);
   }
 
+  /** Read the registry order produced by build.ts and published to ~/.aisk/units.json. */
   private readGlobalOrder(): string[] {
     const orderPath = join(this.aiskHome, "units.json");
     if (!existsSync(orderPath)) return [];
     return JSON.parse(readFileSync(orderPath, "utf8")) as string[];
   }
 
+  /** Sort names by registry order, falling back to lexical order for unknown names. */
   private sortByGlobalOrder(names: string[], order?: string[]): string[] {
     const ord = order ?? this.readGlobalOrder();
     const index = new Map(ord.map((n, i) => [n, i]));

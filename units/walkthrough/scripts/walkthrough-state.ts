@@ -22,18 +22,22 @@ import type { Index } from "./types/types";
 const BASE_DIR = join(process.cwd(), ".aisk", "walkthrough", "state");
 
 class WalkthroughState {
+  /** Directory that owns all state files for a sanitized walkthrough key. */
   private stateDir(key: string): string {
     return join(BASE_DIR, key);
   }
 
+  /** Absolute path to the persisted index for a state key. */
   private indexPath(key: string): string {
     return join(this.stateDir(key), "index.json");
   }
 
+  /** Read the index file; callers handle command-specific missing-state behavior. */
   private readIndex(key: string): Index {
     return JSON.parse(readFileSync(this.indexPath(key), "utf-8")) as Index;
   }
 
+  /** Initialize a new state record from JSON produced by the walkthrough planner. */
   cmdInit(key: string, indexJson: string): void {
     const dir = this.stateDir(key);
     mkdirSync(dir, { recursive: true });
@@ -41,6 +45,7 @@ class WalkthroughState {
     writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8");
   }
 
+  /** Print the raw index JSON for shell callers that need the complete state. */
   cmdRead(key: string): void {
     const path = this.indexPath(key);
     if (!existsSync(path)) {
@@ -50,6 +55,7 @@ class WalkthroughState {
     process.stdout.write(readFileSync(path, "utf-8"));
   }
 
+  /** Replace an existing index after the skill updates derived state. */
   cmdUpdate(key: string, indexJson: string): void {
     const path = this.indexPath(key);
     if (!existsSync(path)) {
@@ -60,6 +66,7 @@ class WalkthroughState {
     writeFileSync(path, JSON.stringify(index, null, 2) + "\n", "utf-8");
   }
 
+  /** List compact summaries for every persisted walkthrough state. */
   cmdList(): void {
     if (!existsSync(BASE_DIR)) {
       process.stdout.write("[]\n");
@@ -85,6 +92,7 @@ class WalkthroughState {
     process.stdout.write(JSON.stringify(results, null, 2) + "\n");
   }
 
+  /** Locate the active walkthrough state for a target commit hash. */
   cmdFind(hash: string): void {
     if (!existsSync(BASE_DIR)) {
       console.error(`No active state found for hash: ${hash}`);
@@ -107,6 +115,7 @@ class WalkthroughState {
     process.exit(1);
   }
 
+  /** Mark the current group done and advance to the next group. */
   cmdNext(key: string): void {
     const index = this.readIndex(key);
     // currentGroup is 1-based; groups[] is 0-based — mark current group done first
@@ -121,6 +130,7 @@ class WalkthroughState {
     writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8");
   }
 
+  /** Move back one group and reopen it for work. */
   cmdPrev(key: string): void {
     const index = this.readIndex(key);
     if (index.currentGroup <= 1) {
@@ -134,6 +144,7 @@ class WalkthroughState {
     writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8");
   }
 
+  /** Jump to a 1-based group number and reopen that group. */
   cmdGoto(key: string, n: number): void {
     const index = this.readIndex(key);
     if (n < 1 || n > index.totalGroups) {
@@ -146,6 +157,7 @@ class WalkthroughState {
     writeFileSync(this.indexPath(key), JSON.stringify(index, null, 2) + "\n", "utf-8");
   }
 
+  /** Mark a walkthrough complete without deleting audit state. */
   cmdFinish(key: string): void {
     const index = this.readIndex(key);
     index.status = "completed";
@@ -153,6 +165,7 @@ class WalkthroughState {
     process.stdout.write(JSON.stringify({ status: "completed", stateKey: key }, null, 2) + "\n");
   }
 
+  /** Delete all persisted state for one walkthrough key. */
   cmdDelete(key: string): void {
     const dir = this.stateDir(key);
     if (!existsSync(dir)) {
@@ -162,6 +175,7 @@ class WalkthroughState {
     rmSync(dir, { recursive: true, force: true });
   }
 
+  /** Register the CLI command surface used by the walkthrough skill. */
   run(): void {
     const cli = cac("walkthrough-state");
 

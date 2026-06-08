@@ -1,3 +1,10 @@
+/**
+ * Rebuilds unit metadata from the units/ directory.
+ *
+ * This script is the source of truth for generated registry files: it refreshes
+ * each unit.json from component folders and writes units/units.json in
+ * dependency order for deterministic publish/install behavior.
+ */
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "fs";
 import { basename, extname, join, resolve } from "path";
 import type {
@@ -20,6 +27,7 @@ interface ExistingUnitJson {
   [key: string]: unknown;
 }
 
+/** Return sorted file names in a component directory, or an empty list if absent. */
 function scanFiles(dir: string, exts: string[]): string[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
@@ -27,19 +35,23 @@ function scanFiles(dir: string, exts: string[]): string[] {
     .sort();
 }
 
+/** Test scripts are intentionally excluded from installable unit script components. */
 function isTestScript(filename: string): boolean {
   return /\.(test|spec)\.ts$/.test(filename);
 }
 
+/** Derive the component name used in unit.json from its source filename. */
 function nameFromFilename(filename: string): string {
   return basename(filename, extname(filename));
 }
 
+/** Detect whether a component declares user-preserved customization regions. */
 function hasAisfCustom(filePath: string): boolean {
   if (!existsSync(filePath)) return false;
   return /AISK:CUSTOM/.test(readFileSync(filePath, "utf8"));
 }
 
+/** Extract the first customization hint advertised by a component template. */
 function extractHint(filePath: string): string | undefined {
   if (!existsSync(filePath)) return undefined;
   const match = readFileSync(filePath, "utf8").match(/AISK:CUSTOM.*?hint="([^"]+)"/);
@@ -64,6 +76,8 @@ export function refreshUnit(unitSrcDir: string): boolean {
   const existingRules = new Map((existing.components?.rules ?? []).map((r) => [r.name, r]));
   const existingScripts = new Map((existing.components?.scripts ?? []).map((s) => [s.name, s]));
 
+  // The filesystem decides component membership; existing unit.json only keeps
+  // fields that are intentionally manual and cannot be inferred from filenames.
   const skills: UnitSkillEntry[] = scanFiles(join(unitSrcDir, "skills"), [".md"]).map((f) => ({
     name: nameFromFilename(f),
     file: `skills/${f}`,
@@ -113,6 +127,7 @@ export function refreshUnit(unitSrcDir: string): boolean {
 
   const hasComponents = skills.length + rules.length + scripts.length + resources.length > 0;
   const unitJsonExists = existsSync(unitJsonPath);
+  // Empty directories without a pre-existing unit.json are not considered units.
   if (!hasComponents && !unitJsonExists) return false;
 
   const newContent = JSON.stringify(updated, null, 2) + "\n";
@@ -161,6 +176,8 @@ export function computeGlobalOrder(unitsDir: string): string[] {
   const queue = [...deps.keys()].filter((n) => inDegree.get(n) === 0).sort();
   const result: string[] = [];
 
+  // Re-sort after every release so same-depth units remain deterministic even
+  // when dependency traversal order changes.
   while (queue.length > 0) {
     const name = queue.shift()!;
     result.push(name);
@@ -179,6 +196,12 @@ export function computeGlobalOrder(unitsDir: string): string[] {
   return result;
 }
 
+/**
+ * Validate that every declared dependency refers to a unit directory.
+ *
+ * Missing deps are reported here instead of silently ignored so publish fails
+ * before installers see an incomplete registry.
+ */
 export function checkDependencies(unitsDir: string): boolean {
   const unitNames = new Set(readdirSync(unitsDir));
   let valid = true;

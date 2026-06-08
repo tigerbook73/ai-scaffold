@@ -1,3 +1,10 @@
+/**
+ * Publishes this repository's units into the local aisk home.
+ *
+ * The publish step is intentionally filesystem-based: build.ts owns registry
+ * generation, while this script copies unit assets, bundles runtime scripts,
+ * and writes the repo locator consumed by agent-side installers.
+ */
 import {
   cpSync,
   existsSync,
@@ -34,6 +41,7 @@ export class Publish {
     this.claudeSkillsDir = claudeSkillsDir ?? join(homedir(), ".claude", "skills");
   }
 
+  /** Publish every unit plus global installer assets into the configured targets. */
   run(): void {
     console.log("Publishing to ~/.aisk/ ...\n");
 
@@ -55,6 +63,13 @@ export class Publish {
     console.log("\nPublish complete.");
   }
 
+  /**
+   * Publish one unit directory.
+   *
+   * Non-script assets are copied as templates. Script components are bundled
+   * under their component names so installed hooks are stable across source
+   * file renames that preserve unit.json metadata.
+   */
   private publishUnit(unitSrcDir: string, unitName: string): void {
     const unitJsonPath = join(unitSrcDir, "unit.json");
     if (!existsSync(unitJsonPath)) return;
@@ -87,6 +102,7 @@ export class Publish {
     cpSync(src, join(this.aiskHome, "units.json"));
   }
 
+  /** Publish shared global scripts used by installed skills. */
   private publishGlobalScripts(): void {
     const globalScriptsDir = join(this.repoRoot, "global", "scripts");
     if (!existsSync(globalScriptsDir)) return;
@@ -106,6 +122,7 @@ export class Publish {
     }
   }
 
+  /** Publish global Claude skill commands that are not tied to a unit. */
   private publishGlobalCommands(): void {
     const globalDir = join(this.repoRoot, "global");
     if (!existsSync(globalDir)) return;
@@ -121,6 +138,7 @@ export class Publish {
     }
   }
 
+  /** Bundle every TypeScript file in a directory into CommonJS output. */
   private compileScripts(srcDir: string, destDir: string): void {
     mkdirSync(destDir, { recursive: true });
     for (const file of readdirSync(srcDir).filter((f) => extname(f) === ".ts")) {
@@ -128,6 +146,7 @@ export class Publish {
     }
   }
 
+  /** Bundle only scripts declared in unit.json components.scripts[]. */
   private compileUnitScripts(unitJson: UnitJson, srcDir: string, destDir: string): void {
     const scripts = unitJson.components.scripts ?? [];
     if (scripts.length === 0) return;
@@ -141,6 +160,7 @@ export class Publish {
     }
   }
 
+  /** Bundle a Node-targeted TypeScript entry point into a standalone CommonJS file. */
   private bundle(entryPoint: string, outfile: string): void {
     buildSync({
       entryPoints: [entryPoint],
@@ -152,6 +172,7 @@ export class Publish {
     });
   }
 
+  /** Write the repo locator used to guard clean operations and agent discovery. */
   private writeConfig(): void {
     mkdirSync(this.aiskHome, { recursive: true });
     const config: AisfConfig = {

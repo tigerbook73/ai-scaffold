@@ -1,10 +1,19 @@
+/**
+ * Enforces explicit review markers on staged test changes.
+ *
+ * The hook compares the staged file content against HEAD, so it validates what
+ * will be committed rather than the working tree. Review counters must increase
+ * whenever an existing test file changes.
+ */
 import { execFileSync } from "child_process";
 
 const REVIEWED_BY_RE = /@reviewed-by\s+.+@\s+\[(\d+)\]/;
 
 class CheckTestReview {
+  /** Check staged test/spec files and fail when their @reviewed-by counter is missing or stale. */
   run(): void {
     const renames = new Map<string, string>();
+    // Keep rename history so the previous marker is read from the old path when needed.
     for (const line of execFileSync("git", ["diff", "--cached", "--name-status"])
       .toString()
       .split("\n")) {
@@ -24,6 +33,7 @@ class CheckTestReview {
     for (const file of stagedFiles) {
       let current: string;
       try {
+        // Read from the index, not disk, to match exactly what pre-commit will include.
         current = execFileSync("git", ["show", `:${file}`]).toString();
       } catch {
         continue;
@@ -34,6 +44,7 @@ class CheckTestReview {
       let prev: string | null = null;
       try {
         const oldName = renames.get(file) ?? file;
+        // HEAD may not contain new files; those are handled as first-review cases below.
         prev = execFileSync("git", ["show", `HEAD:${oldName}`]).toString();
       } catch {
         // new file or renamed with no prior history

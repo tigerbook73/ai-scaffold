@@ -1,3 +1,9 @@
+/**
+ * Minimal lefthook.yml editor for installer-managed pre-commit commands.
+ *
+ * The installer avoids a full YAML parser here because it only owns one narrow
+ * shape under pre-commit.commands and must preserve all unrelated project YAML.
+ */
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 

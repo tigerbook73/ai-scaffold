@@ -1,3 +1,9 @@
+/**
+ * Removes artifacts created by the local publish command.
+ *
+ * The repoPath guard prevents this repository from deleting another checkout's
+ * ~/.aisk contents when multiple local skill repos have been registered.
+ */
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
@@ -24,6 +30,7 @@ export class Clean {
     this.claudeSkillsDir = claudeSkillsDir ?? join(homedir(), ".claude", "skills");
   }
 
+  /** Clean the local aisk home and global Claude skills that belong to this repo. */
   run(): void {
     const configPath = join(this.aiskHome, "config.json");
     if (!existsSync(configPath)) {
