@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "description": "Local AI skill library — install all skills globally with pnpm register",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node --import tsx scripts/build.ts",
+    "build": "tsc -p tsconfig.build.json",
     "buildx": "node --import tsx scripts/buildx.ts",
     "pub": "pnpm buildx && node --import tsx scripts/publish.ts",
     "clean": "node --import tsx scripts/clean.ts",

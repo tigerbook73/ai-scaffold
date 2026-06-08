@@ -17,7 +17,7 @@ implementation (in_progress)
 
 ## Current Step
 
-Step 3：清理老架构产物
+Step 4：重命名约定统一
 
 ## Requirements Phase（架构）
 
@@ -54,7 +54,7 @@ Step 3：清理老架构产物
 
 - step-type: final
 - status: done
-- Commit: TBD
+- Commit: 69be858
 - Date: 2026-06-08
 - auto-check: pass
 - manual-check: pending（编辑 ai-units/poc-unit/skills/poc.md，确认 skill-gate 规则生效）
@@ -62,6 +62,15 @@ Step 3：清理老架构产物
 ### Step 3：清理老架构产物
 
 - step-type: intermediate
+- status: done
+- Commit: TBD
+- Date: 2026-06-08
+- auto-check: pass
+- manual-check: n/a
+
+### Step 4：重命名约定统一
+
+- step-type: final
 - status: not_started
 
 ## Implementation Phase（Phase 1 PoC）

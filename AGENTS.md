@@ -14,30 +14,31 @@
 
 ```bash
 pnpm register                 # Install skills globally (Claude Code + Codex)
-pnpm build                    # Sync skill-format.md and Claude rule files
+pnpm build                    # Compile TypeScript (tsconfig.build.json)
+pnpm buildx                   # Scan ai-units/ and update units.json + unit.json files
 pnpm create-skill -- <file>   # Promote a skill file to the repository
 pnpm lint:check               # ESLint check without modifying files
 pnpm lint:fix                 # ESLint fix for scripts, resources, and tests
 pnpm typecheck                # TypeScript check
-pnpm test                     # Run node:test test suite
+pnpm test                     # Run vitest test suite
 pnpm verify                   # Run lint:check, typecheck, test, and build
 pnpm format                   # Prettier format all supported files
 ```
 
-单独运行某个测试文件：
+単独運行某个测试文件：
 
 ```bash
 node --import tsx --test --test-concurrency=1 --test-reporter=spec tests/<file>.test.ts
 ```
 
 修改 skill 文件或脚本后，提交前请运行 `pnpm verify`。
-无需手动维护 manifest —— 安装器会直接扫描 `skills/` 目录。
+无需手动维护 manifest —— 安装器会直接扫描 `ai-units/` 目录。
 
 ## 当前架构
 
 ```text
 Local skill repository (this repo)
-    -> pnpm register           Claude Code + Codex installation (scans skills/ directly)
+    -> pnpm register           Claude Code + Codex installation (scans ai-units/ directly)
 
 ~/.ai-skills/config.json       repository locator (shared by both agents)
 ~/.claude/commands/aisk/       Claude Code skill commands
@@ -48,13 +49,12 @@ Local skill repository (this repo)
 
 Claude 斜杠命令（如 `/aisk/create-task`）不是 Codex 命令。Codex 通过自然语言匹配已安装 SKILL.md frontmatter 中的 `description` 字段来选择 skill。
 
-Skill 默认同时支持 Claude Code 和 Codex 两个目标。在 frontmatter 中添加 `---\ntargets: [claude]\n---` 可将 skill 限制为仅 Claude Code。
+Skill 以 ai-unit 形式组织在 `ai-units/` 目录下。每个 unit 包含 `unit.json` 和可选的 `skills/`、`rules/`、`scripts/`、`resources/` 子目录。
 
 ## 关键文件
 
-- `scripts/scan-skills.ts`：扫描 `skills/` 目录，从 SK-\*.md 的 frontmatter 和 H1 推断所有目标元数据。
-- `skills/skill-format.md`：skill 源文件的规范格式（人工维护，由 `pnpm build` 同步至 Claude 规则文件）。
-- `scripts/build.ts`：将 `skills/skill-format.md` 同步至 `.claude/rules/skill-rules.md`。同步内容为 `<!-- EXTRACT:skill-format:start -->` 与 `<!-- EXTRACT:skill-format:end -->` 标记之间的部分。编辑 `skills/skill-format.md` 后需运行 `pnpm build`。
+- `scripts/scan-skills.ts`：扫描 `skills/` 目录（兼容旧格式），从 SK-\*.md 的 frontmatter 和 H1 推断目标元数据。
+- `scripts/buildx.ts`：扫描 `ai-units/`，自动刷新 `unit.json` 和 `units.json`，维护拓扑顺序。
 - `scripts/setup.ts`：统一安装入口 —— 运行 Claude Code + Codex 安装（即 `pnpm register`）。
 - `scripts/setup-claude.ts`：Claude 安装器 —— 扫描 skill 并安装至 `~/.claude/commands/aisk/`。
 - `scripts/setup-codex.ts`：Codex 安装器 —— 扫描 skill 并安装至 `~/.codex/skills/aisk-*/`。
@@ -63,18 +63,10 @@ Skill 默认同时支持 Claude Code 和 Codex 两个目标。在 frontmatter �
 
 ## Skill 目标控制
 
-安装器从每个 `SK-*.md` 文件读取可选的 YAML frontmatter：
-
-```yaml
----
-targets: [claude]
----
-```
-
-无 frontmatter → 同时支持两个目标（claude + codex）。目前只有一个 skill 使用此配置：`set-claude-permission`。
+ai-unit 中每个 skill 文件直接作为命令安装。在 unit 的 `unit.json` 中，skills 组件列出各 skill 文件路径。
 
 Codex skill 元数据（name、description、shortDescription）由 `scripts/scan-skills.ts` 根据 skill 文件名和 H1 描述行自动推断。
 
 ## 无生成 Manifest 文件
 
-不存在中间 JSON manifest 文件。`pnpm register` 在安装时直接扫描 `skills/` 目录以处理两个 agent 目标。`pnpm build` 命令仅同步 skill 格式文档，不生成安装 manifest。
+不存在中间 JSON manifest 文件。`pnpm register` 在安装时直接扫描 `ai-units/` 目录以处理两个 agent 目标。`pnpm buildx` 负责维护 unit 注册表，不生成安装 manifest。
