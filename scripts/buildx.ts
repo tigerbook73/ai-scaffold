@@ -1,42 +1,12 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "fs";
 import { basename, extname, join, resolve } from "path";
-
-interface SkillEntry {
-  name: string;
-  file: string;
-}
-
-interface RuleEntry {
-  name: string;
-  file: string;
-  condition?: string;
-  hint?: string;
-  hasCustom?: boolean;
-}
-
-interface ScriptEntry {
-  name: string;
-  file: string;
-  hook?: string;
-  params?: string[];
-}
-
-interface ResourceEntry {
-  name: string;
-  file: string;
-}
-
-interface UnitJson {
-  name: string;
-  description: string;
-  dependencies: string[];
-  components: {
-    skills?: SkillEntry[];
-    rules?: RuleEntry[];
-    scripts?: ScriptEntry[];
-    resources?: ResourceEntry[];
-  };
-}
+import type {
+  UnitSkillEntry,
+  UnitRuleEntry,
+  UnitScriptEntry,
+  UnitResourceEntry,
+  UnitJson,
+} from "../global/scripts/installer-types";
 
 interface ExistingUnitJson {
   name?: string;
@@ -90,16 +60,16 @@ export function refreshUnit(unitSrcDir: string): boolean {
   const existingRules = new Map((existing.components?.rules ?? []).map((r) => [r.name, r]));
   const existingScripts = new Map((existing.components?.scripts ?? []).map((s) => [s.name, s]));
 
-  const skills: SkillEntry[] = scanFiles(join(unitSrcDir, "skills"), [".md"]).map((f) => ({
+  const skills: UnitSkillEntry[] = scanFiles(join(unitSrcDir, "skills"), [".md"]).map((f) => ({
     name: nameFromFilename(f),
     file: `skills/${f}`,
   }));
 
-  const rules: RuleEntry[] = scanFiles(join(unitSrcDir, "rules"), [".md"]).map((f) => {
+  const rules: UnitRuleEntry[] = scanFiles(join(unitSrcDir, "rules"), [".md"]).map((f) => {
     const name = nameFromFilename(f);
     const filePath = join(unitSrcDir, "rules", f);
     const prev = existingRules.get(name);
-    const entry: RuleEntry = { name, file: `rules/${f}` };
+    const entry: UnitRuleEntry = { name, file: `rules/${f}` };
     if (prev?.condition) entry.condition = prev.condition;
     const hint = extractHint(filePath);
     if (hint) entry.hint = hint;
@@ -107,19 +77,21 @@ export function refreshUnit(unitSrcDir: string): boolean {
     return entry;
   });
 
-  const scripts: ScriptEntry[] = scanFiles(join(unitSrcDir, "scripts"), [".ts"]).map((f) => {
+  const scripts: UnitScriptEntry[] = scanFiles(join(unitSrcDir, "scripts"), [".ts"]).map((f) => {
     const name = nameFromFilename(f);
     const prev = existingScripts.get(name);
-    const entry: ScriptEntry = { name, file: `scripts/${f}` };
+    const entry: UnitScriptEntry = { name, file: `scripts/${f}` };
     if (prev?.hook) entry.hook = prev.hook;
     if (prev?.params?.length) entry.params = prev.params;
     return entry;
   });
 
-  const resources: ResourceEntry[] = scanFiles(join(unitSrcDir, "resources"), [".md"]).map((f) => ({
-    name: nameFromFilename(f),
-    file: `resources/${f}`,
-  }));
+  const resources: UnitResourceEntry[] = scanFiles(join(unitSrcDir, "resources"), [".md"]).map(
+    (f) => ({
+      name: nameFromFilename(f),
+      file: `resources/${f}`,
+    }),
+  );
 
   const updated: UnitJson = {
     name: basename(unitSrcDir),

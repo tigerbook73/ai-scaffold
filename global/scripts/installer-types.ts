@@ -22,6 +22,8 @@ export interface UnitRuleEntry {
   file: string;
   hasCustom?: boolean;
   condition?: string;
+  /** Hint shown to the AI when generating custom content for this rule. */
+  hint?: string;
 }
 
 /** A script entry as declared in unit.json components.scripts[]. */
@@ -29,7 +31,7 @@ export interface UnitScriptEntry {
   name: string;
   file: string;
   /** lefthook hook name to register this script under (e.g. "pre-commit"). */
-  hook: string;
+  hook?: string;
   /** lefthook template variables to append as CLI args, e.g. ["staged_files"] → {staged_files} */
   params?: string[];
 }
