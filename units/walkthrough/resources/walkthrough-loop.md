@@ -1,6 +1,6 @@
 # walkthrough-loop
 
-共享交互循环 —— 由 `create-walkthrough` 和 `start-walkthrough` 在进入展示阶段时加载。
+共享交互循环 —— 由 `create-walkthrough` 在进入展示阶段时加载。
 
 ---
 
@@ -159,4 +159,4 @@ Change intent: {intent}
 2. 若 `index.checkedOut === true`：提示用户运行 `git checkout -`
 3. 询问："走读完成。删除状态记录？"
    - 是 → `state delete --key {stateKey}`
-   - 否 → 保留；告知用户可随时通过 `start-walkthrough` 恢复
+   - 否 → 保留；告知用户可随时通过 `create-walkthrough` 恢复

@@ -7,10 +7,6 @@
       {
         "name": "create-walkthrough",
         "file": "skills/create-walkthrough.md"
-      },
-      {
-        "name": "start-walkthrough",
-        "file": "skills/start-walkthrough.md"
       }
     ],
     "scripts": [

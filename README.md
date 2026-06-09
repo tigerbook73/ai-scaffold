@@ -59,8 +59,7 @@ All skills are available in both Claude Code and Codex, except `set-claude-permi
 | Skill                | Description                                                       |
 | -------------------- | ----------------------------------------------------------------- |
 | `smart-review`       | Iteratively review and fix a specified file, module, or directory |
-| `create-walkthrough` | Create a walkthrough of changes at a target version               |
-| `start-walkthrough`  | Resume a walkthrough from the state file                          |
+| `create-walkthrough` | Create or resume a walkthrough of changes at a target version     |
 
 ### Skill management
 

@@ -1,6 +1,6 @@
 # create-walkthrough
 
-创建新的走读：签出目标版本，一次性分析所有变更，对变更分组，展示全局概览，然后按需逐组走读。
+创建或恢复结构化代码走读：若当前分支已有活跃状态则恢复；否则签出目标版本，一次性分析所有变更，对变更分组，展示全局概览，然后按需逐组走读。
 
 **用法**：`/aisk/create-walkthrough [<range>]`
 
@@ -8,7 +8,8 @@
 
 ## 约束
 
-- 每个 state key（从当前分支派生）只允许一个活跃走读；若已存在，提示用户选择恢复或覆盖
+- 每个 state key（从当前分支派生）只允许一个活跃走读；若已存在，默认恢复，并允许用户选择覆盖重建
+- 上下文作用范围为当前 session；每次新 session 开始时重新运行本 skill 以恢复走读状态
 - 签出前工作树必须干净
 - **静默准备**：不作解说地完成所有设置步骤；仅在提问或展示内容时输出文本
 - **状态脚本**：Index 操作通过以下方式执行：
@@ -38,7 +39,7 @@
 检查已有状态：`state read --key {stateKey}`。
 
 - 找到状态且 `status === "active"` → 询问：恢复还是覆盖？
-  - 恢复 → 停止（告知用户运行 `start-walkthrough`）
+  - 恢复 → 跳到"第九步 — 恢复走读"
   - 覆盖 → `state delete --key {stateKey}`，继续
 - 找到状态且 `status === "completed"` → 提示："此走读已完成。" 询问：重新开始？
   - 是 → `state delete --key {stateKey}`，继续
@@ -221,7 +222,36 @@ Change intent: {intent}
 3. 删除分组已变更的已生成 `g{N}.md` 文件（使用 Bash `rm`），以便首次访问时按更新后的分组重新生成。
 4. 重新输出更新后的概览，然后停止并再次等待。
 
-### 第九步 — 进入走读循环
+### 第九步 — 恢复走读
+
+当第一步选择恢复已有 active 状态时，执行本步骤。
+
+#### 验证签出位置
+
+若 `index.checkedOut = true`：
+
+1. `git rev-parse HEAD` → `{currentHash}`
+2. 与 `index.targetHash` 对比。
+3. 不匹配 → 警告并停止：
+   > Current position (`{currentHash}`) does not match the walkthrough target (`{index.targetHash}`).
+   > Run `git checkout {index.targetRef}` first, then re-run `create-walkthrough`.
+
+#### 展示恢复摘要
+
+输出：
+
+```
+Walkthrough target: {index.target} (baseline: {index.baseline})
+Progress: G{index.currentGroup} / {index.totalGroups}, {done count} group(s) done
+```
+
+#### 进入走读循环
+
+读取 `.aisk/walkthrough/resources/walkthrough-loop.md`。
+从"显示当前组"处开始执行其中的指令。
+（walkthrough-loop 会自行读取并输出 g{currentGroup}.md —— 此处无需重复）
+
+### 第十步 — 进入新建走读循环
 
 读取 `.aisk/walkthrough/resources/walkthrough-loop.md`。
 从"显示当前组"处开始执行其中的指令。

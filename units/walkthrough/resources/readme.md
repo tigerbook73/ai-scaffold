@@ -4,9 +4,7 @@
 
 ## Skills
 
-**`create-walkthrough`** — 创建新的走读。确认目标范围，必要时签出目标版本，一次性读取所有 diff 和上下文文档，对变更分组，展示全局概览，然后进入交互式循环。组内容在导航过程中按需生成。
-
-**`start-walkthrough`** — 从状态文件恢复走读。每次新 session 开始时重新运行以恢复进度。
+**`create-walkthrough`** — 创建或恢复走读。若当前分支已有活跃状态则恢复进度；否则确认目标范围，必要时签出目标版本，一次性读取所有 diff 和上下文文档，对变更分组，展示全局概览，然后进入交互式循环。组内容在导航过程中按需生成。
 
 ## 输入格式
 
@@ -43,6 +41,6 @@ wtgroup finish    # 结束走读
 ## 资源文件
 
 - `resources/strategy.md` — 分析、分组和展示策略（可独立调整，无需修改 skill 流程文件）
-- `resources/walkthrough-loop.md` — `create-walkthrough` 和 `start-walkthrough` 共用的交互式循环
+- `resources/walkthrough-loop.md` — `create-walkthrough` 使用的交互式循环
 - `scripts/walkthrough-state.ts` — 管理 `index.json` 的 CLI 脚本
 - `scripts/types.ts` — 状态 index 的 TypeScript 类型定义
