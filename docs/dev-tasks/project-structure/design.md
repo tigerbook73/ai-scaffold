@@ -115,7 +115,7 @@ skill 文件内容直接从 `skills/<dir>/SK-*.md` 复制，仅去掉 SK- 前缀
 
 ---
 
-## Task Acceptance
+## Dev-Task Acceptance
 
 - `(auto)` TBD
 - `(manual)` TBD

@@ -1,4 +1,4 @@
-# Task State: project-structure
+# Dev-Task State: project-structure
 
 ## Metadata
 
@@ -134,7 +134,7 @@ test-review-gate 已实现；构建已忽略脚本目录中的测试文件；待
   - `pnpm build` — 已注册至 units.json
   - auto-check: `pnpm exec vitest run tests/build.test.ts` pass；`pnpm typecheck` pass；`pnpm build` pass
 
-## Task Acceptance
+## Dev-Task Acceptance
 
 - auto-check: —
 - manual-check: —

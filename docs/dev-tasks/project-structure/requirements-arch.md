@@ -1,7 +1,7 @@
 # Requirements: project-structure（架构）
 
 > 本文档记录 ai-unit 架构的功能需求，对应 Phase 1 PoC 实现（已完成）。
-> 命名约定将在迁移任务中统一更新（详见 `requirements.md`）。
+> 命名约定将在迁移dev-task中统一更新（详见 `requirements.md`）。
 
 ## 目标
 

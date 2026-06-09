@@ -1,10 +1,10 @@
 [
   "confirm-intent",
+  "dev-task",
   "poc-dep",
   "poc",
   "quick-ship",
   "smart-review",
-  "task",
   "test-review-gate",
   "walkthrough"
 ]

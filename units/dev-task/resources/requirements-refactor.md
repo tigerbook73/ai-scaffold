@@ -1,4 +1,4 @@
-# 需求格式：Refactor 任务
+# 需求格式：Refactor dev-task
 
 本文档定义 refactor 需求文档的必要章节。所有章节内容均为自由格式。
 

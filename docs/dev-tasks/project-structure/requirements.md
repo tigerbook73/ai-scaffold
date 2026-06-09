@@ -70,7 +70,7 @@ Phase 1（架构需求见 `requirements-arch.md`）已完成 ai-unit 架构的�
 
 ## 范围外
 
-- `archive/skills/` 中旧 skill 的迁移评估（单独任务，低优先级）
+- `archive/skills/` 中旧 skill 的迁移评估（单独dev-task，低优先级）
 
 ---
 

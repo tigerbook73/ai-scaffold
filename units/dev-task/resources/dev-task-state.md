@@ -1,4 +1,4 @@
-# Task State: {task-name}
+# Dev-Task State: {dev-task-name}
 
 ## Metadata
 
@@ -61,7 +61,7 @@ Step N | —
 - auto-check: —
 - manual-check: —
 
-## Task Acceptance
+## Dev-Task Acceptance
 
 - auto-check: passed | failed | —
 - manual-check: passed | failed | —

@@ -1,7 +1,7 @@
 # 设计步骤格式：必要章节
 
 本文档定义设计文档中每个步骤的必要章节。
-设计文档可以拆分为多个文件（列于 `task-state.md` Document Index 中）；
+设计文档可以拆分为多个文件（列于 `dev-task-state.md` Document Index 中）；
 无论步骤位于哪个文件，格式约束均适用。
 所有其他步骤内容（目标、架构说明、关键变更、设计理由）为自由格式。
 
@@ -44,11 +44,11 @@
 
 ---
 
-## Task Acceptance
+## Dev-Task Acceptance
 
-验证整个任务是否满足需求验收标准的条件。
+验证整个dev-task是否满足需求验收标准的条件。
 此章节出现一次，位于设计文档末尾（若文档已拆分则在最后一个设计文件中）。
-由 `verify task` 上下文命令验证，而非 `verify step`。
+由 `verify dev-task` 上下文命令验证，而非 `verify step`。
 
 `requirements.md` 中的每条验收标准必须在此处至少对应一个条件。
 

@@ -45,7 +45,7 @@ Local skill repository (this repo)
 
 `~/.ai-skills/config.json` 存储本代码库路径，由 `pnpm register` 写入。
 
-Claude 斜杠命令（如 `/aisk/create-task`）不是 Codex 命令。Codex 通过自然语言匹配已安装 SKILL.md frontmatter 中的 `description` 字段来选择 skill。
+Claude 斜杠命令（如 `/aisk/create-dev-task`）不是 Codex 命令。Codex 通过自然语言匹配已安装 SKILL.md frontmatter 中的 `description` 字段来选择 skill。
 
 Skill 以 ai-unit 形式组织在 `units/` 目录下。每个 unit 包含 `unit.json` 和可选的 `skills/`、`rules/`、`scripts/`、`resources/` 子目录。
 

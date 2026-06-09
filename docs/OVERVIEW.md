@@ -55,6 +55,7 @@ units/{unit}/
 `unit.json` 由 `pnpm build` 根据文件系统刷新。手动维护字段会被保留：
 
 - `description`
+- `name`
 - `dependencies`
 - `components.rules[].condition`
 - `components.scripts[].hook`
@@ -69,7 +70,7 @@ units/{unit}/
 | `confirm-intent`   | 执行前确认用户预期结果的 Codex skill     |
 | `quick-ship`       | 审查变更、创建分支、提交、PR、合并的流程 |
 | `smart-review`     | 对文件、模块或目录进行迭代式审查和修复   |
-| `task`             | 结构化开发任务的创建、恢复、验证和完成   |
+| `dev-task`         | 结构化 dev-task 的创建、恢复、验证和完成 |
 | `poc`              | 覆盖 skill/rule/script/resource 的 PoC   |
 | `poc-dep`          | `poc` 的依赖 unit                        |
 | `test-review-gate` | 测试审查规则、pre-commit hook 和 CI 工具 |
@@ -115,7 +116,7 @@ pnpm exec vitest run units/test-review-gate/scripts/check-reviewed-by-commit-mar
 2. 自动发现 `skills/*.md`、`rules/*.md`、`scripts/*.ts`、`resources/*.md`
 3. 忽略 `scripts/*.test.ts` 和 `scripts/*.spec.ts`
 4. 从 rule 文件中的 `AISK:CUSTOM` 标记提取 `hasCustom` 和 `hint`
-5. 保留人工维护的 description、dependencies、condition、hook、params
+5. 保留人工维护的 name、description、dependencies、condition、hook、params
 6. 重写各 unit 的 `unit.json`
 7. 计算全局拓扑顺序并写入 `units/units.json`
 
@@ -125,7 +126,7 @@ pnpm exec vitest run units/test-review-gate/scripts/check-reviewed-by-commit-mar
 
 职责：
 
-1. 将 `units/{unit}/unit.json` 和组件内容发布到 `~/.aisk/units/{unit}/`
+1. 将 `units/{unit}/unit.json` 和组件内容发布到 `~/.aisk/units/{public-name}/`
 2. 将 unit 脚本编译为 CommonJS JS 文件
 3. 将 `units/units.json` 复制到 `~/.aisk/units.json`
 4. 将 `global/scripts/*.ts` 编译或复制到 `~/.aisk/global/`
@@ -216,7 +217,7 @@ rule、skill、resource 可以通过 `AISK:CUSTOM` 标记声明需要项目定�
 | `scripts/publish.ts`                   | 发布到 `~/.aisk/` 和 Claude 全局 skill |
 | `scripts/clean.ts`                     | 清理全局发布产物                       |
 | `tests/`                               | build、publish、installer 基线测试     |
-| `docs/tasks/project-structure/`        | ai-unit 架构迁移任务记录               |
+| `docs/dev-tasks/project-structure/`    | ai-unit 架构迁移 dev-task 记录         |
 
 ## 开发检查清单
 

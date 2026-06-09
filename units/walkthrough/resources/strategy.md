@@ -10,7 +10,7 @@
 
 **优先级 1 —— 设计文档**（若存在，始终读取）：
 
-- Glob `docs/tasks/*/design*.md` —— 覆盖 `design.md`、`design-step1.md`、`design-step2.md` 等。
+- Glob `docs/dev-tasks/*/design*.md` —— 覆盖 `design.md`、`design-step1.md`、`design-step2.md` 等。
 - 读取所有匹配文件。这些文件将变更映射到设计步骤，驱动模式 A 的分组。
 
 **优先级 2 —— 项目约定**（始终读取）：
