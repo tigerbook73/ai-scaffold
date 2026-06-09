@@ -46,13 +46,9 @@ All skills are available in both Claude Code and Codex, except `set-claude-permi
 
 ### Task workflow
 
-| Skill           | Description                                                                    |
-| --------------- | ------------------------------------------------------------------------------ |
-| `create-task`   | Initialize a new task: create branch, scaffold task documents, enter work mode |
-| `start-task`    | Enter task work mode for the current session (re-run at each new session)      |
-| `verify-step`   | Run acceptance checks for a single step                                        |
-| `verify-task`   | Run acceptance checks across all steps                                         |
-| `complete-task` | Verify task completion, clean up task documents, and prompt to create a PR     |
+| Skill         | Description                                                                    |
+| ------------- | ------------------------------------------------------------------------------ |
+| `create-task` | Initialize a new task: create branch, scaffold task documents, enter work mode |
 
 ### Code review & learning
 

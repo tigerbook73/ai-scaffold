@@ -1,6 +1,6 @@
 # create-task
 
-初始化新任务：创建分支、搭建任务文档，并进入工作模式。
+初始化新任务：创建分支和任务状态文档。后续任务命令由 `docs/tasks/**/*.md` path rule 识别。
 
 ---
 
@@ -34,13 +34,7 @@
    - 尽量使用静默写文件命令/工具。
    - 所有脚手架文件创建完成后，仅输出简短摘要。
 
-5. 从 `.aisk/task/resources/task-context.md` 创建 `docs/tasks/{name}/AGENTS.md`，
-   替换 `{task-name}` 和 `{task-type}` 占位符。
-
-6. 创建 `docs/tasks/{name}/.claude/CLAUDE.md` 作为精简的 Claude Code 入口文件，内容为：
-   `@../AGENTS.md`
-
-7. 从 `.aisk/task/resources/task-state.md` 创建 `docs/tasks/{name}/task-state.md`，
+5. 从 `.aisk/task/resources/task-state.md` 创建 `docs/tasks/{name}/task-state.md`，
    替换 `{task-name}` 并设置初始值：
 
 - Metadata `type`：`task-type` 参数值（`feature` 或 `refactor`）
@@ -51,6 +45,6 @@
 - Design / Implementation phases：`status: pending`，无步骤条目
 - Document Index：空（文档在计划阶段创建时逐步添加到此处）
 
-8. 暂存并提交：`git add docs/tasks/{name}/` 然后 `git commit -m "chore: init task {name}"`
+6. 暂存并提交：`git add docs/tasks/{name}/` 然后 `git commit -m "chore: init task {name}"`
 
-9. 进入任务工作模式（等同于 start-task）：读取 task-state.md，确认 .claude/CLAUDE.md 已加载，输出任务摘要，并提示用户开始规划需求。
+7. 读取 `docs/tasks/{name}/task-state.md`，输出任务摘要，并提示用户开始规划需求。后续处理 `docs/tasks/{name}/` 下的 Markdown 文件时，Claude Code 会通过 task workflow path rule 识别任务命令。
