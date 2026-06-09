@@ -3,14 +3,14 @@
   "version": "3.0.0",
   "description": "Local AI skill library — install all skills globally with pnpm register",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node --import tsx scripts/build.ts",
-    "register": "pnpm build && node --import tsx scripts/setup.ts",
-    "create-skill": "node --import tsx src/create-skill/create-skill.ts",
+    "build": "node --import tsx scripts/build.ts && pnpm format",
+    "register": "pnpm build && node --import tsx scripts/publish.ts",
+    "clean": "node --import tsx scripts/clean.ts",
     "lint": "pnpm lint:fix",
-    "lint:check": "eslint scripts/**/*.ts src/**/*.ts tests/**/*.ts",
-    "lint:fix": "eslint scripts/**/*.ts src/**/*.ts tests/**/*.ts --fix",
+    "lint:check": "eslint scripts/**/*.ts global/**/*.ts tests/**/*.ts",
+    "lint:fix": "eslint scripts/**/*.ts global/**/*.ts tests/**/*.ts --fix",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test --test-concurrency=1 --test-reporter=spec tests/**/*.test.ts",
+    "test": "vitest run",
     "verify": "pnpm lint:check && pnpm typecheck && pnpm test && pnpm build",
     "format": "prettier --log-level warn --write ."
   },
@@ -27,20 +27,18 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "esbuild": "^0.28.0",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
-    "lint-staged": "^17.0.5",
+    "lefthook": "^2.1.9",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.4"
+    "typescript-eslint": "^8.59.4",
+    "vitest": "^4.1.8"
   },
-  "lint-staged": {
-    "*.{ts,js}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{md,json,yaml,yml}": [
-      "prettier --write"
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "lefthook"
     ]
   }
 }

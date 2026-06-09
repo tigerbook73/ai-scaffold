@@ -1,0 +1,19 @@
+{
+  "name": "poc-dep",
+  "description": "PoC dependency unit with skill and resource; validates dependency resolution in the ai-unit install flow",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      {
+        "name": "poc-dep",
+        "file": "skills/poc-dep.md"
+      }
+    ],
+    "resources": [
+      {
+        "name": "info",
+        "file": "resources/info.md"
+      }
+    ]
+  }
+}

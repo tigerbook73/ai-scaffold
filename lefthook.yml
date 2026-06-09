@@ -1,0 +1,10 @@
+pre-commit:
+  commands:
+    lint:
+      glob: "*.{ts,js}"
+      run: pnpm exec eslint --fix {staged_files} && pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+    format:
+      glob: "*.{md,json,yaml,yml}"
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true

@@ -1,0 +1,13 @@
+{
+  "name": "quick-ship",
+  "description": "审查当前工作区变更，推断意图，若变更简单 —— 创建私有分支、提交、开 PR、squash 合并、返回原分支并 pull。",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      {
+        "name": "quick-ship",
+        "file": "skills/quick-ship.md"
+      }
+    ]
+  }
+}

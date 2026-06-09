@@ -1,0 +1,41 @@
+{
+  "name": "dev-task",
+  "description": "管理结构化 dev-task：创建 dev-task 文档，并通过 path rule 识别 dev-task 上下文命令",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      {
+        "name": "create-dev-task",
+        "file": "skills/create-dev-task.md"
+      }
+    ],
+    "rules": [
+      {
+        "name": "dev-task-workflow",
+        "file": "rules/dev-task-workflow.md"
+      }
+    ],
+    "resources": [
+      {
+        "name": "design",
+        "file": "resources/design.md"
+      },
+      {
+        "name": "dev-task-state",
+        "file": "resources/dev-task-state.md"
+      },
+      {
+        "name": "readme",
+        "file": "resources/readme.md"
+      },
+      {
+        "name": "requirements-feature",
+        "file": "resources/requirements-feature.md"
+      },
+      {
+        "name": "requirements-refactor",
+        "file": "resources/requirements-refactor.md"
+      }
+    ]
+  }
+}
