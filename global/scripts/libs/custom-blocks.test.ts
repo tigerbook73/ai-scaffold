@@ -2,7 +2,7 @@
  * @test-file   custom-blocks
  * @description Verifies AISK:CUSTOM block parsing and merge behavior
  * @ai-generated
- * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ 1
+ * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [1]
  */
 import { describe, expect, test } from "vitest";
 
