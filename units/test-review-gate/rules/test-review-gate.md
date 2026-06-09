@@ -1,6 +1,6 @@
 ---
 paths:
-  # AISF:CUSTOM name="paths" status="done" hint="old hint"
+  # AISF:CUSTOM name="paths" status="todo" hint="important test files shall be added here"
   - "**/*.test.ts"
   - "**/*.spec.ts"
   # AISF:CUSTOM:END"
