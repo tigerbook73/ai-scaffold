@@ -60,18 +60,16 @@ node ~/.aisk/global/installer.js <subcommand> [units...]
 
 #### add / update 格式
 
-按三类分组，组内按处理顺序列出，各组件逐行展示：
+按三类（已添加 / 已更新 / 失败）分组展示。每个 unit 显示安装状态；仅当组件含未填写的 AISK:CUSTOM 块时，在 unit 名下列出对应路径：
 
 ```
 已添加：
-  test-review-gate
-    rule:   .claude/rules/aisk-trg/test-review-gate.md    [installed]
-    script: .aisk/trg/scripts/check-reviewed-by-commit-marker.js [installed, hook: pre-commit]
-    script: .aisk/trg/scripts/check-test-cases-match-it.js       [installed, hook: pre-commit]
+  confirm-intent              [installed]
+  test-review-gate            [installed]
+    rule: .claude/rules/aisk-test-review-gate/test-review-gate.md    [待定制]
 
 已更新：
-  smart-review
-    rule: .claude/rules/aisk-smart-review/smart-review.md [done]
+  smart-review                [updated]
 
 失败：
   unknown-unit — unit 不在注册表中
@@ -85,9 +83,7 @@ node ~/.aisk/global/installer.js <subcommand> [units...]
 
 ```
 已删除：
-  another-unit
-    rule:   .claude/rules/aisk-another/rule.md
-    script: .aisk/another/scripts/hook.js
+  smart-review
 
 失败：
   missing-unit — unit 未安装
@@ -115,18 +111,18 @@ refresh 完成。
 test-review-gate — Enforce human review markers on test files
 
 组件：
-  rule:   .claude/rules/aisk-trg/test-review-gate.md          [todo - 需要定制]
+  rule:   .claude/rules/aisk-trg/test-review-gate.md           [待定制]
   script: .aisk/trg/scripts/check-reviewed-by-commit-marker.js [installed, hook: pre-commit]
-  script: .aisk/trg/scripts/check-test-cases-match-it.js       [installed, hook: pre-commit]
+  script: .aisk/trg/scripts/check-test-cases-match-it.js       [installed]
 ```
 
 ---
 
 ### 状态标签
 
-| 标签                | 含义                                     |
-| ------------------- | ---------------------------------------- |
-| `installed`         | 已安装，无需定制                         |
-| `todo - 需要定制`   | 已安装，含未填写的 AISK:CUSTOM 块        |
-| `done`              | 已安装，定制已完成                       |
-| `optional, skipped` | 可选组件，本次未安装（仅 update 时出现） |
+| 标签                | 含义                                          |
+| ------------------- | --------------------------------------------- |
+| `installed`         | 已安装，无需定制                              |
+| `updated`           | 已更新，无需定制                              |
+| `待定制`            | 已安装，含未填写的 AISK:CUSTOM 块（高亮显示） |
+| `optional, skipped` | 可选组件，本次未安装（仅 update 时出现）      |

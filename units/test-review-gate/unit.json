@@ -6,7 +6,9 @@
     "rules": [
       {
         "name": "test-review-gate",
-        "file": "rules/test-review-gate.md"
+        "file": "rules/test-review-gate.md",
+        "hint": "important test files shall be added here",
+        "hasCustom": true
       }
     ],
     "scripts": [

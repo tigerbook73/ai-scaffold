@@ -8,3 +8,7 @@ pre-commit:
       glob: "*.{md,json,yaml,yml}"
       run: pnpm exec prettier --write {staged_files}
       stage_fixed: true
+    aisk-test-review-gate-check-reviewed-by-commit-marker:
+      run: node .aisk/test-review-gate/scripts/check-reviewed-by-commit-marker.js {staged_files}
+    aisk-test-review-gate-check-test-cases-match-it:
+      run: node .aisk/test-review-gate/scripts/check-test-cases-match-it.js {staged_files}

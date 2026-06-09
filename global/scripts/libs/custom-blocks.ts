@@ -1,9 +1,9 @@
 import type { CustomBlock } from "../types/installer-types";
 
 const CUSTOM_START_RE =
-  /^(#|<!--)\s*AISK:CUSTOM\s+name="([^"]+)"\s+status="([^"]+)"\s+hint="([^"]*)".*$/;
-const CUSTOM_END_HASH_RE = /^#\s*AISK:CUSTOM:END/;
-const CUSTOM_END_HTML_RE = /^<!--\s*AISK:CUSTOM:END/;
+  /^\s*(#|<!--)\s*AISK:CUSTOM\s+name="([^"]+)"\s+status="([^"]+)"\s+hint="([^"]*)".*$/;
+const CUSTOM_END_HASH_RE = /^\s*#\s*AISK:CUSTOM:END/;
+const CUSTOM_END_HTML_RE = /^\s*<!--\s*AISK:CUSTOM:END/;
 
 /**
  * Parse all AISK:CUSTOM blocks from file content.
