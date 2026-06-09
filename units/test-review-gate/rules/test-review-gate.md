@@ -1,9 +1,9 @@
 ---
 paths:
+  # AISF:CUSTOM name="paths" status="done" hint="old hint"
   - "**/*.test.ts"
   - "**/*.spec.ts"
-  - "**/*.test.js"
-  - "**/*.spec.js"
+  # AISF:CUSTOM:END"
 ---
 
 # AI 测试审查规则

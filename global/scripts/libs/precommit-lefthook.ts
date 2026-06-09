@@ -57,16 +57,32 @@ export function addPreCommitHook(
 
   const section = lines.slice(bounds.start, bounds.end);
 
-  // Idempotency: scoped to pre-commit section only
-  if (section.some((l) => l === `    ${commandName}:`)) return;
+  // If already exists: replace run: value in-place
+  const existingRelIdx = section.findIndex((l) => l === `    ${commandName}:`);
+  if (existingRelIdx !== -1) {
+    const startIdx = bounds.start + existingRelIdx;
+    for (let i = startIdx + 1; i < bounds.end; i++) {
+      if (!lines[i].startsWith("      ")) break;
+      if (/^      run:/.test(lines[i])) {
+        lines[i] = `      run: ${runCommand}`;
+        writeFileSync(lefthookPath, lines.join("\n"));
+        return;
+      }
+    }
+    return;
+  }
 
   const commandsRelIdx = section.findIndex((l) => /^  commands:/.test(l));
   if (commandsRelIdx === -1) {
     // No commands block yet: insert one after `pre-commit:`
     lines.splice(bounds.start + 1, 0, "  commands:", ...commandLines);
   } else {
-    // Insert after `  commands:` line
-    lines.splice(bounds.start + commandsRelIdx + 1, 0, ...commandLines);
+    // Append to end of section (before any trailing blank lines)
+    let insertIdx = bounds.end;
+    while (insertIdx > bounds.start + commandsRelIdx + 1 && lines[insertIdx - 1] === "") {
+      insertIdx--;
+    }
+    lines.splice(insertIdx, 0, ...commandLines);
   }
 
   writeFileSync(lefthookPath, lines.join("\n"));
