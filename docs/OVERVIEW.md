@@ -29,7 +29,7 @@ Local skill repository
 ├── units/{unit}/                  # 已发布 unit
 └── global/installer.js            # 目标项目安装器
 
-~/.claude/skills/aisk:setup/
+~/.claude/skills/aisk-setup/
 └── SKILL.md                       # 全局 setup 管理命令
 
 Target project
@@ -130,7 +130,7 @@ pnpm exec vitest run units/test-review-gate/scripts/check-reviewed-by-commit-mar
 2. 将 unit 脚本编译为 CommonJS JS 文件
 3. 将 `units/units.json` 复制到 `~/.aisk/units.json`
 4. 将 `global/scripts/*.ts` 编译或复制到 `~/.aisk/global/`
-5. 将 `global/setup/SKILL.md` 安装到 `~/.claude/skills/aisk:setup/SKILL.md`
+5. 将 `global/setup/SKILL.md` 安装到 `~/.claude/skills/aisk-setup/SKILL.md`
 6. 写入 `~/.aisk/config.json`
 
 ### `scripts/clean.ts`
@@ -141,7 +141,7 @@ pnpm exec vitest run units/test-review-gate/scripts/check-reviewed-by-commit-mar
 
 1. 校验 `~/.aisk/config.json` 是否由当前仓库发布
 2. 删除 `~/.aisk/` 下的所有内容，但保留 `~/.aisk/` 目录
-3. 删除 `~/.claude/skills/` 下由本仓库发布的 `aisk:*` 全局管理 skill
+3. 删除 `~/.claude/skills/` 下由本仓库发布的 `aisk-*` 全局管理 skill
 
 ## 目标项目安装器
 

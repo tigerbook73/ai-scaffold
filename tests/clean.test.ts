@@ -47,7 +47,7 @@ test("removes published AISK artifacts for Claude only", () => {
     mkdirSync(join(dir, ".aisk", "global"), { recursive: true });
     writeFileSync(join(dir, ".aisk", "units.json"), "[]");
     writeFileSync(join(dir, ".aisk", "stale.txt"), "stale");
-    mkdirSync(join(dir, ".claude", "skills", "aisk:setup"), { recursive: true });
+    mkdirSync(join(dir, ".claude", "skills", "aisk-setup"), { recursive: true });
     mkdirSync(join(dir, ".claude", "skills", "other-skill"), { recursive: true });
 
     makeClean(dir).run();
@@ -58,7 +58,7 @@ test("removes published AISK artifacts for Claude only", () => {
     expect(existsSync(join(dir, ".aisk", "stale.txt"))).toBe(false);
     expect(existsSync(join(dir, ".aisk", "config.json"))).toBe(false);
     expect(readdirSync(join(dir, ".aisk"))).toEqual([]);
-    expect(existsSync(join(dir, ".claude", "skills", "aisk:setup"))).toBe(false);
+    expect(existsSync(join(dir, ".claude", "skills", "aisk-setup"))).toBe(false);
     expect(existsSync(join(dir, ".claude", "skills", "other-skill"))).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -68,11 +68,11 @@ test("removes published AISK artifacts for Claude only", () => {
 test("does nothing when config.json is absent", () => {
   const dir = makeTempDir();
   try {
-    mkdirSync(join(dir, ".claude", "skills", "aisk:setup"), { recursive: true });
+    mkdirSync(join(dir, ".claude", "skills", "aisk-setup"), { recursive: true });
 
     makeClean(dir).run();
 
-    expect(existsSync(join(dir, ".claude", "skills", "aisk:setup"))).toBe(true);
+    expect(existsSync(join(dir, ".claude", "skills", "aisk-setup"))).toBe(true);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -83,7 +83,7 @@ test("exits before removing files when config belongs to another repo", () => {
   const originalExit = process.exit;
   try {
     writeConfig(dir, join(dir, "other-repo"));
-    mkdirSync(join(dir, ".claude", "skills", "aisk:setup"), { recursive: true });
+    mkdirSync(join(dir, ".claude", "skills", "aisk-setup"), { recursive: true });
 
     process.exit = ((code?: string | number | null | undefined): never => {
       throw new Error(`process.exit: ${code}`);
@@ -91,7 +91,7 @@ test("exits before removing files when config belongs to another repo", () => {
 
     expect(() => makeClean(dir).run()).toThrow("process.exit: 1");
     expect(readFileSync(join(dir, ".aisk", "config.json"), "utf8")).toContain("other-repo");
-    expect(existsSync(join(dir, ".claude", "skills", "aisk:setup"))).toBe(true);
+    expect(existsSync(join(dir, ".claude", "skills", "aisk-setup"))).toBe(true);
   } finally {
     process.exit = originalExit;
     rmSync(dir, { recursive: true, force: true });

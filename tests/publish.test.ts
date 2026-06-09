@@ -359,13 +359,13 @@ test("publishGlobalScripts removes stale .js files on re-publish", () => {
 
 /**
  * @test-suite  publishGlobalCommands
- * @target      Publish.run() → publishGlobalCommands(): global/{name}/SKILL.md → claudeSkillsDir/aisk:{name}/SKILL.md
+ * @target      Publish.run() → publishGlobalCommands(): global/{name}/SKILL.md → claudeSkillsDir/aisk-{name}/SKILL.md
  * @strategy    integration; isolated temp dirs
  * @cases
- *   - [PASS] copies SKILL.md to claudeSkillsDir/aisk:{name}/SKILL.md with original content
+ *   - [PASS] copies SKILL.md to claudeSkillsDir/aisk-{name}/SKILL.md with original content
  *   - [PASS] skips the scripts entry in global/
  */
-test("publishGlobalCommands copies SKILL.md to claudeSkillsDir/aisk:{name}/SKILL.md", () => {
+test("publishGlobalCommands copies SKILL.md to claudeSkillsDir/aisk-{name}/SKILL.md", () => {
   const dir = makeTempDir();
   try {
     makeRepoSkeleton(dir);
@@ -375,7 +375,7 @@ test("publishGlobalCommands copies SKILL.md to claudeSkillsDir/aisk:{name}/SKILL
 
     makePublish(dir).run();
 
-    const installed = join(dir, ".claude", "skills", "aisk:mycmd", "SKILL.md");
+    const installed = join(dir, ".claude", "skills", "aisk-mycmd", "SKILL.md");
     expect(existsSync(installed)).toBe(true);
     expect(readFileSync(installed, "utf8")).toBe("---\ndescription: my cmd\n---\nContent.");
   } finally {
@@ -392,7 +392,7 @@ test("publishGlobalCommands skips scripts entry in global/", () => {
 
     makePublish(dir).run();
 
-    expect(existsSync(join(dir, ".claude", "skills", "aisk:scripts"))).toBe(false);
+    expect(existsSync(join(dir, ".claude", "skills", "aisk-scripts"))).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

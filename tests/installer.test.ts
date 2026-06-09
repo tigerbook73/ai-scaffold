@@ -150,6 +150,12 @@ test("list sets hasTodo=true when a component has customStatus=todo", () => {
     const aiskHome = makeFakeAiskHome(dir);
     const projectDir = join(dir, "project");
     mkdirSync(join(projectDir, ".aisk"), { recursive: true });
+    const skillPath = join(projectDir, ".claude", "skills", "aisk-poc-poc");
+    mkdirSync(skillPath, { recursive: true });
+    writeFileSync(
+      join(skillPath, "SKILL.md"),
+      '# AISK:CUSTOM name="paths" status="todo" hint="scan test files"\n# AISK:CUSTOM:END\n',
+    );
     writeFileSync(
       join(projectDir, ".aisk", "installed.json"),
       JSON.stringify({

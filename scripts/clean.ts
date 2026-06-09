@@ -46,7 +46,7 @@ export class Clean {
       process.exit(1);
     }
 
-    console.log("Cleaning ~/.aisk/ and ~/.claude/skills/aisk:* ...\n");
+    console.log("Cleaning ~/.aisk/ and ~/.claude/skills/aisk-* ...\n");
 
     mkdirSync(this.aiskHome, { recursive: true });
     for (const entry of readdirSync(this.aiskHome)) {
@@ -56,7 +56,7 @@ export class Clean {
 
     if (existsSync(this.claudeSkillsDir)) {
       for (const entry of readdirSync(this.claudeSkillsDir)) {
-        if (entry.startsWith("aisk:")) {
+        if (entry.startsWith("aisk-")) {
           rmSync(join(this.claudeSkillsDir, entry), { recursive: true, force: true });
           console.log(`  Removed: ~/.claude/skills/${entry}/`);
         }
