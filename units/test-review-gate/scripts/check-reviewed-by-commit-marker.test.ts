@@ -2,13 +2,13 @@
  * @test-file   check-reviewed-by-commit-marker
  * @description Verifies that the pre-commit check validates declared @reviewed-by markers in staged test files, including renamed files
  * @ai-generated
- * @reviewed-by Shengtian Liao @ [2]
+ * @reviewed-by Shengtian Liao @ [3]
  */
 import { execSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 const repoRoot = resolve(__dirname, "../../..");
 const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
@@ -31,16 +31,18 @@ function runCheck(cwd: string) {
  * @cases
  *   - [PASS] exits 0 when no test files are staged
  */
-test("exits 0 when no test files are staged", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
-  try {
-    initRepo(dir);
-    writeFileSync(join(dir, "utils.ts"), "export {}");
-    execSync("git add .", { cwd: dir });
-    expect(runCheck(dir).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+describe("no staged test files", () => {
+  test("exits 0 when no test files are staged", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+    try {
+      initRepo(dir);
+      writeFileSync(join(dir, "utils.ts"), "export {}");
+      execSync("git add .", { cwd: dir });
+      expect(runCheck(dir).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -50,16 +52,18 @@ test("exits 0 when no test files are staged", () => {
  * @cases
  *   - [PASS] exits 0 when new test file is staged without @reviewed-by
  */
-test("exits 0 when new test file is staged without @reviewed-by", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
-  try {
-    initRepo(dir);
-    writeFileSync(join(dir, "service.test.ts"), "// no annotation");
-    execSync("git add .", { cwd: dir });
-    expect(runCheck(dir).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+describe("new test file without @reviewed-by", () => {
+  test("exits 0 when new test file is staged without @reviewed-by", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+    try {
+      initRepo(dir);
+      writeFileSync(join(dir, "service.test.ts"), "// no annotation");
+      execSync("git add .", { cwd: dir });
+      expect(runCheck(dir).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -69,16 +73,18 @@ test("exits 0 when new test file is staged without @reviewed-by", () => {
  * @cases
  *   - [FAIL] exits 1 when new test file declares @reviewed-by without a valid marker
  */
-test("exits 1 when new test file declares @reviewed-by without a valid marker", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
-  try {
-    initRepo(dir);
-    writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by (!HUMAN EDIT ONLY):");
-    execSync("git add .", { cwd: dir });
-    expect(runCheck(dir).status).toBe(1);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+describe("new test file with empty @reviewed-by", () => {
+  test("exits 1 when new test file declares @reviewed-by without a valid marker", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+    try {
+      initRepo(dir);
+      writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by (!HUMAN EDIT ONLY):");
+      execSync("git add .", { cwd: dir });
+      expect(runCheck(dir).status).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -88,16 +94,18 @@ test("exits 1 when new test file declares @reviewed-by without a valid marker", 
  * @cases
  *   - [PASS] exits 0 when new test file is staged with valid @reviewed-by
  */
-test("exits 0 when new test file is staged with valid @reviewed-by", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
-  try {
-    initRepo(dir);
-    writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]");
-    execSync("git add .", { cwd: dir });
-    expect(runCheck(dir).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+describe("new test file with valid @reviewed-by", () => {
+  test("exits 0 when new test file is staged with valid @reviewed-by", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+    try {
+      initRepo(dir);
+      writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]");
+      execSync("git add .", { cwd: dir });
+      expect(runCheck(dir).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -107,21 +115,23 @@ test("exits 0 when new test file is staged with valid @reviewed-by", () => {
  * @cases
  *   - [FAIL] exits 1 when modified test file is staged with unchanged @reviewed-by version
  */
-test("exits 1 when modified test file is staged with unchanged @reviewed-by version", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
-  try {
-    initRepo(dir);
-    writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]");
-    execSync("git add . && git commit -m init", { cwd: dir });
-    writeFileSync(
-      join(dir, "service.test.ts"),
-      "// updated\n// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]",
-    );
-    execSync("git add .", { cwd: dir });
-    expect(runCheck(dir).status).toBe(1);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+describe("modified test file with stale version", () => {
+  test("exits 1 when modified test file is staged with unchanged @reviewed-by version", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+    try {
+      initRepo(dir);
+      writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]");
+      execSync("git add . && git commit -m init", { cwd: dir });
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        "// updated\n// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]",
+      );
+      execSync("git add .", { cwd: dir });
+      expect(runCheck(dir).status).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -131,21 +141,23 @@ test("exits 1 when modified test file is staged with unchanged @reviewed-by vers
  * @cases
  *   - [PASS] exits 0 when modified test file is staged with incremented @reviewed-by version
  */
-test("exits 0 when modified test file is staged with incremented @reviewed-by version", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
-  try {
-    initRepo(dir);
-    writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]");
-    execSync("git add . && git commit -m init", { cwd: dir });
-    writeFileSync(
-      join(dir, "service.test.ts"),
-      "// updated\n// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [2]",
-    );
-    execSync("git add .", { cwd: dir });
-    expect(runCheck(dir).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+describe("modified test file with incremented version", () => {
+  test("exits 0 when modified test file is staged with incremented @reviewed-by version", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+    try {
+      initRepo(dir);
+      writeFileSync(join(dir, "service.test.ts"), "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]");
+      execSync("git add . && git commit -m init", { cwd: dir });
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        "// updated\n// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [2]",
+      );
+      execSync("git add .", { cwd: dir });
+      expect(runCheck(dir).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -155,27 +167,29 @@ test("exits 0 when modified test file is staged with incremented @reviewed-by ve
  * @cases
  *   - [FAIL] exits 1 when renamed test file is staged with unchanged @reviewed-by version
  */
-test("exits 1 when renamed test file is staged with unchanged @reviewed-by version", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
-  // Files need enough content for git's rename detection to trigger (small files are ignored)
-  const filler = "// filler\n".repeat(40);
-  try {
-    initRepo(dir);
-    writeFileSync(
-      join(dir, "old.test.ts"),
-      filler + "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [3]",
-    );
-    execSync("git add . && git commit -m init", { cwd: dir });
-    execSync("git mv old.test.ts new.test.ts", { cwd: dir });
-    writeFileSync(
-      join(dir, "new.test.ts"),
-      filler + "// updated\n// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [3]",
-    );
-    execSync("git add .", { cwd: dir });
-    expect(runCheck(dir).status).toBe(1);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+describe("renamed test file — counter not incremented", () => {
+  test("exits 1 when renamed test file is staged with unchanged @reviewed-by version", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+    // Files need enough content for git's rename detection to trigger (small files are ignored)
+    const filler = "// filler\n".repeat(40);
+    try {
+      initRepo(dir);
+      writeFileSync(
+        join(dir, "old.test.ts"),
+        filler + "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [3]",
+      );
+      execSync("git add . && git commit -m init", { cwd: dir });
+      execSync("git mv old.test.ts new.test.ts", { cwd: dir });
+      writeFileSync(
+        join(dir, "new.test.ts"),
+        filler + "// updated\n// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [3]",
+      );
+      execSync("git add .", { cwd: dir });
+      expect(runCheck(dir).status).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -185,25 +199,27 @@ test("exits 1 when renamed test file is staged with unchanged @reviewed-by versi
  * @cases
  *   - [PASS] exits 0 when renamed test file is staged with incremented @reviewed-by version
  */
-test("exits 0 when renamed test file is staged with incremented @reviewed-by version", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
-  // Files need enough content for git's rename detection to trigger (small files are ignored)
-  const filler = "// filler\n".repeat(40);
-  try {
-    initRepo(dir);
-    writeFileSync(
-      join(dir, "old.test.ts"),
-      filler + "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [3]",
-    );
-    execSync("git add . && git commit -m init", { cwd: dir });
-    execSync("git mv old.test.ts new.test.ts", { cwd: dir });
-    writeFileSync(
-      join(dir, "new.test.ts"),
-      filler + "// updated\n// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [4]",
-    );
-    execSync("git add .", { cwd: dir });
-    expect(runCheck(dir).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+describe("renamed test file — counter incremented", () => {
+  test("exits 0 when renamed test file is staged with incremented @reviewed-by version", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-check-"));
+    // Files need enough content for git's rename detection to trigger (small files are ignored)
+    const filler = "// filler\n".repeat(40);
+    try {
+      initRepo(dir);
+      writeFileSync(
+        join(dir, "old.test.ts"),
+        filler + "// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [3]",
+      );
+      execSync("git add . && git commit -m init", { cwd: dir });
+      execSync("git mv old.test.ts new.test.ts", { cwd: dir });
+      writeFileSync(
+        join(dir, "new.test.ts"),
+        filler + "// updated\n// @reviewed-by (!HUMAN EDIT ONLY): Tom @ [4]",
+      );
+      execSync("git add .", { cwd: dir });
+      expect(runCheck(dir).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

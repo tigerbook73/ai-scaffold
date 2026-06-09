@@ -2,13 +2,13 @@
  * @test-file   check-test-cases-match-it
  * @description Verifies that explicit file checks compare @cases entries with it()/test() names only when @reviewed-by is declared
  * @ai-generated
- * @reviewed-by Shengtian Liao @ [2]
+ * @reviewed-by Shengtian Liao @ [3]
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 const scriptPath = resolve("units/test-review-gate/scripts/check-test-cases-match-it.ts");
 const tsxLoader = require.resolve("tsx");
@@ -27,14 +27,16 @@ function runCheck(cwd: string, files: string[] = []) {
  * @cases
  *   - [PASS] exits 0 when no file arguments are passed
  */
-test("exits 0 when no file arguments are passed", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
-  try {
-    writeFileSync(join(dir, "service.test.ts"), "not valid test metadata");
-    expect(runCheck(dir).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+describe("no explicit files", () => {
+  test("exits 0 when no file arguments are passed", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(join(dir, "service.test.ts"), "not valid test metadata");
+      expect(runCheck(dir).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -44,12 +46,13 @@ test("exits 0 when no file arguments are passed", () => {
  * @cases
  *   - [PASS] exits 0 when a mismatched test file has no @reviewed-by field
  */
-test("exits 0 when a mismatched test file has no @reviewed-by field", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
-  try {
-    writeFileSync(
-      join(dir, "service.test.ts"),
-      `/**
+describe("file without reviewed-by", () => {
+  test("exits 0 when a mismatched test file has no @reviewed-by field", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
  * ${testSuiteTag}  service
  * @cases
  *   - [PASS] returns ok when valid
@@ -58,11 +61,12 @@ describe("service", () => {
   it("returns nope when invalid", () => {});
 });
 `,
-    );
-    expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -72,12 +76,13 @@ describe("service", () => {
  * @cases
  *   - [PASS] exits 0 when @cases entries match it names
  */
-test("exits 0 when @cases entries match it names", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
-  try {
-    writeFileSync(
-      join(dir, "service.test.ts"),
-      `/**
+describe("matching cases and it names", () => {
+  test("exits 0 when @cases entries match it names", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
  * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
  */
 
@@ -90,11 +95,12 @@ describe("service", () => {
   it("returns ok when valid", () => {});
 });
 `,
-    );
-    expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -104,12 +110,13 @@ describe("service", () => {
  * @cases
  *   - [FAIL] exits 1 when @cases entries do not match it names
  */
-test("exits 1 when @cases entries do not match it names", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
-  try {
-    writeFileSync(
-      join(dir, "service.test.ts"),
-      `/**
+describe("mismatched cases and it names", () => {
+  test("exits 1 when @cases entries do not match it names", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
  * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
  */
 
@@ -122,11 +129,12 @@ describe("service", () => {
   it("returns nope when invalid", () => {});
 });
 `,
-    );
-    expect(runCheck(dir, ["service.test.ts"]).status).toBe(1);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -136,12 +144,13 @@ describe("service", () => {
  * @cases
  *   - [PASS] exits 0 when test.describe contains matching consecutive test cases
  */
-test("exits 0 when test.describe contains matching consecutive test cases", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
-  try {
-    writeFileSync(
-      join(dir, "service.spec.ts"),
-      `/**
+describe("test.describe with consecutive test cases", () => {
+  test("exits 0 when test.describe contains matching consecutive test cases", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.spec.ts"),
+        `/**
  * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
  */
 
@@ -160,11 +169,12 @@ test.describe("service", () => {
   });
 });
 `,
-    );
-    expect(runCheck(dir, ["service.spec.ts"]).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+      );
+      expect(runCheck(dir, ["service.spec.ts"]).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -174,12 +184,13 @@ test.describe("service", () => {
  * @cases
  *   - [PASS] exits 0 when case names contain brace characters
  */
-test("exits 0 when case names contain brace characters", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
-  try {
-    writeFileSync(
-      join(dir, "service.test.ts"),
-      `/**
+describe("brace characters in test names", () => {
+  test("exits 0 when case names contain brace characters", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
  * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
  */
 
@@ -200,11 +211,12 @@ describe("service", () => {
   });
 });
 `,
-    );
-    expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -214,12 +226,13 @@ describe("service", () => {
  * @cases
  *   - [PASS] exits 0 when direct multi-line it cases match @cases
  */
-test("exits 0 when direct multi-line it cases match @cases", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
-  try {
-    writeFileSync(
-      join(dir, "service.test.ts"),
-      `/**
+describe("direct multi-line cases", () => {
+  test("exits 0 when direct multi-line it cases match @cases", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
  * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
  */
 
@@ -236,11 +249,12 @@ it("rejects when invalid", () => {
   expect(false).toBe(false);
 });
 `,
-    );
-    expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -250,12 +264,13 @@ it("rejects when invalid", () => {
  * @cases
  *   - [FAIL] exits 1 when describe mode mixes it and test cases for one test suite
  */
-test("exits 1 when describe mode mixes it and test cases for one test suite", () => {
-  const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
-  try {
-    writeFileSync(
-      join(dir, "service.test.ts"),
-      `/**
+describe("mixed case functions", () => {
+  test("exits 1 when describe mode mixes it and test cases for one test suite", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
  * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
  */
 
@@ -270,9 +285,10 @@ describe("service", () => {
   test("returns nope when invalid", () => {});
 });
 `,
-    );
-    expect(runCheck(dir, ["service.test.ts"]).status).toBe(1);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
