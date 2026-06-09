@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 
-interface AisfConfig {
+interface AiskConfig {
   repoPath: string;
   publishedAt: string;
 }
@@ -38,7 +38,7 @@ export class Clean {
       return;
     }
 
-    const config = JSON.parse(readFileSync(configPath, "utf8")) as AisfConfig;
+    const config = JSON.parse(readFileSync(configPath, "utf8")) as AiskConfig;
     if (config.repoPath !== this.repoRoot) {
       console.error("Error: config.json was published from a different repo.");
       console.error(`  Expected: ${this.repoRoot}`);

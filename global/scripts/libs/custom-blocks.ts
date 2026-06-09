@@ -1,12 +1,12 @@
 import type { CustomBlock } from "../types/installer-types";
 
 const CUSTOM_START_RE =
-  /^(#|<!--)\s*AISF:CUSTOM\s+name="([^"]+)"\s+status="([^"]+)"\s+hint="([^"]*)".*$/;
-const CUSTOM_END_HASH_RE = /^#\s*AISF:CUSTOM:END/;
-const CUSTOM_END_HTML_RE = /^<!--\s*AISF:CUSTOM:END/;
+  /^(#|<!--)\s*AISK:CUSTOM\s+name="([^"]+)"\s+status="([^"]+)"\s+hint="([^"]*)".*$/;
+const CUSTOM_END_HASH_RE = /^#\s*AISK:CUSTOM:END/;
+const CUSTOM_END_HTML_RE = /^<!--\s*AISK:CUSTOM:END/;
 
 /**
- * Parse all AISF:CUSTOM blocks from file content.
+ * Parse all AISK:CUSTOM blocks from file content.
  *
  * Supports both Markdown hash comments and HTML comments because rules/skills
  * may need different comment syntaxes depending on where the template appears.

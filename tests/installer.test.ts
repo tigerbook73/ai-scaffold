@@ -1,7 +1,7 @@
 /**
  * @test-file   installer
  * @description Verifies the Installer class handles list, resolve (ResolveResult), add, remove,
- *              update (with AISF:CUSTOM merge), refresh, show, optional components, and
+ *              update (with AISK:CUSTOM merge), refresh, show, optional components, and
  *              lefthook.yml idempotent updates.
  * @ai-generated
  * @reviewed-by
@@ -382,8 +382,8 @@ test("add auto-installs transitive dependency when not yet installed", () => {
  * @strategy    unit; unit.json declares rule component
  * @cases
  *   - [PASS] copies rule template directly (no temp files)
- *   - [PASS] sets customStatus=todo for hasCustom rule with AISF:CUSTOM block
- *   - [PASS] customStatus undefined for hasCustom rule with no AISF:CUSTOM block
+ *   - [PASS] sets customStatus=todo for hasCustom rule with AISK:CUSTOM block
+ *   - [PASS] customStatus undefined for hasCustom rule with no AISK:CUSTOM block
  */
 test("add copies rule template directly (no temp files)", () => {
   const dir = makeTempDir();
@@ -417,7 +417,7 @@ test("add copies rule template directly (no temp files)", () => {
   }
 });
 
-test("add sets customStatus=todo for hasCustom rule with AISF:CUSTOM block", () => {
+test("add sets customStatus=todo for hasCustom rule with AISK:CUSTOM block", () => {
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
@@ -426,9 +426,9 @@ test("add sets customStatus=todo for hasCustom rule with AISF:CUSTOM block", () 
     writeFileSync(
       join(rulesDir, "poc-rule.md"),
       [
-        '# AISF:CUSTOM name="glob-pattern" status="todo" hint="scan test files"',
+        '# AISK:CUSTOM name="glob-pattern" status="todo" hint="scan test files"',
         'testMatch: ["**/*.test.ts"]',
-        "# AISF:CUSTOM:END",
+        "# AISK:CUSTOM:END",
       ].join("\n"),
     );
     writeFileSync(
@@ -457,7 +457,7 @@ test("add sets customStatus=todo for hasCustom rule with AISF:CUSTOM block", () 
   }
 });
 
-test("add customStatus is undefined for hasCustom rule without AISF:CUSTOM blocks in template", () => {
+test("add customStatus is undefined for hasCustom rule without AISK:CUSTOM blocks in template", () => {
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
@@ -598,10 +598,10 @@ test("add (update path) removes orphaned component file when unit.json no longer
   }
 });
 
-// ─── installer update: AISF:CUSTOM merge ─────────────────────────────────────
+// ─── installer update: AISK:CUSTOM merge ─────────────────────────────────────
 
 /**
- * @test-suite  update (AISF:CUSTOM merge)
+ * @test-suite  update (AISK:CUSTOM merge)
  * @target      Installer.update()
  * @strategy    unit; installed file has done block; new template has same block
  * @cases
@@ -621,9 +621,9 @@ test("update merges done block from old file into new template", () => {
     writeFileSync(
       join(rulesDir, "poc-rule.md"),
       [
-        '# AISF:CUSTOM name="pattern" status="todo" hint="new hint"',
+        '# AISK:CUSTOM name="pattern" status="todo" hint="new hint"',
         'testMatch: ["**/*.new.ts"]',
-        "# AISF:CUSTOM:END",
+        "# AISK:CUSTOM:END",
       ].join("\n"),
     );
     writeFileSync(
@@ -646,9 +646,9 @@ test("update merges done block from old file into new template", () => {
     writeFileSync(
       join(ruleDir, "poc-rule.md"),
       [
-        '# AISF:CUSTOM name="pattern" status="done" hint="old hint"',
+        '# AISK:CUSTOM name="pattern" status="done" hint="old hint"',
         'testMatch: ["**/*.spec.ts"]',
-        "# AISF:CUSTOM:END",
+        "# AISK:CUSTOM:END",
       ].join("\n"),
     );
 
@@ -699,9 +699,9 @@ test("update keeps new template content for todo blocks", () => {
     writeFileSync(
       join(rulesDir, "poc-rule.md"),
       [
-        '# AISF:CUSTOM name="pattern" status="todo" hint="hint"',
+        '# AISK:CUSTOM name="pattern" status="todo" hint="hint"',
         'testMatch: ["**/*.updated.ts"]',
-        "# AISF:CUSTOM:END",
+        "# AISK:CUSTOM:END",
       ].join("\n"),
     );
     writeFileSync(
@@ -722,9 +722,9 @@ test("update keeps new template content for todo blocks", () => {
     writeFileSync(
       join(ruleDir, "poc-rule.md"),
       [
-        '# AISF:CUSTOM name="pattern" status="todo" hint="hint"',
+        '# AISK:CUSTOM name="pattern" status="todo" hint="hint"',
         'testMatch: ["**/*.old.ts"]',
-        "# AISF:CUSTOM:END",
+        "# AISK:CUSTOM:END",
       ].join("\n"),
     );
 
@@ -1000,14 +1000,14 @@ test("remove all removes all installed units", () => {
 /**
  * @test-suite  refresh
  * @target      Installer.refresh()
- * @strategy    unit; installed files with AISF:CUSTOM blocks
+ * @strategy    unit; installed files with AISK:CUSTOM blocks
  * @cases
  *   - [PASS] scans file and updates customStatus=done when block is done
  *   - [PASS] outputs todo list in non-silent mode
  *   - [PASS] produces no output in silent mode
  *   - [PASS] cleans orphaned hook when script file is deleted
  */
-test("refresh updates customStatus to done when AISF:CUSTOM block is done", () => {
+test("refresh updates customStatus to done when AISK:CUSTOM block is done", () => {
   const dir = makeTempDir();
   try {
     const aiskHome = makeFakeAiskHome(dir);
@@ -1017,9 +1017,9 @@ test("refresh updates customStatus to done when AISF:CUSTOM block is done", () =
     writeFileSync(
       join(ruleDir, "poc-rule.md"),
       [
-        '# AISF:CUSTOM name="pattern" status="done" hint="hint"',
+        '# AISK:CUSTOM name="pattern" status="done" hint="hint"',
         'testMatch: ["**/*.spec.ts"]',
-        "# AISF:CUSTOM:END",
+        "# AISK:CUSTOM:END",
       ].join("\n"),
     );
     mkdirSync(join(projectDir, ".aisk"), { recursive: true });
@@ -1069,9 +1069,9 @@ test("refresh outputs todo list in non-silent mode", () => {
     writeFileSync(
       join(ruleDir, "poc-rule.md"),
       [
-        '# AISF:CUSTOM name="pattern" status="todo" hint="hint"',
+        '# AISK:CUSTOM name="pattern" status="todo" hint="hint"',
         "content",
-        "# AISF:CUSTOM:END",
+        "# AISK:CUSTOM:END",
       ].join("\n"),
     );
     mkdirSync(join(projectDir, ".aisk"), { recursive: true });

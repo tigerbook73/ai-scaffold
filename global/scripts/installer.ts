@@ -3,7 +3,7 @@
  *
  * This file is bundled into ~/.aisk/global/installer.js and then invoked from
  * installed skills. It manages project-local generated files, hook registration,
- * dependency resolution, and preservation of AISF:CUSTOM blocks during updates.
+ * dependency resolution, and preservation of AISK:CUSTOM blocks during updates.
  */
 import {
   cpSync,
@@ -183,7 +183,7 @@ export class Installer {
   /**
    * Update one or more installed units. "all" updates all installed units.
    * Fails per-unit if not installed. Optional components that are not on disk are skipped.
-   * AISF:CUSTOM done blocks are merged into the new template.
+   * AISK:CUSTOM done blocks are merged into the new template.
    */
   update(names: string[]): void {
     this.refresh(true);
@@ -215,7 +215,7 @@ export class Installer {
   }
 
   /**
-   * Scan all installed component files for AISF:CUSTOM block status,
+   * Scan all installed component files for AISK:CUSTOM block status,
    * sync customStatus back to installed.json, and clean up orphaned hooks.
    * In silent mode (internal calls), produces no output.
    */
@@ -371,7 +371,7 @@ export class Installer {
 
   /**
    * Install a unit with ALL components (required + optional).
-   * Copies files directly from templates; scans AISF:CUSTOM blocks for customStatus.
+   * Copies files directly from templates; scans AISK:CUSTOM blocks for customStatus.
    */
   private installUnitAllComponents(unitName: string): ComponentOpResult[] {
     const unitJson = this.readUnitJson(unitName)!;
@@ -603,7 +603,7 @@ export class Installer {
 
   /**
    * Copy a file directly from src to dest, creating parent dirs.
-   * If hasCustom, scans dest for AISF:CUSTOM block status after copy.
+   * If hasCustom, scans dest for AISK:CUSTOM block status after copy.
    */
   private copyComponentDirect(
     src: string,
@@ -620,7 +620,7 @@ export class Installer {
   }
 
   /**
-   * Update a component file, merging AISF:CUSTOM done blocks from the existing file.
+   * Update a component file, merging AISK:CUSTOM done blocks from the existing file.
    * Falls back to direct copy if the file doesn't exist yet or has no done blocks.
    */
   private updateComponentDirect(
@@ -894,7 +894,7 @@ export class Installer {
     }
   }
 
-  /** Scan a file for AISF:CUSTOM blocks and return the aggregate customStatus. */
+  /** Scan a file for AISK:CUSTOM blocks and return the aggregate customStatus. */
   private scanCustomStatus(filePath: string): "todo" | "done" | undefined {
     if (!existsSync(filePath)) return undefined;
     const blocks = parseCustomBlocks(readFileSync(filePath, "utf8"));

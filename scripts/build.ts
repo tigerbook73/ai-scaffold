@@ -46,7 +46,7 @@ function nameFromFilename(filename: string): string {
 }
 
 /** Detect whether a component declares user-preserved customization regions. */
-function hasAisfCustom(filePath: string): boolean {
+function hasAiskCustom(filePath: string): boolean {
   if (!existsSync(filePath)) return false;
   return /AISK:CUSTOM/.test(readFileSync(filePath, "utf8"));
 }
@@ -91,7 +91,7 @@ export function refreshUnit(unitSrcDir: string): boolean {
     if (prev?.condition) entry.condition = prev.condition;
     const hint = extractHint(filePath);
     if (hint) entry.hint = hint;
-    if (hasAisfCustom(filePath)) entry.hasCustom = true;
+    if (hasAiskCustom(filePath)) entry.hasCustom = true;
     return entry;
   });
 

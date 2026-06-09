@@ -1,9 +1,9 @@
 ---
 paths:
-  # AISF:CUSTOM name="paths" status="todo" hint="important test files shall be added here"
+  # AISK:CUSTOM name="paths" status="todo" hint="important test files shall be added here"
   - "**/*.test.ts"
   - "**/*.spec.ts"
-  # AISF:CUSTOM:END"
+  # AISK:CUSTOM:END"
 ---
 
 # AI 测试审查规则

@@ -127,6 +127,6 @@ test-review-gate — Enforce human review markers on test files
 | 标签                | 含义                                     |
 | ------------------- | ---------------------------------------- |
 | `installed`         | 已安装，无需定制                         |
-| `todo - 需要定制`   | 已安装，含未填写的 AISF:CUSTOM 块        |
+| `todo - 需要定制`   | 已安装，含未填写的 AISK:CUSTOM 块        |
 | `done`              | 已安装，定制已完成                       |
 | `optional, skipped` | 可选组件，本次未安装（仅 update 时出现） |

@@ -10,7 +10,7 @@
 export interface UnitSkillEntry {
   name: string;
   file: string;
-  /** Whether this component contains AISF:CUSTOM blocks requiring user customization. */
+  /** Whether this component contains AISK:CUSTOM blocks requiring user customization. */
   hasCustom?: boolean;
   /** If set, the component is optional. */
   condition?: string;
@@ -22,7 +22,7 @@ export interface UnitRuleEntry {
   file: string;
   hasCustom?: boolean;
   condition?: string;
-  /** Hint shown when the AISF:CUSTOM block needs to be filled. */
+  /** Hint shown when the AISK:CUSTOM block needs to be filled. */
   hint?: string;
 }
 
@@ -66,7 +66,7 @@ export interface InstalledComponent {
   name: string;
   /** Project-relative path of the installed file. */
   path: string;
-  /** Customization status for hasCustom components. undefined = no AISF:CUSTOM blocks. */
+  /** Customization status for hasCustom components. undefined = no AISK:CUSTOM blocks. */
   customStatus?: "todo" | "done";
 }
 
@@ -94,7 +94,7 @@ export interface ComponentOpResult {
   type: "skill" | "rule" | "script" | "resource";
   name: string;
   path: string;
-  /** Customization status; undefined means no AISF:CUSTOM blocks. */
+  /** Customization status; undefined means no AISK:CUSTOM blocks. */
   customStatus?: "todo" | "done";
   /** lefthook hook name if this script was registered. */
   hook?: string;
@@ -228,9 +228,9 @@ export interface ResourceSpec extends Omit<UnitResourceEntry, "condition"> {
 /** Union of all resolved component spec types. */
 export type ComponentSpec = SkillSpec | RuleSpec | ScriptSpec | ResourceSpec;
 
-// ─── AISF:CUSTOM block (installer-internal) ───────────────────────────────────
+// ─── AISK:CUSTOM block (installer-internal) ───────────────────────────────────
 
-/** A parsed AISF:CUSTOM block found in an installed component file. */
+/** A parsed AISK:CUSTOM block found in an installed component file. */
 export interface CustomBlock {
   name: string;
   status: "todo" | "done";

@@ -19,7 +19,7 @@ import { homedir } from "os";
 import { buildSync } from "esbuild";
 import type { UnitJson } from "../global/scripts/types/installer-types";
 
-interface AisfConfig {
+interface AiskConfig {
   repoPath: string;
   publishedAt: string;
 }
@@ -169,7 +169,7 @@ export class Publish {
   /** Write the repo locator used to guard clean operations and agent discovery. */
   private writeConfig(): void {
     mkdirSync(this.aiskHome, { recursive: true });
-    const config: AisfConfig = {
+    const config: AiskConfig = {
       repoPath: this.repoRoot,
       publishedAt: new Date().toISOString(),
     };
