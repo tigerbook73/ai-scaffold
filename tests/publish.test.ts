@@ -259,6 +259,7 @@ test("publishUnit does not compile nested .ts files from scripts/", () => {
  * @strategy    integration; isolated temp dirs
  * @cases
  *   - [PASS] compiles global/scripts/*.ts to aiskHome/global/*.js in CJS format
+ *   - [PASS] bundles imported libs modules without publishing them separately
  *   - [PASS] skips non-.ts files in global/scripts/
  *   - [PASS] removes stale .js files on re-publish
  */
@@ -281,6 +282,32 @@ test("publishGlobalScripts compiles global/scripts/*.ts to aiskHome/global/*.js 
     expect(content, "import must be converted to require() in CJS output").toContain(
       'require("fs")',
     );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("publishGlobalScripts bundles imported libs modules without publishing them separately", () => {
+  const dir = makeTempDir();
+  try {
+    makeRepoSkeleton(dir);
+    const globalScriptsDir = join(dir, "global", "scripts");
+    mkdirSync(join(globalScriptsDir, "libs"), { recursive: true });
+    writeFileSync(
+      join(globalScriptsDir, "tool.ts"),
+      'import { message } from "./libs/helper";\nprocess.stdout.write(message + "\\n");\n',
+    );
+    writeFileSync(
+      join(globalScriptsDir, "libs", "helper.ts"),
+      'export const message = "helper-ok";\n',
+    );
+
+    makePublish(dir).run();
+
+    const outJs = join(dir, ".aisk", "global", "tool.js");
+    expect(existsSync(outJs), "tool.js must exist").toBe(true);
+    expect(readFileSync(outJs, "utf8")).toContain("helper-ok");
+    expect(existsSync(join(dir, ".aisk", "global", "libs", "helper.js"))).toBe(false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

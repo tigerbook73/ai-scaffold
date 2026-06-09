@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { expect, test, vi } from "vitest";
 
 import { Installer } from "../global/scripts/installer";
-import type { ResolveResult } from "../global/scripts/installer-types";
+import type { ResolveResult } from "../global/scripts/types/installer-types";
 
 function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), "aisk-installer-"));

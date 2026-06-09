@@ -17,7 +17,7 @@ import {
 import { join, extname, resolve } from "path";
 import { homedir } from "os";
 import { buildSync } from "esbuild";
-import type { UnitJson } from "../global/scripts/installer-types";
+import type { UnitJson } from "../global/scripts/types/installer-types";
 
 interface AisfConfig {
   repoPath: string;
@@ -111,6 +111,8 @@ export class Publish {
     if (existsSync(destDir)) rmSync(destDir, { recursive: true, force: true });
     mkdirSync(destDir, { recursive: true });
 
+    // Root .ts files are publish entrypoints. Subdirectories are source modules
+    // and are only included when bundled through an entrypoint import.
     for (const file of readdirSync(globalScriptsDir)) {
       if (extname(file) !== ".ts") continue;
       // Publish *-types.ts as source — interfaces have no runtime representation after compilation.
@@ -135,14 +137,6 @@ export class Publish {
       mkdirSync(destDir, { recursive: true });
       cpSync(skillSrc, join(destDir, "SKILL.md"));
       console.log(`  global: aisk:${entry}`);
-    }
-  }
-
-  /** Bundle every TypeScript file in a directory into CommonJS output. */
-  private compileScripts(srcDir: string, destDir: string): void {
-    mkdirSync(destDir, { recursive: true });
-    for (const file of readdirSync(srcDir).filter((f) => extname(f) === ".ts")) {
-      this.bundle(join(srcDir, file), join(destDir, file.replace(/\.ts$/, ".js")));
     }
   }
 

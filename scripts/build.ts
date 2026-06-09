@@ -13,7 +13,7 @@ import type {
   UnitScriptEntry,
   UnitResourceEntry,
   UnitJson,
-} from "../global/scripts/installer-types";
+} from "../global/scripts/types/installer-types";
 
 interface ExistingUnitJson {
   name?: string;
