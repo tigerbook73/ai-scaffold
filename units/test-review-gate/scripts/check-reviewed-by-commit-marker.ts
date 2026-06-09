@@ -1,6 +1,18 @@
 /**
  * Validates human review markers for staged test changes during pre-commit.
  *
+ * Specifically, for every staged .test/.spec file that contains @reviewed-by:
+ * - read the current file content from the Git index, not the working tree;
+ * - read the previous content from HEAD, following Git rename metadata when present;
+ * - require new reviewed files to declare a valid marker like
+ *   "@reviewed-by (!HUMAN EDIT ONLY): Tom Zhang @ [1]";
+ * - require modified or renamed reviewed files to increase the numeric marker from
+ *   the previous HEAD value.
+ *
+ * Files without any @reviewed-by field are ignored. This does not verify the
+ * reviewer identity, whether a human actually reviewed the file, or whether the
+ * marker was changed by a human instead of an automated tool.
+ *
  * Application: install this script as a Git pre-commit hook. It compares staged
  * test file content against HEAD, ignores files without an @reviewed-by field,
  * and requires declared review markers to have a valid, incrementing counter.
