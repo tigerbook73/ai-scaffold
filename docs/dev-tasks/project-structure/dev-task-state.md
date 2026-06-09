@@ -3,7 +3,7 @@
 ## Metadata
 
 - type: refactor
-- status: in_progress
+- status: done
 
 ## Document Index
 
@@ -17,7 +17,7 @@ implementation (in_progress)
 
 ## Current Step
 
-test-review-gate 已实现；构建已忽略脚本目录中的测试文件；待提交
+Step 5 已提交（25797af）；所有实现步骤完成；待执行 Dev-Task Acceptance 验收
 
 ## Requirements Phase（架构）
 
@@ -123,6 +123,10 @@ test-review-gate 已实现；构建已忽略脚本目录中的测试文件；待
 
 - step-type: final
 - status: done
+- Commit: 25797af
+- Date: 2026-06-09
+- auto-check: pass
+- manual-check: n/a
 - notes:
   - `units/test-review-gate/rules/test-review-gate.md` — 从 archive 复制，Claude 规则
   - `units/test-review-gate/scripts/check-reviewed-by-commit-marker.ts` — pre-commit hook，检查已声明的人工审查 marker
@@ -136,5 +140,5 @@ test-review-gate 已实现；构建已忽略脚本目录中的测试文件；待
 
 ## Dev-Task Acceptance
 
-- auto-check: —
-- manual-check: —
+- auto-check: pass（pnpm verify：lint + typecheck + 113 tests + build，2026-06-09）
+- manual-check: pass（用户确认）
