@@ -56,12 +56,12 @@ node ~/.aisk/global/installer.js <subcommand> [units...]
 
 ```
 已安装：
-  poc          — PoC unit                      [有待定制]
-  smart-review — Smart review skill
+  test-review-gate — Test review gate           [有待定制]
+  smart-review     — Smart review skill
 
 未安装：
-  poc-dep      — PoC dep unit
-  quick-ship   — Quick ship skill
+  confirm-intent — Confirm intent before acting
+  quick-ship     — Quick ship skill
 ```
 
 `hasTodo: true` 时在名称右侧标注 `[有待定制]`。
@@ -80,9 +80,8 @@ node ~/.aisk/global/installer.js <subcommand> [units...]
     script: .aisk/trg/scripts/check-test-cases-match-it.js       [installed, hook: pre-commit]
 
 已更新：
-  poc
-    rule: .claude/rules/aisk-poc/poc-rule.md              [done]
-    rule: .claude/rules/aisk-poc/poc-rule-nextjs.md       [todo - 需要定制]  （可选）
+  smart-review
+    rule: .claude/rules/aisk-smart-review/smart-review.md [done]
 
 失败：
   unknown-unit — unit 不在注册表中
@@ -112,8 +111,6 @@ node ~/.aisk/global/installer.js <subcommand> [units...]
 refresh 完成。
 
 待定制（需处理）：
-  poc
-    .claude/rules/aisk-poc/poc-rule-nextjs.md  [todo]
   test-review-gate
     .claude/rules/aisk-trg/test-review-gate.md  [todo]
 ```
@@ -125,15 +122,12 @@ refresh 完成。
 #### show 格式
 
 ```
-poc — PoC unit covering all four component types
-依赖：poc-dep
+test-review-gate — Enforce human review markers on test files
 
 组件：
-  skill:    poc              [installed]
-  rule:     poc-rule         [done]
-  rule:     poc-rule-nextjs  [todo - 需要定制]  （可选）
-  script:   poc-hook         [installed, hook: pre-commit]
-  resource: readme           [installed]
+  rule:   .claude/rules/aisk-trg/test-review-gate.md          [todo - 需要定制]
+  script: .aisk/trg/scripts/check-reviewed-by-commit-marker.js [installed, hook: pre-commit]
+  script: .aisk/trg/scripts/check-test-cases-match-it.js       [installed, hook: pre-commit]
 ```
 
 ---
