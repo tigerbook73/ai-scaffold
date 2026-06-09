@@ -64,6 +64,7 @@ export class Installer {
 
   /** List all available units with their install and customization status. */
   list(): void {
+    this.refresh(true);
     const installed = this.readInstalled();
     const unitList = this.getUnitList();
 
@@ -94,6 +95,7 @@ export class Installer {
    * Transitive dependencies that are not installed are auto-installed.
    */
   add(names: string[]): void {
+    this.refresh(true);
     const installed = this.readInstalled();
     const available = this.getUnitList().map((u) => u.name);
     const availableSet = new Set(available);
@@ -155,6 +157,7 @@ export class Installer {
    * Fails per-unit if not installed.
    */
   remove(names: string[]): void {
+    this.refresh(true);
     const installed = this.readInstalled();
 
     const requestedNames = names.includes("all") ? Object.keys(installed.units) : names;
@@ -183,6 +186,7 @@ export class Installer {
    * AISF:CUSTOM done blocks are merged into the new template.
    */
   update(names: string[]): void {
+    this.refresh(true);
     const installed = this.readInstalled();
     const availableSet = new Set(this.getUnitList().map((u) => u.name));
 

@@ -133,10 +133,10 @@ export class Publish {
       if (entry === "scripts") continue;
       const skillSrc = join(globalDir, entry, "SKILL.md");
       if (!existsSync(skillSrc)) continue;
-      const destDir = join(this.claudeSkillsDir, `aisk:${entry}`);
+      const destDir = join(this.claudeSkillsDir, `aisk-${entry}`);
       mkdirSync(destDir, { recursive: true });
       cpSync(skillSrc, join(destDir, "SKILL.md"));
-      console.log(`  global: aisk:${entry}`);
+      console.log(`  global: aisk-${entry}`);
     }
   }
 

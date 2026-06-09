@@ -24,17 +24,7 @@
 
 无参数时输出上方命令表后停止。
 
-### 1. 前置静默 refresh
-
-对 `list` / `add` / `remove` / `update` 命令，先执行静默 refresh（同步磁盘状态到 installed.json）：
-
-```
-node ~/.aisk/global/installer.js refresh --silent
-```
-
-若失败则输出错误并停止。
-
-### 2. 执行主命令
+### 1. 执行主命令
 
 运行对应 installer 命令，获取 JSON 输出：
 
@@ -44,7 +34,7 @@ node ~/.aisk/global/installer.js <subcommand> [units...]
 
 若命令失败（exit code 非 0）则输出错误后停止。
 
-### 3. 格式化并展示结果
+### 2. 格式化并展示结果
 
 将 JSON 格式化为可读报告。操作过程中不输出中间结果，操作完成后统一展示。
 
