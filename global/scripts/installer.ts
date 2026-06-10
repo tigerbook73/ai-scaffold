@@ -50,14 +50,18 @@ export class Installer {
   readonly aiskHome: string;
   /** Absolute path to the target project directory. */
   readonly cwd: string;
+  /** When true, output is human-readable text instead of JSON. */
+  readonly human: boolean;
 
   /**
    * @param cwd      Project root to install units into (defaults to process.cwd()).
    * @param aiskHome Global aisk home directory (defaults to ~/.aisk).
+   * @param human    When true, output human-readable text instead of JSON.
    */
-  constructor(cwd = process.cwd(), aiskHome = join(homedir(), ".aisk")) {
+  constructor(cwd = process.cwd(), aiskHome = join(homedir(), ".aisk"), human = false) {
     this.cwd = cwd;
     this.aiskHome = aiskHome;
+    this.human = human;
   }
 
   // ─── Public API ────────────────────────────────────────────────────────────
@@ -86,7 +90,12 @@ export class Installer {
       };
     });
 
-    process.stdout.write(JSON.stringify({ units } satisfies ListResult, null, 2) + "\n");
+    const result: ListResult = { units };
+    if (this.human) {
+      this.printListHuman(result);
+    } else {
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    }
   }
 
   /**
@@ -149,7 +158,11 @@ export class Installer {
       }
     }
 
-    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    if (this.human) {
+      this.printAddHuman(result);
+    } else {
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    }
   }
 
   /**
@@ -177,7 +190,11 @@ export class Installer {
       }
     }
 
-    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    if (this.human) {
+      this.printRemoveHuman(result);
+    } else {
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    }
   }
 
   /**
@@ -211,7 +228,11 @@ export class Installer {
       }
     }
 
-    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    if (this.human) {
+      this.printUpdateHuman(result);
+    } else {
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    }
   }
 
   /**
@@ -277,9 +298,12 @@ export class Installer {
     }
 
     if (!silent) {
-      process.stdout.write(
-        JSON.stringify({ todo: todoUnits } satisfies RefreshResult, null, 2) + "\n",
-      );
+      const refreshResult: RefreshResult = { todo: todoUnits };
+      if (this.human) {
+        this.printRefreshHuman(refreshResult);
+      } else {
+        process.stdout.write(JSON.stringify(refreshResult, null, 2) + "\n");
+      }
     }
   }
 
@@ -348,7 +372,11 @@ export class Installer {
       components,
     };
 
-    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    if (this.human) {
+      this.printShowHuman(result);
+    } else {
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    }
   }
 
   /**
@@ -357,7 +385,11 @@ export class Installer {
    */
   resolve(selectedNames: string[]): void {
     const result = this.resolveDeps(selectedNames);
-    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    if (this.human) {
+      this.printResolveHuman(result);
+    } else {
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    }
   }
 
   /** Reads and parses .aisk/installed.json from the project directory. */
@@ -977,6 +1009,126 @@ export class Installer {
       return ai !== bi ? ai - bi : a.localeCompare(b);
     });
   }
+
+  // ─── Human-readable output ─────────────────────────────────────────────────
+
+  private printListHuman({ units }: ListResult): void {
+    const installedCount = units.filter((u) => u.installed).length;
+    process.stdout.write(
+      `${units.length} unit${units.length !== 1 ? "s" : ""} available, ${installedCount} installed\n`,
+    );
+    if (units.length === 0) return;
+    process.stdout.write("\n");
+    const maxLen = Math.max(...units.map((u) => u.name.length));
+    for (const u of units) {
+      const mark = u.installed ? "✓" : "·";
+      const todo = u.hasTodo ? "  [!]" : "";
+      process.stdout.write(`  ${mark} ${u.name.padEnd(maxLen + 2)}${u.description}${todo}\n`);
+    }
+  }
+
+  private printAddHuman({ added, updated, failed }: AddResult): void {
+    const regular = added.filter((a) => !a.autoDep);
+    const auto = added.filter((a) => a.autoDep);
+    if (regular.length > 0) {
+      process.stdout.write(`Added: ${regular.map((a) => a.name).join(", ")}\n`);
+    }
+    if (auto.length > 0) {
+      process.stdout.write(`  auto: ${auto.map((a) => a.name).join(", ")}\n`);
+    }
+    if (updated.length > 0) {
+      process.stdout.write(`Updated: ${updated.map((u) => u.name).join(", ")}\n`);
+    }
+    for (const f of failed) {
+      process.stdout.write(`Failed: ${f.name} — ${f.reason}\n`);
+    }
+    if (added.length === 0 && updated.length === 0 && failed.length === 0) {
+      process.stdout.write("Nothing to do.\n");
+    }
+  }
+
+  private printRemoveHuman({ removed, failed }: RemoveResult): void {
+    if (removed.length > 0) {
+      process.stdout.write(`Removed: ${removed.map((r) => r.name).join(", ")}\n`);
+    }
+    for (const f of failed) {
+      process.stdout.write(`Failed: ${f.name} — ${f.reason}\n`);
+    }
+    if (removed.length === 0 && failed.length === 0) {
+      process.stdout.write("Nothing to remove.\n");
+    }
+  }
+
+  private printUpdateHuman({ updated, failed }: UpdateResult): void {
+    if (updated.length > 0) {
+      process.stdout.write(`Updated: ${updated.map((u) => u.name).join(", ")}\n`);
+    }
+    for (const f of failed) {
+      process.stdout.write(`Failed: ${f.name} — ${f.reason}\n`);
+    }
+    if (updated.length === 0 && failed.length === 0) {
+      process.stdout.write("Nothing to update.\n");
+    }
+  }
+
+  private printRefreshHuman({ todo }: RefreshResult): void {
+    if (todo.length === 0) {
+      process.stdout.write("All custom blocks up to date.\n");
+      return;
+    }
+    const totalFiles = todo.reduce((n, u) => n + u.files.length, 0);
+    process.stdout.write(
+      `${totalFiles} file${totalFiles !== 1 ? "s" : ""} with pending todos in ${todo.length} unit${todo.length !== 1 ? "s" : ""}:\n`,
+    );
+    for (const { unit, files } of todo) {
+      for (const f of files) {
+        process.stdout.write(`  ${unit}: ${f}\n`);
+      }
+    }
+  }
+
+  private printShowHuman(result: ShowResult): void {
+    process.stdout.write(`${result.name} — ${result.description}\n`);
+    if (result.dependencies.length > 0) {
+      process.stdout.write(`Dependencies: ${result.dependencies.join(", ")}\n`);
+    }
+    process.stdout.write(`Status: ${result.installed ? "installed" : "not installed"}\n\n`);
+    process.stdout.write("Components:\n");
+    for (const c of result.components) {
+      const mark = !c.installed ? "·" : c.customStatus === "todo" ? "!" : "✓";
+      const typePad = c.type.padEnd(8);
+      const todo = c.customStatus === "todo" ? "  [todo]" : "";
+      const notInstalled = !c.installed && c.optional ? "  (optional, not installed)" : "";
+      process.stdout.write(`  ${mark} ${typePad} ${c.name}${todo}${notInstalled}\n`);
+    }
+  }
+
+  private printResolveHuman(result: ResolveResult): void {
+    const autoSet = new Set(result.auto);
+    if (result.to_install.length > 0) {
+      const regular = result.to_install.filter((n) => !autoSet.has(n));
+      const auto = result.to_install.filter((n) => autoSet.has(n));
+      if (regular.length > 0) {
+        process.stdout.write(`Install (${regular.length}): ${regular.join(", ")}\n`);
+      }
+      if (auto.length > 0) {
+        process.stdout.write(`  auto (${auto.length}): ${auto.join(", ")}\n`);
+      }
+    }
+    if (result.to_update.length > 0) {
+      process.stdout.write(`Update (${result.to_update.length}): ${result.to_update.join(", ")}\n`);
+    }
+    if (result.to_remove.length > 0) {
+      process.stdout.write(`Remove (${result.to_remove.length}): ${result.to_remove.join(", ")}\n`);
+    }
+    if (
+      result.to_install.length === 0 &&
+      result.to_update.length === 0 &&
+      result.to_remove.length === 0
+    ) {
+      process.stdout.write("Nothing to change.\n");
+    }
+  }
 }
 
 // ─── CLI ─────────────────────────────────────────────────────────────────────
@@ -984,37 +1136,53 @@ export class Installer {
 if (require.main === module) {
   const cli = cac("installer");
 
+  cli.option("--human", "Output in human-readable text format instead of JSON");
+
   cli
     .command("list", "List all available units with install and customization status")
-    .action(() => new Installer().list());
+    .action((options: { human?: boolean }) =>
+      new Installer(undefined, undefined, options.human).list(),
+    );
 
   cli
     .command("add [...units]", 'Install units; use "all" to install all available units')
-    .action((units: string[]) => new Installer().add(units ?? []));
+    .action((units: string[], options: { human?: boolean }) =>
+      new Installer(undefined, undefined, options.human).add(units ?? []),
+    );
 
   cli
     .command("remove [...units]", 'Uninstall units; use "all" to remove all installed units')
-    .action((units: string[]) => new Installer().remove(units ?? []));
+    .action((units: string[], options: { human?: boolean }) =>
+      new Installer(undefined, undefined, options.human).remove(units ?? []),
+    );
 
   cli
     .command("update [...units]", 'Update installed units; use "all" to update all')
-    .action((units: string[]) => new Installer().update(units ?? []));
+    .action((units: string[], options: { human?: boolean }) =>
+      new Installer(undefined, undefined, options.human).update(units ?? []),
+    );
 
   cli
     .command("refresh", "Sync customStatus from disk, output TODO list, clean orphaned hooks")
     .option("--silent", "Suppress output (used for internal pre-operation refresh)")
-    .action((options: { silent?: boolean }) => new Installer().refresh(options.silent ?? false));
+    .action((options: { silent?: boolean; human?: boolean }) =>
+      new Installer(undefined, undefined, options.human).refresh(options.silent ?? false),
+    );
 
   cli
     .command("show <unit>", "Show unit details and component status")
-    .action((unit: string) => new Installer().show(unit));
+    .action((unit: string, options: { human?: boolean }) =>
+      new Installer(undefined, undefined, options.human).show(unit),
+    );
 
   cli
     .command(
       "resolve [...units]",
       "Resolve transitive deps and output changeset; no args means uninstall all",
     )
-    .action((units: string[]) => new Installer().resolve(units ?? []));
+    .action((units: string[], options: { human?: boolean }) =>
+      new Installer(undefined, undefined, options.human).resolve(units ?? []),
+    );
 
   cli.help();
   cli.parse();
