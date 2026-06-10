@@ -11,8 +11,8 @@
     "lint:fix": "eslint scripts/**/*.ts global/**/*.ts tests/**/*.ts --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "verify": "pnpm lint:check && pnpm typecheck && pnpm test && pnpm build",
-    "format": "prettier --log-level warn --write ."
+    "format": "prettier --log-level warn --write .",
+    "verify": "pnpm build && pnpm typecheck && pnpm lint && pnpm format && pnpm test"
   },
   "keywords": [
     "ai",
