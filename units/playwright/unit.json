@@ -1,0 +1,17 @@
+{
+  "name": "playwright",
+  "description": "Playwright E2E 测试规范：定位器优先级、作用域链式定位，以及 shadcn/ui（Radix Portal）的 E2E 写法补充",
+  "dependencies": [],
+  "components": {
+    "rules": [
+      {
+        "name": "playwright-shadcn",
+        "file": "rules/playwright-shadcn.md"
+      },
+      {
+        "name": "playwright",
+        "file": "rules/playwright.md"
+      }
+    ]
+  }
+}

@@ -1,1 +1,11 @@
-["confirm-intent", "dev-task", "quick-ship", "smart-review", "test-review-gate", "walkthrough"]
+[
+  "confirm-intent",
+  "dev-task",
+  "playwright",
+  "quick-ship",
+  "smart-review",
+  "test-review-gate",
+  "ui-coverage",
+  "ui-testability",
+  "walkthrough"
+]

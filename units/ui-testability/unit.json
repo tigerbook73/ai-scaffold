@@ -1,0 +1,17 @@
+{
+  "name": "ui-testability",
+  "description": "UI 可测试性规范：aria-label、data-testid 命名、动态列表、可复用组件透传，以及 shadcn/ui 实现细节补充",
+  "dependencies": [],
+  "components": {
+    "rules": [
+      {
+        "name": "ui-testability-shadcn",
+        "file": "rules/ui-testability-shadcn.md"
+      },
+      {
+        "name": "ui-testability",
+        "file": "rules/ui-testability.md"
+      }
+    ]
+  }
+}

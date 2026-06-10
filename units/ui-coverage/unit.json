@@ -1,0 +1,13 @@
+{
+  "name": "ui-coverage",
+  "description": "UI 变更测试覆盖规范：判定哪些 UI 变更需要测试、选择测试类型（E2E / 组件测试），以及检查义务",
+  "dependencies": [],
+  "components": {
+    "rules": [
+      {
+        "name": "ui-coverage",
+        "file": "rules/ui-coverage.md"
+      }
+    ]
+  }
+}
