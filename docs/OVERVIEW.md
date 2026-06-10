@@ -65,16 +65,17 @@ units/{unit}/
 
 ## 当前 Units
 
-| Unit               | 内容                                     |
-| ------------------ | ---------------------------------------- |
-| `confirm-intent`   | 执行前确认用户预期结果的 Codex skill     |
-| `quick-ship`       | 审查变更、创建分支、提交、PR、合并的流程 |
-| `smart-review`     | 对文件、模块或目录进行迭代式审查和修复   |
-| `dev-task`         | 结构化 dev-task 的创建、恢复、验证和完成 |
-| `poc`              | 覆盖 skill/rule/script/resource 的 PoC   |
-| `poc-dep`          | `poc` 的依赖 unit                        |
-| `test-review-gate` | 测试审查规则、pre-commit hook 和 CI 工具 |
-| `walkthrough`      | 结构化代码走读的创建、恢复和导航         |
+| Unit               | 内容                                                                  |
+| ------------------ | --------------------------------------------------------------------- |
+| `confirm-intent`   | 执行前确认用户预期结果，等待明确最终确认                              |
+| `dev-task`         | 管理结构化 dev-task：创建文档，通过 path rule 识别上下文命令          |
+| `playwright`       | Playwright E2E 测试规范：定位器优先级、作用域链式定位，shadcn/ui 补充 |
+| `quick-ship`       | 审查变更、创建分支、提交、PR、squash 合并、返回原分支                 |
+| `smart-review`     | 对文件、模块或目录进行迭代式审查和修复                                |
+| `test-review-gate` | 测试审查规则、pre-commit hook 和 Claude 规则约束                      |
+| `ui-coverage`      | UI 变更测试覆盖规范：判定需要测试的变更，选择测试类型                 |
+| `ui-testability`   | UI 可测试性规范：aria-label、data-testid、shadcn/ui 实现细节          |
+| `walkthrough`      | 结构化代码走读的创建、恢复和导航                                      |
 
 全局顺序由 `units/units.json` 维护，依赖总是排在被依赖方之前。
 
