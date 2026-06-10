@@ -1,8 +1,8 @@
 /**
  * @test-file   check-test-cases-match-it
- * @description Verifies that explicit file checks compare @cases entries with it()/test() names only when @reviewed-by is declared
+ * @description Verifies that explicit file checks compare @cases entries with supported describe/test.describe suites only when @reviewed-by is declared
  * @ai-generated
- * @reviewed-by Shengtian Liao @ [3]
+ * @reviewed-by Shengtian Liao @ [4]
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -93,6 +93,42 @@ describe("matching cases and it names", () => {
  */
 describe("service", () => {
   it("returns ok when valid", () => {});
+});
+`,
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  nested supported suite
+ * @target      Validate that supported suites can be nested inside an outer describe
+ * @strategy    Integration - uses isolated temp directory
+ * @cases
+ *   - [PASS] exits 0 when a matching suite is nested inside an outer describe
+ */
+describe("nested supported suite", () => {
+  test("exits 0 when a matching suite is nested inside an outer describe", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
+ * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
+ */
+
+describe("outer", () => {
+  /**
+   * ${testSuiteTag}  service
+   * @cases
+   *   - [PASS] returns ok when valid
+   */
+  describe("service", () => {
+    it("returns ok when valid", () => {});
+  });
 });
 `,
       );
@@ -220,14 +256,104 @@ describe("service", () => {
 });
 
 /**
- * @test-suite  direct multi-line cases
- * @target      Validate that direct consecutive it() cases can have multi-line bodies
+ * @test-suite  quote characters in test names
+ * @target      Validate that quote characters inside test names do not terminate parsing early
  * @strategy    Integration - uses isolated temp directory
  * @cases
- *   - [PASS] exits 0 when direct multi-line it cases match @cases
+ *   - [PASS] exits 0 when double-quoted test names contain single quotes
  */
-describe("direct multi-line cases", () => {
-  test("exits 0 when direct multi-line it cases match @cases", () => {
+describe("quote characters in test names", () => {
+  test("exits 0 when double-quoted test names contain single quotes", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
+ * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
+ */
+
+/**
+ * ${testSuiteTag}  Out of Stock
+ * @target      Validate stock messaging
+ * @strategy    Integration - uses isolated temp directory
+ * @cases
+ *   - [PASS] shows 'Out of stock' when the matched variant is unavailable
+ *   - [PASS] does not show 'Out of stock' when the matched variant is available
+ */
+describe("Out of Stock", () => {
+  it("shows 'Out of stock' when the matched variant is unavailable", () => {
+    expect(true).toBe(true);
+  });
+
+  it("does not show 'Out of stock' when the matched variant is available", () => {
+    expect(false).toBe(false);
+  });
+});
+`,
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  multi-line fixture parameters
+ * @target      Validate that multi-line test callback parameters do not end suite parsing early
+ * @strategy    Integration - uses isolated temp directory
+ * @cases
+ *   - [PASS] exits 0 when a test callback parameter list spans multiple lines
+ */
+describe("multi-line fixture parameters", () => {
+  test("exits 0 when a test callback parameter list spans multiple lines", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
+ * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
+ */
+
+/**
+ * ${testSuiteTag}  service
+ * @cases
+ *   - [PASS] expands menu when user is signed in
+ *   - [PASS] closes menu when Escape is pressed
+ */
+describe("service", () => {
+  it("expands menu when user is signed in", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    expect(page).toBeTruthy();
+    expect(context).toBeTruthy();
+    expect(baseURL).toBeTruthy();
+  });
+
+  it("closes menu when Escape is pressed", async ({ page }) => {
+    expect(page).toBeTruthy();
+  });
+});
+`,
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  direct cases ignored
+ * @target      Validate that direct consecutive it() cases are ignored because they are not a supported suite structure
+ * @strategy    Integration - uses isolated temp directory
+ * @cases
+ *   - [PASS] exits 0 when direct it cases do not match @cases
+ */
+describe("direct cases ignored", () => {
+  test("exits 0 when direct it cases do not match @cases", () => {
     const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
     try {
       writeFileSync(
@@ -242,11 +368,58 @@ describe("direct multi-line cases", () => {
  *   - [PASS] returns ok when valid
  *   - [FAIL] rejects when invalid
  */
-it("returns ok when valid", () => {
+it("returns nope when invalid", () => {
   expect(true).toBe(true);
 });
-it("rejects when invalid", () => {
+it("accepts invalid input", () => {
   expect(false).toBe(false);
+});
+`,
+      );
+      expect(runCheck(dir, ["service.test.ts"]).status).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  generated cases ignored
+ * @target      Validate that generated or dynamic tests are ignored instead of being compared with @cases
+ * @strategy    Integration - uses isolated temp directory
+ * @cases
+ *   - [PASS] exits 0 when a suite uses generated or dynamic test cases
+ */
+describe("generated cases ignored", () => {
+  test("exits 0 when a suite uses generated or dynamic test cases", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aisk-cases-"));
+    try {
+      writeFileSync(
+        join(dir, "service.test.ts"),
+        `/**
+ * @reviewed-by (!HUMAN EDIT ONLY): Tom @ [1]
+ */
+
+/**
+ * ${testSuiteTag}  service
+ * @cases
+ *   - [PASS] returns ok when valid
+ */
+describe("service", () => {
+  const cases = ["valid", "invalid"];
+
+  for (const name of cases) {
+    it(\`returns dynamic result when \${name}\`, () => {});
+  }
+});
+
+/**
+ * ${testSuiteTag}  browser
+ * @cases
+ *   - [PASS] shows dashboard when user signs in
+ */
+test.describe("browser", () => {
+  test.each(["empty", "invalid"])("shows error when password is %s", async () => {});
 });
 `,
       );

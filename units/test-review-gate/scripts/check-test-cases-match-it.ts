@@ -6,8 +6,7 @@
  * - collect @cases entries written as "- [PASS|FAIL] <case name>";
  * - compare those case names with one of the supported code shapes:
  *   describe()/test.describe() followed by consecutive same-indent, same-function
- *   it()/test() calls, or direct consecutive same-indent, same-function it()/test()
- *   calls;
+ *   it()/test() calls;
  * - fail when a documented @cases name has no matching it()/test(), or an it()/test()
  *   name has no matching @cases entry.
  *
@@ -39,7 +38,7 @@ const State = {
   IDLE: "idle", // Outside any tracked suite, waiting for an @test-suite marker.
   IN_SUITE_COMMENT: "in-suite-comment", // Inside the @test-suite metadata block before @cases.
   COLLECTING_CASES: "collecting-cases", // Collecting documented @cases names until the comment ends.
-  PENDING_STRUCTURE: "pending-structure", // After the comment, waiting for describe/test.describe/it/test.
+  PENDING_STRUCTURE: "pending-structure", // After the comment, waiting for describe/test.describe.
   DESCRIBE_WAITING_CASE: "describe-waiting-case", // Inside a describe wrapper, waiting for the first deeper case.
   COLLECTING_CODE_CASES: "collecting-code-cases", // Collecting consecutive code cases locked to the first case's function name and indentation.
 } as const;
@@ -130,6 +129,14 @@ class CheckTestCases {
     const finishSuite = () => {
       const mismatch = this.compareSuite(suiteName, suiteCommentLine, pendingCases, seenIts);
       if (mismatch) mismatches.push(mismatch);
+      resetSuite();
+    };
+
+    const abandonSuite = () => {
+      resetSuite();
+    };
+
+    const resetSuite = () => {
       state = State.IDLE;
       suiteName = "";
       suiteCommentLine = 0;
@@ -184,7 +191,7 @@ class CheckTestCases {
           break;
         }
 
-        // The first real structure after @test-suite chooses describe mode or direct mode.
+        // Only describe/test.describe suites are supported. Any other shape is ignored.
         case State.PENDING_STRUCTURE: {
           if (this.isSkippableLine(t)) break;
 
@@ -195,22 +202,18 @@ class CheckTestCases {
             break;
           }
 
-          const codeCase = this.parseCodeCase(raw);
-          if (codeCase) {
-            caseIndent = codeCase.indent;
-            caseFn = codeCase.fn;
-            seenIts.push(codeCase.name);
-            state = State.COLLECTING_CODE_CASES;
-            break;
-          }
-
-          finishSuite();
+          abandonSuite();
           break;
         }
 
         // In describe mode, ignore wrapper/body noise until the first deeper it()/test().
         case State.DESCRIBE_WAITING_CASE: {
           if (this.isSkippableLine(t)) break;
+
+          if (this.isUnsupportedGeneratedCase(raw, suiteIndent)) {
+            abandonSuite();
+            break;
+          }
 
           const codeCase = this.parseCodeCase(raw);
           if (codeCase && codeCase.indent > suiteIndent) {
@@ -231,6 +234,12 @@ class CheckTestCases {
         // Once the first case is seen, only same-indent, same-function cases belong here.
         case State.COLLECTING_CODE_CASES: {
           if (this.isSkippableLine(t)) break;
+
+          if (this.isUnsupportedGeneratedCase(raw, suiteIndent)) {
+            finishSuite();
+            advance = false;
+            break;
+          }
 
           const codeCase = this.parseCodeCase(raw);
           if (codeCase) {
@@ -286,6 +295,7 @@ class CheckTestCases {
       trimmed.startsWith("/*") ||
       trimmed.startsWith("*") ||
       trimmed === "*/" ||
+      /^\}\)\s*=>\s*\{;?$/.test(trimmed) ||
       /^[});\],]+;?$/.test(trimmed)
     );
   }
@@ -296,9 +306,19 @@ class CheckTestCases {
   }
 
   private parseCodeCase(line: string): CodeCase | null {
-    const m = line.match(/^(\s*)(it|test)\s*\(\s*['"`](.*?)['"`]/);
+    const m = line.match(/^(\s*)(it|test)\s*\(\s*(['"`])((?:\\.|(?!\3).)*)\3/);
     if (!m) return null;
-    return { fn: m[2] as "it" | "test", indent: m[1].length, name: m[3].trim() };
+    if (m[4].includes("${")) return null;
+    return { fn: m[2] as "it" | "test", indent: m[1].length, name: m[4].trim() };
+  }
+
+  private isUnsupportedGeneratedCase(line: string, suiteIndent: number): boolean {
+    if (this.indentOf(line) <= suiteIndent) return false;
+    return (
+      /^\s*(?:it|test)\.each\s*\(/.test(line) ||
+      /^\s*(?:it|test)\s*\(\s*`[^`]*\$\{/.test(line) ||
+      /^\s*for\s*(?:await\s*)?\(/.test(line)
+    );
   }
 
   /** Return a mismatch report when documented cases and code cases diverge. */
