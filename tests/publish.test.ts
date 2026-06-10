@@ -1,16 +1,26 @@
 /**
  * @test-file   publish
- * @description Verifies Publish copies unit assets, compiles TypeScript via esbuild, manages global scripts and commands, and writes config.json
+ * @description Verifies Publish cleans previous install first, copies unit assets, compiles TypeScript via esbuild, copies and chmod+x shell scripts, manages global commands, writes config.json, adds PATH entry to ~/.bashrc, and writes install.log recording all persistent operations
  * @ai-generated
- * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [1]
+ * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [2]
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 import { Publish } from "../scripts/publish";
+import { AISK_BLOCK_START, AISK_PATH_LINE } from "../scripts/libs/bashrc";
+import { InstallLog, INSTALL_LOG_FILENAME } from "../scripts/libs/install-log";
 
 function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), "aisk-publish-"));
@@ -26,6 +36,7 @@ function makePublish(dir: string): Publish {
     repoRoot: dir,
     aiskHome: join(dir, ".aisk"),
     claudeSkillsDir: join(dir, ".claude", "skills"),
+    bashrcPath: join(dir, ".bashrc"),
   });
 }
 
@@ -255,12 +266,13 @@ describe("publishUnit script compilation", () => {
 
 /**
  * @test-suite  publishGlobalScripts
- * @target      Publish.run() → publishGlobalScripts(): global/scripts/*.ts → aiskHome/global/*.js
+ * @target      Publish.run() → publishGlobalScripts(): global/scripts/*.ts → aiskHome/global/*.js, *.sh → aiskHome/global/*.sh (chmod 755)
  * @strategy    integration; isolated temp dirs
  * @cases
  *   - [PASS] compiles global/scripts/*.ts to aiskHome/global/*.js in CJS format
  *   - [PASS] bundles imported libs modules without publishing them separately
- *   - [PASS] skips non-.ts files in global/scripts/
+ *   - [PASS] copies .sh files from global/scripts/ to aiskHome/global/ with executable permission
+ *   - [PASS] skips non-.ts and non-.sh files in global/scripts/
  *   - [PASS] removes stale .js files on re-publish
  */
 describe("publishGlobalScripts", () => {
@@ -314,7 +326,26 @@ describe("publishGlobalScripts", () => {
     }
   });
 
-  test("skips non-.ts files in global/scripts/", () => {
+  test("copies .sh files from global/scripts/ to aiskHome/global/ with executable permission", () => {
+    const dir = makeTempDir();
+    try {
+      makeRepoSkeleton(dir);
+      const globalScriptsDir = join(dir, "global", "scripts");
+      mkdirSync(globalScriptsDir, { recursive: true });
+      writeFileSync(join(globalScriptsDir, "aisk-setup.sh"), "#!/usr/bin/env bash\necho hello\n");
+
+      makePublish(dir).run();
+
+      const dest = join(dir, ".aisk", "global", "aisk-setup.sh");
+      expect(existsSync(dest), "aisk-setup.sh must be copied").toBe(true);
+      expect(readFileSync(dest, "utf8")).toBe("#!/usr/bin/env bash\necho hello\n");
+      expect(statSync(dest).mode & 0o100, "owner execute bit must be set").toBeTruthy();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("skips non-.ts and non-.sh files in global/scripts/", () => {
     const dir = makeTempDir();
     try {
       makeRepoSkeleton(dir);
@@ -425,6 +456,162 @@ describe("writeConfig", () => {
       expect(ts >= before && ts <= after, "publishedAt must be within test execution window").toBe(
         true,
       );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  publishBashrc
+ * @target      Publish.run() → publishBashrc(): adds AISK block to .bashrc
+ * @strategy    integration; isolated temp dirs
+ * @cases
+ *   - [PASS] adds AISK block to .bashrc with one blank line above when not already present
+ *   - [PASS] does not duplicate AISK block when already present
+ *   - [PASS] skips when .bashrc does not exist
+ */
+describe("publishBashrc", () => {
+  test("adds AISK block to .bashrc with one blank line above when not already present", () => {
+    const dir = makeTempDir();
+    try {
+      makeRepoSkeleton(dir);
+      writeFileSync(join(dir, ".bashrc"), "# existing content\n");
+
+      makePublish(dir).run();
+
+      const content = readFileSync(join(dir, ".bashrc"), "utf8");
+      expect(content).toContain(AISK_BLOCK_START);
+      expect(content).toContain(AISK_PATH_LINE);
+      expect(content).toMatch(/\n\n# AISK start/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("does not duplicate AISK block when already present", () => {
+    const dir = makeTempDir();
+    try {
+      makeRepoSkeleton(dir);
+      writeFileSync(
+        join(dir, ".bashrc"),
+        `# existing\n\n${AISK_BLOCK_START}\n${AISK_PATH_LINE}\n# AISK end\n`,
+      );
+
+      makePublish(dir).run();
+
+      const content = readFileSync(join(dir, ".bashrc"), "utf8");
+      const count = content.split(AISK_BLOCK_START).length - 1;
+      expect(count).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("skips when .bashrc does not exist", () => {
+    const dir = makeTempDir();
+    try {
+      makeRepoSkeleton(dir);
+
+      expect(() => makePublish(dir).run()).not.toThrow();
+      expect(existsSync(join(dir, ".bashrc"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  writeInstallLog
+ * @target      Publish.run() → log.write(): writes ~/.aisk/install.log with entries for every persistent operation
+ * @strategy    integration; isolated temp dirs
+ * @cases
+ *   - [PASS] writes install.log containing entries for unit dir, units.json, global dir, claude skill dir, and config.json
+ *   - [PASS] last entry in install.log is the log file itself
+ *   - [PASS] cleans previous install.log before publishing a fresh one
+ */
+describe("writeInstallLog", () => {
+  test("writes install.log containing entries for unit dir, units.json, global dir, claude skill dir, and config.json", () => {
+    const dir = makeTempDir();
+    try {
+      makeRepoSkeleton(dir);
+
+      // Unit
+      const unitDir = join(dir, "units", "my-unit");
+      mkdirSync(join(unitDir, "skills"), { recursive: true });
+      writeFileSync(
+        join(unitDir, "unit.json"),
+        JSON.stringify({ name: "my-unit", dependencies: [], components: {} }),
+      );
+
+      // units.json
+      writeFileSync(join(dir, "units", "units.json"), "[]");
+
+      // Global scripts
+      mkdirSync(join(dir, "global", "scripts"), { recursive: true });
+      writeFileSync(join(dir, "global", "scripts", "tool.ts"), "process.exit(0);\n");
+
+      // Global command
+      mkdirSync(join(dir, "global", "mycmd"), { recursive: true });
+      writeFileSync(join(dir, "global", "mycmd", "SKILL.md"), "---\ndescription: cmd\n---\n");
+
+      makePublish(dir).run();
+
+      const logPath = join(dir, ".aisk", INSTALL_LOG_FILENAME);
+      expect(existsSync(logPath), "install.log must exist").toBe(true);
+
+      const log = InstallLog.load(logPath)!;
+      const paths = log.entries.map((e) => e.path);
+
+      expect(paths).toContain(join(dir, ".aisk", "units", "my-unit"));
+      expect(paths).toContain(join(dir, ".aisk", "units.json"));
+      expect(paths).toContain(join(dir, ".aisk", "global"));
+      expect(paths).toContain(join(dir, ".claude", "skills", "aisk-mycmd"));
+      expect(paths).toContain(join(dir, ".aisk", "config.json"));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("last entry in install.log is the log file itself", () => {
+    const dir = makeTempDir();
+    try {
+      makeRepoSkeleton(dir);
+
+      makePublish(dir).run();
+
+      const logPath = join(dir, ".aisk", INSTALL_LOG_FILENAME);
+      const log = InstallLog.load(logPath)!;
+      const last = log.entries[log.entries.length - 1];
+
+      expect(last).toEqual({ type: "file", path: logPath });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("cleans previous install.log before publishing a fresh one", () => {
+    const dir = makeTempDir();
+    try {
+      makeRepoSkeleton(dir);
+
+      // First publish
+      const unitDir = join(dir, "units", "first-unit");
+      mkdirSync(join(unitDir, "skills"), { recursive: true });
+      writeFileSync(
+        join(unitDir, "unit.json"),
+        JSON.stringify({ name: "first-unit", dependencies: [], components: {} }),
+      );
+      makePublish(dir).run();
+
+      expect(existsSync(join(dir, ".aisk", "units", "first-unit"))).toBe(true);
+
+      // Remove unit from source and re-publish
+      rmSync(unitDir, { recursive: true, force: true });
+      makePublish(dir).run();
+
+      // Stale unit dir from first publish must be gone
+      expect(existsSync(join(dir, ".aisk", "units", "first-unit"))).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
