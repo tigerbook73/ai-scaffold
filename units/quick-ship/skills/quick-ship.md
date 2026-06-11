@@ -47,7 +47,9 @@
 3. `git add -A && git commit -m "<message>"`
 4. `git push -u origin <type>/<slug>`
 5. `gh pr create --title "<commit-subject>" --body "<intent summary>" --base <original>`
-6. `gh pr merge --squash`（等待完成）
+6. `gh pr merge --squash --auto --delete-branch`，随后立即执行 `gh pr view --json state -q .state`：
+   - 结果为 `MERGED`：直接进入第 7 步
+   - 结果为 `OPEN`：每隔 10 秒重复查询，直到 `MERGED`；超过 2 分钟仍未合并则停止并报告超时
 7. `git checkout <original>`
 8. `git pull`
 
