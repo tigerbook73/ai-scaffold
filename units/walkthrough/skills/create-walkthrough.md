@@ -13,7 +13,7 @@
 - 签出前工作树必须干净
 - **静默准备**：不作解说地完成所有设置步骤；仅在提问或展示内容时输出文本
 - **状态脚本**：Index 操作通过以下方式执行：
-  `node .aisk/walkthrough/scripts/walkthrough-state.js <cmd> [--options]`
+  `node .aisk/walkthrough/scripts/walkthrough-state.cjs <cmd> [--options]`
 - **组文件**：通过 Write 工具直接写入 `g{N}.md`；通过 Read 工具读取。路径：`{cwd}/.aisk/walkthrough/state/{stateKey}/g{N}.md`
 - **策略**：分组和展示规则见 `.aisk/walkthrough/resources/strategy.md`；在第五步时读取
 

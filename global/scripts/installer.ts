@@ -685,15 +685,15 @@ export class Installer {
    * Copy a compiled script to .aisk/{unit}/scripts/ and register its hook.
    */
   private installScript(unitName: string, spec: ScriptSpec): InstalledComponent {
-    const srcJs = join(this.aiskHome, "units", unitName, "scripts", `${spec.name}.js`);
+    const srcJs = join(this.aiskHome, "units", unitName, "scripts", `${spec.name}.cjs`);
     if (!existsSync(srcJs)) throw new Error(`compiled script not found: ${srcJs}`);
 
     const destDir = join(this.cwd, ".aisk", unitName, "scripts");
     mkdirSync(destDir, { recursive: true });
-    const destFile = join(destDir, `${spec.name}.js`);
+    const destFile = join(destDir, `${spec.name}.cjs`);
     cpSync(srcJs, destFile);
 
-    const relPath = join(".aisk", unitName, "scripts", `${spec.name}.js`);
+    const relPath = join(".aisk", unitName, "scripts", `${spec.name}.cjs`);
     if (spec.hook) {
       const paramStr = (spec.params ?? []).map((p) => `{${p}}`).join(" ");
       const runCmd = paramStr ? `node ${relPath} ${paramStr}` : `node ${relPath}`;

@@ -4,7 +4,7 @@
  *              update (with AISK:CUSTOM merge), refresh, show, optional components, and
  *              lefthook.yml idempotent updates.
  * @ai-generated
- * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [1]
+ * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [2]
  */
 import { existsSync, mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -29,7 +29,7 @@ function makeFakeAiskHome(tmpDir: string): string {
   mkdirSync(join(unitDir, "scripts"), { recursive: true });
   mkdirSync(join(unitDir, "resources"), { recursive: true });
   writeFileSync(join(unitDir, "skills", "poc.md"), "# poc\nPoC skill content");
-  writeFileSync(join(unitDir, "scripts", "poc-hook.js"), '"use strict";\nconsole.log("hook");');
+  writeFileSync(join(unitDir, "scripts", "poc-hook.cjs"), '"use strict";\nconsole.log("hook");');
   writeFileSync(join(unitDir, "resources", "readme.md"), "readme content");
   writeFileSync(
     join(unitDir, "unit.json"),
@@ -914,10 +914,10 @@ describe("remove", () => {
       const projectDir = join(dir, "project");
       const scriptDir = join(projectDir, ".aisk", "poc", "scripts");
       mkdirSync(scriptDir, { recursive: true });
-      writeFileSync(join(scriptDir, "poc-hook.js"), "// hook");
+      writeFileSync(join(scriptDir, "poc-hook.cjs"), "// hook");
       writeFileSync(
         join(projectDir, "lefthook.yml"),
-        "pre-commit:\n  commands:\n    aisk-poc-poc-hook:\n      run: node .aisk/poc/scripts/poc-hook.js\n",
+        "pre-commit:\n  commands:\n    aisk-poc-poc-hook:\n      run: node .aisk/poc/scripts/poc-hook.cjs\n",
       );
       writeFileSync(
         join(projectDir, ".aisk", "installed.json"),
@@ -928,7 +928,7 @@ describe("remove", () => {
               components: {
                 skills: [],
                 rules: [],
-                scripts: [{ name: "poc-hook", path: ".aisk/poc/scripts/poc-hook.js" }],
+                scripts: [{ name: "poc-hook", path: ".aisk/poc/scripts/poc-hook.cjs" }],
                 resources: [],
               },
             },
@@ -938,7 +938,9 @@ describe("remove", () => {
 
       new Installer(projectDir, aiskHome).remove(["poc"]);
 
-      expect(existsSync(join(scriptDir, "poc-hook.js")), "script file must be removed").toBe(false);
+      expect(existsSync(join(scriptDir, "poc-hook.cjs")), "script file must be removed").toBe(
+        false,
+      );
       const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
       expect(lefthook, "lefthook entry must be removed").not.toContain("aisk-poc-poc-hook:");
     } finally {
@@ -1237,12 +1239,12 @@ describe("add (script/hook)", () => {
 
       new Installer(projectDir, aiskHome).add(["poc"]);
 
-      const scriptFile = join(projectDir, ".aisk", "poc", "scripts", "poc-hook.js");
+      const scriptFile = join(projectDir, ".aisk", "poc", "scripts", "poc-hook.cjs");
       expect(readFileSync(scriptFile, "utf8")).toContain("hook");
 
       const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
       expect(lefthook).toContain("aisk-poc-poc-hook:");
-      expect(lefthook).toContain(".aisk/poc/scripts/poc-hook.js");
+      expect(lefthook).toContain(".aisk/poc/scripts/poc-hook.cjs");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

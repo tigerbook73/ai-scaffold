@@ -2,7 +2,7 @@
  * @test-file   publish
  * @description Verifies Publish cleans previous install first, copies unit assets, compiles TypeScript via esbuild, copies and chmod+x shell scripts, manages global commands, writes config.json, adds PATH entry to ~/.bashrc, and writes install.log recording all persistent operations
  * @ai-generated
- * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [2]
+ * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [3]
  */
 import { execFileSync } from "node:child_process";
 import {
@@ -128,16 +128,16 @@ describe("publishUnit static assets", () => {
 
 /**
  * @test-suite  publishUnit script compilation
- * @target      Publish.run() → compileUnitScripts(): esbuild bundles declared .ts scripts → .js
- * @strategy    integration; creates real .ts entry, verifies compiled .js output
+ * @target      Publish.run() → compileUnitScripts(): esbuild bundles declared .ts scripts → .cjs
+ * @strategy    integration; creates real .ts entry, verifies compiled .cjs output
  * @cases
- *   - [PASS] compiles declared scripts/*.ts to .js with CJS format and strips TypeScript syntax
+ *   - [PASS] compiles declared scripts/*.ts to .cjs with CJS format and strips TypeScript syntax
  *   - [PASS] compiled unit script is executable by node
  *   - [PASS] does not copy non-.ts files from scripts/
  *   - [PASS] does not compile nested .ts files from scripts/
  */
 describe("publishUnit script compilation", () => {
-  test("compiles declared scripts/*.ts to .js with CJS format and strips TypeScript syntax", () => {
+  test("compiles declared scripts/*.ts to .cjs with CJS format and strips TypeScript syntax", () => {
     const dir = makeTempDir();
     try {
       makeRepoSkeleton(dir);
@@ -158,8 +158,8 @@ describe("publishUnit script compilation", () => {
 
       makePublish(dir).run();
 
-      const outJs = join(dir, ".aisk", "units", "my-unit", "scripts", "hook.js");
-      expect(existsSync(outJs), "hook.js must exist in dest").toBe(true);
+      const outJs = join(dir, ".aisk", "units", "my-unit", "scripts", "hook.cjs");
+      expect(existsSync(outJs), "hook.cjs must exist in dest").toBe(true);
       expect(
         existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "hook.ts")),
         "hook.ts must not be in dest",
@@ -196,7 +196,7 @@ describe("publishUnit script compilation", () => {
 
       makePublish(dir).run();
 
-      const outJs = join(dir, ".aisk", "units", "my-unit", "scripts", "hook.js");
+      const outJs = join(dir, ".aisk", "units", "my-unit", "scripts", "hook.cjs");
       const output = execFileSync("node", [outJs], { encoding: "utf8" });
       expect(output.trim()).toBe("hook-ok");
     } finally {
@@ -252,11 +252,13 @@ describe("publishUnit script compilation", () => {
 
       makePublish(dir).run();
 
-      expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "hook.js"))).toBe(true);
-      expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "hook.test.js"))).toBe(
+      expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "hook.cjs"))).toBe(true);
+      expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "hook.test.cjs"))).toBe(
         false,
       );
-      expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "types.js"))).toBe(false);
+      expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "types.cjs"))).toBe(
+        false,
+      );
       expect(existsSync(join(dir, ".aisk", "units", "my-unit", "scripts", "types"))).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -266,17 +268,17 @@ describe("publishUnit script compilation", () => {
 
 /**
  * @test-suite  publishGlobalScripts
- * @target      Publish.run() → publishGlobalScripts(): global/scripts/*.ts → aiskHome/global/*.js, *.sh → aiskHome/global/*.sh (chmod 755)
+ * @target      Publish.run() → publishGlobalScripts(): global/scripts/*.ts → aiskHome/global/*.cjs, *.sh → aiskHome/global/*.sh (chmod 755)
  * @strategy    integration; isolated temp dirs
  * @cases
- *   - [PASS] compiles global/scripts/*.ts to aiskHome/global/*.js in CJS format
+ *   - [PASS] compiles global/scripts/*.ts to aiskHome/global/*.cjs in CJS format
  *   - [PASS] bundles imported libs modules without publishing them separately
  *   - [PASS] copies .sh files from global/scripts/ to aiskHome/global/ with executable permission
  *   - [PASS] skips non-.ts and non-.sh files in global/scripts/
- *   - [PASS] removes stale .js files on re-publish
+ *   - [PASS] removes stale .cjs files on re-publish
  */
 describe("publishGlobalScripts", () => {
-  test("compiles global/scripts/*.ts to aiskHome/global/*.js in CJS format", () => {
+  test("compiles global/scripts/*.ts to aiskHome/global/*.cjs in CJS format", () => {
     const dir = makeTempDir();
     try {
       makeRepoSkeleton(dir);
@@ -289,8 +291,8 @@ describe("publishGlobalScripts", () => {
 
       makePublish(dir).run();
 
-      const outJs = join(dir, ".aisk", "global", "tool.js");
-      expect(existsSync(outJs), "tool.js must exist").toBe(true);
+      const outJs = join(dir, ".aisk", "global", "tool.cjs");
+      expect(existsSync(outJs), "tool.cjs must exist").toBe(true);
       const content = readFileSync(outJs, "utf8");
       expect(content, "import must be converted to require() in CJS output").toContain(
         'require("fs")',
@@ -317,10 +319,10 @@ describe("publishGlobalScripts", () => {
 
       makePublish(dir).run();
 
-      const outJs = join(dir, ".aisk", "global", "tool.js");
-      expect(existsSync(outJs), "tool.js must exist").toBe(true);
+      const outJs = join(dir, ".aisk", "global", "tool.cjs");
+      expect(existsSync(outJs), "tool.cjs must exist").toBe(true);
       expect(readFileSync(outJs, "utf8")).toContain("helper-ok");
-      expect(existsSync(join(dir, ".aisk", "global", "libs", "helper.js"))).toBe(false);
+      expect(existsSync(join(dir, ".aisk", "global", "libs", "helper.cjs"))).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -362,7 +364,7 @@ describe("publishGlobalScripts", () => {
     }
   });
 
-  test("removes stale .js files on re-publish", () => {
+  test("removes stale .cjs files on re-publish", () => {
     const dir = makeTempDir();
     try {
       makeRepoSkeleton(dir);
@@ -371,17 +373,18 @@ describe("publishGlobalScripts", () => {
       writeFileSync(join(globalScriptsDir, "old.ts"), "process.exit(0);\n");
 
       makePublish(dir).run();
-      expect(existsSync(join(dir, ".aisk", "global", "old.js"))).toBe(true);
+      expect(existsSync(join(dir, ".aisk", "global", "old.cjs"))).toBe(true);
 
       rmSync(join(globalScriptsDir, "old.ts"));
       writeFileSync(join(globalScriptsDir, "new.ts"), "process.exit(0);\n");
 
       makePublish(dir).run();
 
-      expect(existsSync(join(dir, ".aisk", "global", "old.js")), "stale file must be removed").toBe(
-        false,
-      );
-      expect(existsSync(join(dir, ".aisk", "global", "new.js")), "new file must exist").toBe(true);
+      expect(
+        existsSync(join(dir, ".aisk", "global", "old.cjs")),
+        "stale file must be removed",
+      ).toBe(false);
+      expect(existsSync(join(dir, ".aisk", "global", "new.cjs")), "new file must exist").toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

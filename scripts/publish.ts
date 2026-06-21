@@ -149,7 +149,7 @@ export class Publish {
         if (file.endsWith("-types.ts")) {
           cpSync(join(globalScriptsDir, file), join(destDir, file));
         } else {
-          this.bundle(join(globalScriptsDir, file), join(destDir, file.replace(/\.ts$/, ".js")));
+          this.bundle(join(globalScriptsDir, file), join(destDir, file.replace(/\.ts$/, ".cjs")));
         }
       }
     }
@@ -181,7 +181,7 @@ export class Publish {
     for (const script of scripts) {
       this.bundle(
         join(srcDir, script.file.replace(/^scripts\//, "")),
-        join(destDir, `${script.name}.js`),
+        join(destDir, `${script.name}.cjs`),
       );
     }
   }
