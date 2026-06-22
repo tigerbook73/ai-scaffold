@@ -1,0 +1,241 @@
+"use strict";
+
+// units/test-review-gate/scripts/check-test-cases-match-it.ts
+var import_fs = require("fs");
+var REVIEWED_BY_FIELD_RE = /@reviewed-by\b/;
+var TEST_FILE_RE = /\.(test|spec)\./;
+var State = {
+  IDLE: "idle",
+  // Outside any tracked suite, waiting for an @test-suite marker.
+  IN_SUITE_COMMENT: "in-suite-comment",
+  // Inside the @test-suite metadata block before @cases.
+  COLLECTING_CASES: "collecting-cases",
+  // Collecting documented @cases names until the comment ends.
+  PENDING_STRUCTURE: "pending-structure",
+  // After the comment, waiting for describe/test.describe.
+  DESCRIBE_WAITING_CASE: "describe-waiting-case",
+  // Inside a describe wrapper, waiting for the first deeper case.
+  COLLECTING_CODE_CASES: "collecting-code-cases"
+  // Collecting consecutive code cases locked to the first case's function name and indentation.
+};
+var CheckTestCases = class {
+  /** Run the checker for explicit test files only. */
+  run() {
+    const files = process.argv.slice(2).filter((f) => TEST_FILE_RE.test(f));
+    if (files.length === 0) {
+      process.exit(0);
+    }
+    const reports = [];
+    for (const file of files) {
+      try {
+        const content = (0, import_fs.readFileSync)(file, "utf-8");
+        if (!REVIEWED_BY_FIELD_RE.test(content)) continue;
+        const mismatches = this.checkFile(content);
+        if (mismatches.length > 0) {
+          reports.push({ file, mismatches });
+        }
+      } catch (e) {
+        console.warn(`\u26A0\uFE0F  Could not read ${file}: ${e.message}`);
+      }
+    }
+    if (reports.length === 0) {
+      console.log("\u2705  All @cases match it()/test() names.");
+      process.exit(0);
+    }
+    console.error("\n\u274C  @cases / it()/test() mismatches found:\n");
+    for (const { file, mismatches } of reports) {
+      console.error(`  ${file}`);
+      for (const { suiteName, line, missingInCode, missingInCases } of mismatches) {
+        console.error(`    @test-suite "${suiteName}" (line ${line})`);
+        for (const c of missingInCode) {
+          console.error(`      [in @cases but no it()/test()]   ${c}`);
+        }
+        for (const it of missingInCases) {
+          console.error(`      [has it()/test() but no @cases]  ${it}`);
+        }
+      }
+    }
+    console.error(
+      "\nFix: keep @cases entries and it()/test() names in sync, or remove @cases if this suite is untracked.\n"
+    );
+    process.exit(1);
+  }
+  /**
+   * Compare every @test-suite comment block with the following supported test code shape.
+   *
+   * The state machine keeps comment parsing and case-call parsing separate
+   * so unrelated comments or code between suites do not leak case names. Code shape
+   * detection is intentionally indentation-based instead of brace-based, so braces
+   * inside strings, comments, or test names do not affect suite boundaries.
+   */
+  checkFile(content) {
+    const lines = content.split("\n");
+    const mismatches = [];
+    let state = State.IDLE;
+    let suiteName = "";
+    let suiteCommentLine = 0;
+    let pendingCases = [];
+    let seenIts = [];
+    let suiteIndent = 0;
+    let caseIndent = 0;
+    let caseFn = null;
+    const finishSuite = () => {
+      const mismatch = this.compareSuite(suiteName, suiteCommentLine, pendingCases, seenIts);
+      if (mismatch) mismatches.push(mismatch);
+      resetSuite();
+    };
+    const abandonSuite = () => {
+      resetSuite();
+    };
+    const resetSuite = () => {
+      state = State.IDLE;
+      suiteName = "";
+      suiteCommentLine = 0;
+      pendingCases = [];
+      seenIts = [];
+      suiteIndent = 0;
+      caseIndent = 0;
+      caseFn = null;
+    };
+    for (let i = 0; i < lines.length; ) {
+      const raw = lines[i];
+      const t = raw.trim();
+      let advance = true;
+      if (state !== State.IDLE && state !== State.IN_SUITE_COMMENT && t.includes("@test-suite")) {
+        finishSuite();
+        advance = false;
+        continue;
+      }
+      switch (state) {
+        // No active suite: only @test-suite can start a tracked block.
+        case State.IDLE:
+          if (t.includes("@test-suite")) {
+            state = State.IN_SUITE_COMMENT;
+            suiteCommentLine = i + 1;
+            suiteName = (t.match(/@test-suite\s+(.+)/) ?? [])[1]?.trim() ?? "(unnamed)";
+            pendingCases = [];
+            seenIts = [];
+            caseFn = null;
+          }
+          break;
+        // Read suite metadata until @cases starts, or abandon suites with no @cases.
+        case State.IN_SUITE_COMMENT:
+          if (t.includes("@cases")) {
+            state = State.COLLECTING_CASES;
+          } else if (t === "*/") {
+            state = State.IDLE;
+          }
+          break;
+        // Collect "- [PASS|FAIL] name" rows. Other comment lines are metadata noise.
+        case State.COLLECTING_CASES: {
+          const m = t.match(/^\*\s+-\s+\[(?:PASS|FAIL)\]\s+(.+)$/);
+          if (m) {
+            pendingCases.push(m[1].trim());
+          } else if (t === "*/") {
+            state = State.PENDING_STRUCTURE;
+          }
+          break;
+        }
+        // Only describe/test.describe suites are supported. Any other shape is ignored.
+        case State.PENDING_STRUCTURE: {
+          if (this.isSkippableLine(t)) break;
+          const describeCall = this.parseDescribeCall(raw);
+          if (describeCall) {
+            suiteIndent = describeCall.indent;
+            state = State.DESCRIBE_WAITING_CASE;
+            break;
+          }
+          abandonSuite();
+          break;
+        }
+        // In describe mode, ignore wrapper/body noise until the first deeper it()/test().
+        case State.DESCRIBE_WAITING_CASE: {
+          if (this.isSkippableLine(t)) break;
+          if (this.isUnsupportedGeneratedCase(raw, suiteIndent)) {
+            abandonSuite();
+            break;
+          }
+          const codeCase = this.parseCodeCase(raw);
+          if (codeCase && codeCase.indent > suiteIndent) {
+            caseIndent = codeCase.indent;
+            caseFn = codeCase.fn;
+            seenIts.push(codeCase.name);
+            state = State.COLLECTING_CODE_CASES;
+            break;
+          }
+          if (this.indentOf(raw) <= suiteIndent) {
+            finishSuite();
+            advance = false;
+          }
+          break;
+        }
+        // Once the first case is seen, only same-indent, same-function cases belong here.
+        case State.COLLECTING_CODE_CASES: {
+          if (this.isSkippableLine(t)) break;
+          if (this.isUnsupportedGeneratedCase(raw, suiteIndent)) {
+            finishSuite();
+            advance = false;
+            break;
+          }
+          const codeCase = this.parseCodeCase(raw);
+          if (codeCase) {
+            if (codeCase.indent === caseIndent && codeCase.fn === caseFn) {
+              seenIts.push(codeCase.name);
+              break;
+            }
+            if (codeCase.indent <= caseIndent) {
+              finishSuite();
+              advance = false;
+            }
+            break;
+          }
+          const describeCall = this.parseDescribeCall(raw);
+          if (describeCall && describeCall.indent <= caseIndent) {
+            finishSuite();
+            advance = false;
+            break;
+          }
+          if (this.indentOf(raw) <= caseIndent) {
+            finishSuite();
+            advance = false;
+          }
+          break;
+        }
+      }
+      if (advance) i++;
+    }
+    if (state === State.PENDING_STRUCTURE || state === State.DESCRIBE_WAITING_CASE || state === State.COLLECTING_CODE_CASES) {
+      finishSuite();
+    }
+    return mismatches;
+  }
+  indentOf(line) {
+    return line.match(/^\s*/)?.[0].length ?? 0;
+  }
+  isSkippableLine(trimmed) {
+    return trimmed === "" || trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*") || trimmed === "*/" || /^\}\)\s*=>\s*\{;?$/.test(trimmed) || /^[});\],]+;?$/.test(trimmed);
+  }
+  parseDescribeCall(line) {
+    if (!/^\s*(?:describe|test\.describe)\s*\(/.test(line)) return null;
+    return { indent: this.indentOf(line) };
+  }
+  parseCodeCase(line) {
+    const m = line.match(/^(\s*)(it|test)\s*\(\s*(['"`])((?:\\.|(?!\3).)*)\3/);
+    if (!m) return null;
+    if (m[4].includes("${")) return null;
+    return { fn: m[2], indent: m[1].length, name: m[4].trim() };
+  }
+  isUnsupportedGeneratedCase(line, suiteIndent) {
+    if (this.indentOf(line) <= suiteIndent) return false;
+    return /^\s*(?:it|test)\.each\s*\(/.test(line) || /^\s*(?:it|test)\s*\(\s*`[^`]*\$\{/.test(line) || /^\s*for\s*(?:await\s*)?\(/.test(line);
+  }
+  /** Return a mismatch report when documented cases and code cases diverge. */
+  compareSuite(suiteName, line, pendingCases, seenIts) {
+    const casesSet = new Set(pendingCases);
+    const itsSet = new Set(seenIts);
+    const missingInCode = pendingCases.filter((c) => !itsSet.has(c));
+    const missingInCases = seenIts.filter((it) => !casesSet.has(it));
+    return missingInCode.length > 0 || missingInCases.length > 0 ? { suiteName, line, missingInCode, missingInCases } : null;
+  }
+};
+new CheckTestCases().run();

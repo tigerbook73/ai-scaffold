@@ -2,17 +2,28 @@
   "name": "ai-skills",
   "version": "3.0.0",
   "description": "Local AI skill library — install all skills globally with pnpm register",
+  "bin": {
+    "ai-skills": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "units/",
+    "global/setup/",
+    "units.json",
+    "README.md"
+  ],
   "scripts": {
     "build": "node --import tsx scripts/build.ts && pnpm format",
+    "build:dist": "node --import tsx scripts/build-dist.ts",
     "register": "pnpm build && node --import tsx scripts/publish.ts",
     "clean": "node --import tsx scripts/clean.ts",
     "lint": "pnpm lint:fix",
-    "lint:check": "eslint scripts/**/*.ts global/**/*.ts tests/**/*.ts",
-    "lint:fix": "eslint scripts/**/*.ts global/**/*.ts tests/**/*.ts --fix",
+    "lint:check": "eslint bin/**/*.ts scripts/**/*.ts global/**/*.ts tests/**/*.ts",
+    "lint:fix": "eslint bin/**/*.ts scripts/**/*.ts global/**/*.ts tests/**/*.ts --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "format": "prettier --log-level warn --write .",
-    "verify": "pnpm build && pnpm typecheck && pnpm lint && pnpm format && pnpm test"
+    "verify": "pnpm build && pnpm build:dist && pnpm typecheck && pnpm lint && pnpm format && pnpm test"
   },
   "keywords": [
     "ai",
@@ -22,10 +33,10 @@
   "license": "MIT",
   "packageManager": "pnpm@10.33.3+sha512.a19744364a7e248b92657a4ca5973f9354d21caf982579674b1c539f32c7420c47138ad8b1254df07aba9bc782d9b3029e3db34d5dbff974326eb74dac8ff489",
   "dependencies": {
-    "cac": "^7.0.0",
-    "tsx": "^4.22.3"
+    "cac": "^7.0.0"
   },
   "devDependencies": {
+    "tsx": "^4.22.3",
     "@types/node": "^25.9.1",
     "esbuild": "^0.28.0",
     "eslint": "^10.4.0",
