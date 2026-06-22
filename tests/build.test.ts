@@ -1,8 +1,8 @@
 /**
  * @test-file   build
- * @description Verifies refreshUnit syncs unit.json from the filesystem while preserving manual fields, and checkDependencies validates unit references.
+ * @description Verifies refreshUnit syncs unit.json from the filesystem while preserving manual fields, checkDependencies validates unit references, and resources/ subdirectories are scanned recursively.
  * @ai-generated
- * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [1]
+ * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [2]
  */
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, basename } from "node:path";
@@ -66,6 +66,56 @@ describe("refreshUnit — component discovery", () => {
 
       const unit = readUnit(dir);
       expect((unit.components as { rules?: unknown[] }).rules).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  refreshUnit — resource subdirectory scanning
+ * @target      refreshUnit(): resources/ recursive scan
+ * @strategy    unit; isolated temp dirs
+ * @cases
+ *   - [PASS] discovers resources in subdirectories with path-prefixed names
+ *   - [PASS] sorts flat and nested resources together in deterministic order
+ */
+describe("refreshUnit — resource subdirectory scanning", () => {
+  test("discovers resources in subdirectories with path-prefixed names", () => {
+    const dir = makeTempDir();
+    try {
+      mkdirSync(join(dir, "resources", "assets"), { recursive: true });
+      writeFileSync(join(dir, "resources", "assets", "progress-template.md"), "template content");
+      writeUnit(dir, { name: "x", description: "d", dependencies: [], components: {} });
+
+      refreshUnit(dir);
+
+      const unit = readUnit(dir);
+      expect((unit.components as { resources: unknown[] }).resources).toEqual([
+        { name: "assets/progress-template", file: "resources/assets/progress-template.md" },
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("sorts flat and nested resources together in deterministic order", () => {
+    const dir = makeTempDir();
+    try {
+      mkdirSync(join(dir, "resources", "assets"), { recursive: true });
+      writeFileSync(join(dir, "resources", "readme.md"), "readme");
+      writeFileSync(join(dir, "resources", "assets", "brief-template.md"), "brief");
+      writeFileSync(join(dir, "resources", "assets", "progress-template.md"), "progress");
+      writeUnit(dir, { name: "x", description: "d", dependencies: [], components: {} });
+
+      refreshUnit(dir);
+
+      const unit = readUnit(dir);
+      expect((unit.components as { resources: unknown[] }).resources).toEqual([
+        { name: "assets/brief-template", file: "resources/assets/brief-template.md" },
+        { name: "assets/progress-template", file: "resources/assets/progress-template.md" },
+        { name: "readme", file: "resources/readme.md" },
+      ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

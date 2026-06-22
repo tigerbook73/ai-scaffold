@@ -35,6 +35,28 @@ function scanFiles(dir: string, exts: string[]): string[] {
     .sort();
 }
 
+/**
+ * Return sorted relative file paths in a directory tree, or an empty list if absent.
+ * Paths use forward slashes and are relative to `dir`.
+ */
+function scanFilesRecursive(dir: string, exts: string[]): string[] {
+  if (!existsSync(dir)) return [];
+  const results: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )) {
+    const abs = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      for (const nested of scanFilesRecursive(abs, exts)) {
+        results.push(`${entry.name}/${nested}`);
+      }
+    } else if (exts.includes(extname(entry.name))) {
+      results.push(entry.name);
+    }
+  }
+  return results;
+}
+
 /** Test scripts are intentionally excluded from installable unit script components. */
 function isTestScript(filename: string): boolean {
   return /\.(test|spec)\.ts$/.test(filename);
@@ -106,12 +128,12 @@ export function refreshUnit(unitSrcDir: string): boolean {
       return entry;
     });
 
-  const resources: UnitResourceEntry[] = scanFiles(join(unitSrcDir, "resources"), [".md"]).map(
-    (f) => ({
-      name: nameFromFilename(f),
-      file: `resources/${f}`,
-    }),
-  );
+  const resources: UnitResourceEntry[] = scanFilesRecursive(join(unitSrcDir, "resources"), [
+    ".md",
+  ]).map((relPath) => ({
+    name: relPath.slice(0, -extname(relPath).length),
+    file: `resources/${relPath}`,
+  }));
 
   const updated: UnitJson = {
     name: basename(unitSrcDir),
