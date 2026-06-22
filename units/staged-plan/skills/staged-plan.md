@@ -14,11 +14,11 @@ plans/<feature-slug>/
 ├── DECISIONS.md         # 横切性全局约束清单，打了[arch]标记的条目最终归并到架构指导文档
 ├── 00-brief.md          # 需求（behavior层面）+ 架构 + 核心技术选型
 ├── step-map.md          # 步骤地图：有序的功能切片列表，每步带验证方式和变更记录
-├── requirements/        # 可选，仅当需求本身规模很大时才拆分（见 .aisk/staged-plan/resources/splitting-guide.md）
-└── design/              # 可选，设计章节文件（见 .aisk/staged-plan/resources/splitting-guide.md）
+├── requirements/        # 可选，仅当需求本身规模很大时才拆分（见 .aisk/staged-plan/resources/references/splitting-guide.md）
+└── design/              # 可选，设计章节文件（见 .aisk/staged-plan/resources/references/splitting-guide.md）
 ```
 
-模板在 `.aisk/staged-plan/resources/` 下（`*-template.md` 文件），新建对应文件时先读对应模板文件，以其结构创建，不要从空白发明结构。
+模板在 `.aisk/staged-plan/resources/assets/` 下，新建对应文件时先读对应模板文件，以其结构创建，不要从空白发明结构。
 
 ---
 
@@ -36,7 +36,7 @@ plans/<feature-slug>/
 
 对于"一开始想不清楚的 UI 细节"：单独维护一份 `design/ui-pending.md` 草稿，不混进需求文档，设计阶段确定后直接写进对应设计章节。不要让不确定的内容污染本来应该稳定的需求文档。
 
-需求文档、步骤地图是否拆分，读 `.aisk/staged-plan/resources/splitting-guide.md` 判断（默认不拆）。如拆出了 `design/` 章节，各章节的细化流程读 `.aisk/staged-plan/resources/chapter-loop-guide.md`。
+需求文档、步骤地图是否拆分，读 `.aisk/staged-plan/resources/references/splitting-guide.md` 判断（默认不拆）。如拆出了 `design/` 章节，各章节的细化流程读 `.aisk/staged-plan/resources/references/chapter-loop-guide.md`。
 
 ### 第二层：架构与关键决策（独立文档）
 
@@ -53,7 +53,7 @@ plans/<feature-slug>/
 
 ### 第三层：步骤地图（轻量设计，行动导向）
 
-不是描述性设计文档，是一张"做什么 → 怎么验证"的有序列表。规划前读 `.aisk/staged-plan/resources/step-map-guide.md`。概要：
+不是描述性设计文档，是一张"做什么 → 怎么验证"的有序列表。规划前读 `.aisk/staged-plan/resources/references/step-map-guide.md`。概要：
 
 **步骤粒度标准**：每个步骤是一个可独立验证的功能切片——做完这步，有一件具体的事可以跑通。不要按"修改了哪些文件"切，要按"完成了什么可观察的功能"切。
 
@@ -102,7 +102,7 @@ plans/<feature-slug>/
 
 ## 变更处理（重要）
 
-实现过程中遇到需要修改的情况，先判断类型，再按对应方式处理。遇到变更时读 `.aisk/staged-plan/resources/change-handling-guide.md`。这里是核心决策逻辑：
+实现过程中遇到需要修改的情况，先判断类型，再按对应方式处理。遇到变更时读 `.aisk/staged-plan/resources/references/change-handling-guide.md`。这里是核心决策逻辑：
 
 ### 追加型变更（发现还需要多做一件事）
 
@@ -130,7 +130,7 @@ plans/<feature-slug>/
 每次技能被触发时：
 
 1. 先检查 `plans/<feature-slug>/PROGRESS.md` 是否存在：
-   - 不存在 → 新 feature，从第一层开始，按 `.aisk/staged-plan/resources/progress-template.md` 创建
+   - 不存在 → 新 feature，从第一层开始，按 `.aisk/staged-plan/resources/assets/progress-template.md` 创建
    - 存在 → 读取并向用户复述：当前阶段、已完成步骤、当前进行中的步骤停在哪、建议下一步做什么
 
 2. 任何实质性进展后，立刻更新 `PROGRESS.md`，不要攒到最后——步骤讨论到一半没有定论，也要记"停在哪个问题上"，不要假设下次 session 还记得。

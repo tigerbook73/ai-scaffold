@@ -62,7 +62,7 @@
 2. 前瞻性检查：
    问自己/问 Claude："下一步（Step N+1）能在这个实现上干净地继续吗？
    有没有我现在能预见到、会妨碍下一步的地方？"
-3. 如果前瞻性检查发现了问题 → 转到 .aisk/staged-plan/resources/change-handling-guide.md
+3. 如果前瞻性检查发现了问题 → 转到 .aisk/staged-plan/resources/references/change-handling-guide.md
 4. 如果没有问题 → 更新步骤状态为"完成"，更新 PROGRESS.md
 ```
 

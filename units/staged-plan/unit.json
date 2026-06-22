@@ -11,40 +11,40 @@
     ],
     "resources": [
       {
-        "name": "brief-template",
-        "file": "resources/brief-template.md"
+        "name": "assets/brief-template",
+        "file": "resources/assets/brief-template.md"
       },
       {
-        "name": "change-handling-guide",
-        "file": "resources/change-handling-guide.md"
+        "name": "assets/chapter-template",
+        "file": "resources/assets/chapter-template.md"
       },
       {
-        "name": "chapter-loop-guide",
-        "file": "resources/chapter-loop-guide.md"
+        "name": "assets/decisions-template",
+        "file": "resources/assets/decisions-template.md"
       },
       {
-        "name": "chapter-template",
-        "file": "resources/chapter-template.md"
+        "name": "assets/progress-template",
+        "file": "resources/assets/progress-template.md"
       },
       {
-        "name": "decisions-template",
-        "file": "resources/decisions-template.md"
+        "name": "assets/step-map-template",
+        "file": "resources/assets/step-map-template.md"
       },
       {
-        "name": "progress-template",
-        "file": "resources/progress-template.md"
+        "name": "references/change-handling-guide",
+        "file": "resources/references/change-handling-guide.md"
       },
       {
-        "name": "splitting-guide",
-        "file": "resources/splitting-guide.md"
+        "name": "references/chapter-loop-guide",
+        "file": "resources/references/chapter-loop-guide.md"
       },
       {
-        "name": "step-map-guide",
-        "file": "resources/step-map-guide.md"
+        "name": "references/splitting-guide",
+        "file": "resources/references/splitting-guide.md"
       },
       {
-        "name": "step-map-template",
-        "file": "resources/step-map-template.md"
+        "name": "references/step-map-guide",
+        "file": "resources/references/step-map-guide.md"
       }
     ]
   }
