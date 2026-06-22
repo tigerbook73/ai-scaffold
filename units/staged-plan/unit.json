@@ -1,0 +1,51 @@
+{
+  "name": "staged-plan",
+  "description": "在开始实现有一定规模的 feature 前规划，通过四层流程（需求 → 架构与关键决策 → 步骤地图 → 逐步实现）驱动功能开发，支持跨 session 的长期规划",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      {
+        "name": "staged-plan",
+        "file": "skills/staged-plan.md"
+      }
+    ],
+    "resources": [
+      {
+        "name": "brief-template",
+        "file": "resources/brief-template.md"
+      },
+      {
+        "name": "change-handling-guide",
+        "file": "resources/change-handling-guide.md"
+      },
+      {
+        "name": "chapter-loop-guide",
+        "file": "resources/chapter-loop-guide.md"
+      },
+      {
+        "name": "chapter-template",
+        "file": "resources/chapter-template.md"
+      },
+      {
+        "name": "decisions-template",
+        "file": "resources/decisions-template.md"
+      },
+      {
+        "name": "progress-template",
+        "file": "resources/progress-template.md"
+      },
+      {
+        "name": "splitting-guide",
+        "file": "resources/splitting-guide.md"
+      },
+      {
+        "name": "step-map-guide",
+        "file": "resources/step-map-guide.md"
+      },
+      {
+        "name": "step-map-template",
+        "file": "resources/step-map-template.md"
+      }
+    ]
+  }
+}
