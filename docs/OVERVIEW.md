@@ -2,14 +2,18 @@
 
 ## 是什么
 
-AI Skills 是一个本地 ai-unit 库。它把可复用的 AI 能力组织在 `units/` 中，通过 `pnpm register` 发布到 `~/.aisk/`，再由目标项目中的 `setup` 管理命令按需安装、更新或卸载。
+AI Skills 是一个本地 ai-unit 库。它把可复用的 AI 能力组织在 `units/` 中，支持两种安装模式：
 
-核心理念：能力在本仓库集中维护，发布后进入本机全局仓库，具体项目只安装自己需要的 unit。
+- **本地发布模式**：通过 `pnpm register` 发布到 `~/.aisk/`，再由目标项目中的全局 `/setup` 管理命令按需安装、更新或卸载。
+- **npm 包模式**：将本仓库作为 npm 包安装，通过 `ai-skills` CLI 直接管理 unit。
+
+核心理念：能力在本仓库集中维护，发布后进入本机全局仓库（或通过 npm 分发），具体项目只安装自己需要的 unit。
 
 ## 当前架构
 
 ```text
 Local skill repository
+├── bin/                           # npm CLI 入口（ai-skills 命令）
 ├── units/                         # ai-unit 源码
 ├── global/                        # 全局 setup skill 和 installer
 └── scripts/                       # build / publish / clean
@@ -17,6 +21,11 @@ Local skill repository
   pnpm build
     -> 刷新 units/*/unit.json
     -> 刷新 units/units.json
+    -> 运行 Prettier 格式化
+
+  pnpm build:dist
+    -> 编译 bin/cli.ts → dist/cli.js
+    -> 编译各 unit hook 脚本为 .cjs
 
   pnpm register
     -> pnpm build
@@ -25,6 +34,7 @@ Local skill repository
 
 ~/.aisk/
 ├── config.json                    # 记录本仓库路径和发布时间
+├── install.log                    # 精确记录所有发布产物，用于 clean
 ├── units.json                     # unit 拓扑顺序
 ├── units/{unit}/                  # 已发布 unit
 └── global/installer.js            # 目标项目安装器
@@ -65,32 +75,34 @@ units/{unit}/
 
 ## 当前 Units
 
-| Unit               | 内容                                                                  |
-| ------------------ | --------------------------------------------------------------------- |
-| `confirm-intent`   | 执行前确认用户预期结果，等待明确最终确认                              |
-| `dev-task`         | 管理结构化 dev-task：创建文档，通过 path rule 识别上下文命令          |
-| `playwright`       | Playwright E2E 测试规范：定位器优先级、作用域链式定位，shadcn/ui 补充 |
-| `quick-ship`       | 审查变更、创建分支、提交、PR、squash 合并、返回原分支                 |
-| `smart-review`     | 对文件、模块或目录进行迭代式审查和修复                                |
-| `test-review-gate` | 测试审查规则、pre-commit hook 和 Claude 规则约束                      |
-| `ui-coverage`      | UI 变更测试覆盖规范：判定需要测试的变更，选择测试类型                 |
-| `ui-testability`   | UI 可测试性规范：aria-label、data-testid、shadcn/ui 实现细节          |
-| `walkthrough`      | 结构化代码走读的创建、恢复和导航                                      |
+| Unit               | 内容                                                                                                |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| `confirm-intent`   | 执行前确认用户预期结果，等待明确最终确认                                                            |
+| `playwright`       | Playwright E2E 测试规范：定位器优先级、作用域链式定位，shadcn/ui 补充                               |
+| `quick-ship`       | 审查工作区变更，推断意图，创建私有分支、提交、开 PR、squash 合并、返回原分支                        |
+| `smart-review`     | 对文件、模块或目录进行迭代式审查和修复                                                              |
+| `staged-plan`      | 通过四层流程（需求 → 架构与关键决策 → 步骤地图 → 逐步实现）驱动功能开发，支持跨 session 的长期规划  |
+| `test-review-gate` | 在测试文件上强制执行 @reviewed-by 注释和测试名称一致性约束，通过 pre-commit hook 和 Claude 规则实现 |
+| `ui-coverage`      | UI 变更测试覆盖规范：判定需要测试的变更，选择测试类型                                               |
+| `ui-testability`   | UI 可测试性规范：aria-label、data-testid、shadcn/ui 实现细节                                        |
+| `walkthrough`      | 结构化代码走读的创建、恢复和导航                                                                    |
 
 全局顺序由 `units/units.json` 维护，依赖总是排在被依赖方之前。
 
 ## 常用命令
 
-| 命令              | 用途                                            |
-| ----------------- | ----------------------------------------------- |
-| `pnpm build`      | 扫描 `units/`，刷新 `unit.json` 和 `units.json` |
-| `pnpm register`   | 先 build，再发布到 `~/.aisk/`                   |
-| `pnpm clean`      | 清理本仓库发布到全局位置的内容                  |
-| `pnpm lint:check` | ESLint 检查                                     |
-| `pnpm lint:fix`   | ESLint 自动修复                                 |
-| `pnpm typecheck`  | TypeScript 检查                                 |
-| `pnpm test`       | Vitest 测试                                     |
-| `pnpm verify`     | lint:check + typecheck + test + build           |
+| 命令              | 用途                                                                    |
+| ----------------- | ----------------------------------------------------------------------- |
+| `pnpm build`      | 扫描 `units/`，刷新 `unit.json` 和 `units.json`，并运行 Prettier 格式化 |
+| `pnpm build:dist` | 编译 npm 发布产物（`dist/cli.js` 和 unit hook 脚本）                    |
+| `pnpm register`   | 先 build，再发布到 `~/.aisk/`                                           |
+| `pnpm clean`      | 清理本仓库发布到全局位置的内容                                          |
+| `pnpm format`     | Prettier 格式化                                                         |
+| `pnpm lint:check` | ESLint 检查                                                             |
+| `pnpm lint:fix`   | ESLint 自动修复                                                         |
+| `pnpm typecheck`  | TypeScript 检查                                                         |
+| `pnpm test`       | Vitest 测试                                                             |
+| `pnpm verify`     | build + build:dist + typecheck + lint + format + test                   |
 
 单独运行测试文件：
 
@@ -106,6 +118,18 @@ pnpm exec vitest run units/test-review-gate/scripts/check-reviewed-by-commit-mar
 ```
 
 ## 发布流程
+
+### `scripts/build-dist.ts`
+
+`pnpm build:dist` 执行该脚本。
+
+职责：
+
+1. 将 `bin/cli.ts` 编译打包为 `dist/cli.js`（npm CLI 入口）
+2. 将各 unit 的 hook 脚本编译为 `units/{unit}/scripts/{name}.cjs`
+3. 将 `units/units.json` 复制到包根目录的 `units.json`
+
+这些产物随代码提交，使通过 GitHub 安装的 npm 包无需额外构建步骤即可运行。
 
 ### `scripts/build.ts`
 
@@ -206,19 +230,21 @@ rule、skill、resource 可以通过 `AISK:CUSTOM` 标记声明需要项目定�
 
 ## 关键文件
 
-| 文件或目录                             | 说明                                   |
-| -------------------------------------- | -------------------------------------- |
-| `units/`                               | ai-unit 源码                           |
-| `units/units.json`                     | 全局 unit 拓扑顺序                     |
-| `global/setup/SKILL.md`                | 全局 setup 管理 skill                  |
-| `global/scripts/installer.ts`          | 目标项目安装器核心实现                 |
-| `global/scripts/precommit-lefthook.ts` | lefthook 更新工具                      |
-| `global/scripts/installer-types.ts`    | unit 和 installer 输出类型定义         |
-| `scripts/build.ts`                     | unit 扫描与注册表刷新                  |
-| `scripts/publish.ts`                   | 发布到 `~/.aisk/` 和 Claude 全局 skill |
-| `scripts/clean.ts`                     | 清理全局发布产物                       |
-| `tests/`                               | build、publish、installer 基线测试     |
-| `docs/dev-tasks/project-structure/`    | ai-unit 架构迁移 dev-task 记录         |
+| 文件或目录                                  | 说明                                   |
+| ------------------------------------------- | -------------------------------------- |
+| `units/`                                    | ai-unit 源码                           |
+| `units/units.json`                          | 全局 unit 拓扑顺序                     |
+| `bin/cli.ts`                                | npm 包 CLI 入口（`ai-skills` 命令）    |
+| `global/setup/SKILL.md`                     | 全局 setup 管理 skill                  |
+| `global/scripts/installer.ts`               | 目标项目安装器核心实现                 |
+| `global/scripts/libs/precommit-lefthook.ts` | lefthook 更新工具                      |
+| `global/scripts/libs/installer-types.ts`    | unit 和 installer 输出类型定义         |
+| `global/scripts/libs/custom-blocks.ts`      | AISK:CUSTOM 块解析工具                 |
+| `scripts/build.ts`                          | unit 扫描与注册表刷新                  |
+| `scripts/build-dist.ts`                     | npm 发布产物编译                       |
+| `scripts/publish.ts`                        | 发布到 `~/.aisk/` 和 Claude 全局 skill |
+| `scripts/clean.ts`                          | 清理全局发布产物（依据 `install.log`） |
+| `tests/`                                    | build、publish、installer 基线测试     |
 
 ## 开发检查清单
 
@@ -228,9 +254,17 @@ rule、skill、resource 可以通过 `AISK:CUSTOM` 标记声明需要项目定�
 pnpm verify
 ```
 
+`pnpm verify` 依次执行：`build` → `build:dist` → `typecheck` → `lint` → `format` → `test`。
+
 如果只修改构建扫描逻辑，可先跑聚焦测试：
 
 ```bash
 pnpm exec vitest run tests/build.test.ts
 pnpm build
+```
+
+修改 `bin/cli.ts` 或 unit hook 脚本后，还需确保 dist 产物同步：
+
+```bash
+pnpm build:dist
 ```
