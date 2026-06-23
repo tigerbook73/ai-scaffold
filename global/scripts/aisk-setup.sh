@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-node "$(dirname "$0")/installer.js" "$@"
+node "$(dirname "$0")/installer.cjs" "$@"
