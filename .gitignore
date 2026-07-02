@@ -7,7 +7,7 @@ node_modules/
 .claude/rules/test-review-gate.md
 
 # Compiled output
-out/
+dist/
 *.tsbuildinfo
 
 # Environment variables
