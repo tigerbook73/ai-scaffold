@@ -10,27 +10,29 @@
  * invoked via node. Solving that is out of scope until the npm-publish path
  * is actually implemented.
  */
-import { buildSync } from "esbuild";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 
 const repoRoot = resolve(__dirname, "..");
 const distDir = join(repoRoot, "dist");
 
-function buildCli(): void {
+async function buildCli(): Promise<void> {
   mkdirSync(distDir, { recursive: true });
   const entry = join(repoRoot, "bin", "cli.ts");
   const out = join(distDir, "cli.js");
-  buildSync({
-    entryPoints: [entry],
-    outfile: out,
-    bundle: true,
-    platform: "node",
+
+  const result = await Bun.build({
+    entrypoints: [entry],
+    outdir: distDir,
+    naming: "cli.js",
+    target: "node",
     format: "cjs",
-    minify: false,
-    // esbuild itself must not be bundled — it uses native binaries resolved at runtime.
-    external: ["esbuild"],
   });
+  if (!result.success) {
+    for (const log of result.logs) console.error(log);
+    process.exit(1);
+  }
+
   // bin/cli.ts's shebang targets bun (for `bun link`); the published dist targets node.
   const content = readFileSync(out, "utf8");
   writeFileSync(out, content.replace(/^#!.*\n/, "#!/usr/bin/env node\n"));
@@ -38,5 +40,11 @@ function buildCli(): void {
 }
 
 console.log("Building dist artifacts...\n");
-buildCli();
-console.log("\nDone.");
+buildCli()
+  .then(() => {
+    console.log("\nDone.");
+  })
+  .catch((error: unknown) => {
+    console.error(error);
+    process.exit(1);
+  });
