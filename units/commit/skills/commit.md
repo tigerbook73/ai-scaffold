@@ -10,6 +10,9 @@
 
 ## 约束
 
+- **必须使用 agent/subagent 模式执行检查**：读取 diff、运行 verify、自动化检查、Claude 评估都放到独立 agent 中完成，避免把大量 diff、测试输出、lint 输出污染主上下文
+- 主上下文只保留：最终检查摘要、阻塞项/警告项、建议提交消息、commit hash
+- 除非用户明确要求查看细节，不要把完整 diff、完整 verify 输出或长日志粘贴回主上下文
 - **阻塞项**（verify 失败、commit message 格式错误）→ 停止执行，等待修复
 - **警告项**（测试覆盖、changeset、debug 残留）→ 列出后询问用户是否确认继续
 - 用户明确说 "强制提交" 或 "skip checks" → 跳过全部检查直接提交
@@ -22,6 +25,45 @@
 ---
 
 ## 步骤
+
+### 第零步 — 启动检查 agent
+
+除非用户明确说 "不要用 agent" 或当前运行环境没有 agent/subagent 能力，否则必须先启动一个独立 agent 执行第一步到第五步。
+
+给检查 agent 的任务：
+
+1. 读取 git 状态、staged 文件、工作区变更边界
+2. 运行 verify 或测试命令
+3. 执行测试覆盖、Changeset、Debug 残留、提交消息格式检查
+4. 基于 diff 做 Claude 评估
+5. 只返回结构化摘要，不返回完整 diff 或完整日志
+
+检查 agent 返回格式：
+
+```text
+status: pass | blocked | warnings
+staged_files:
+  - <path>
+unstaged_files:
+  - <path>
+checks:
+  verify: pass | fail | skipped
+  test_coverage: pass | warning
+  changeset: pass | warning | skipped
+  debug_leftovers: pass | warning
+  commit_message: pass | fail
+assessment:
+  unexpected_files: pass | warning
+  docs_sync: pass | warning
+  test_quality: pass | warning | skipped
+warnings:
+  - <short warning>
+blockers:
+  - <short blocker>
+suggested_commit_message: <type(scope): description>
+```
+
+主 agent 只根据该摘要继续执行：有 blocker 则停止；仅有 warning 则询问用户是否继续；全部通过则提交。
 
 ### 第一步 — 读取变更上下文
 
@@ -46,7 +88,7 @@ git diff --name-only HEAD
 运行结果：
 
 - **成功** → ✓，继续
-- **失败** → 展示完整错误输出，**立即停止**，告知用户修复后重新运行
+- **失败** → 检查 agent 摘要错误原因，**立即停止**，告知用户修复后重新运行；只有用户要求时才展示完整错误输出
 
 ### 第三步 — 自动化检查
 
@@ -106,7 +148,7 @@ git diff HEAD | grep -n "^\+" | grep -E "(console\.(log|debug|warn)|debugger;)"
 
 ### 第四步 — Claude 评估（无需运行命令）
 
-基于 `git diff HEAD` 内容判断：
+在检查 agent 内基于 `git diff HEAD` 内容判断：
 
 1. **意外文件**：是否有不应提交的文件（`.env`、`*.log`、`dist/`、`node_modules/`、构建产物）？
 2. **文档同步**：若 API 有变更（函数签名、导出接口、配置项），相关文档是否同步更新？
@@ -114,7 +156,7 @@ git diff HEAD | grep -n "^\+" | grep -E "(console\.(log|debug|warn)|debugger;)"
 
 ### 第五步 — 汇总报告
 
-输出格式：
+检查 agent 只返回摘要。主上下文输出格式：
 
 ```
 提交前检查报告
