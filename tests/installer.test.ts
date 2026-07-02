@@ -18,18 +18,17 @@ function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), "aisk-installer-"));
 }
 
-/** Creates a minimal fake ~/.aisk tree for testing, returns its path. */
+/** Creates a minimal fake aiskHome (package root) tree for testing, returns its path. */
 function makeFakeAiskHome(tmpDir: string): string {
   const aiskHome = join(tmpDir, ".aisk");
   mkdirSync(aiskHome, { recursive: true });
-  writeFileSync(join(aiskHome, "config.json"), JSON.stringify({ repoPath: tmpDir }));
 
   const unitDir = join(aiskHome, "units", "poc");
   mkdirSync(join(unitDir, "skills"), { recursive: true });
   mkdirSync(join(unitDir, "scripts"), { recursive: true });
   mkdirSync(join(unitDir, "resources"), { recursive: true });
   writeFileSync(join(unitDir, "skills", "poc.md"), "# poc\nPoC skill content");
-  writeFileSync(join(unitDir, "scripts", "poc-hook.cjs"), '"use strict";\nconsole.log("hook");');
+  writeFileSync(join(unitDir, "scripts", "poc-hook.ts"), 'console.log("hook");');
   writeFileSync(join(unitDir, "resources", "readme.md"), "readme content");
   writeFileSync(
     join(unitDir, "unit.json"),
@@ -39,7 +38,7 @@ function makeFakeAiskHome(tmpDir: string): string {
       dependencies: ["poc-dep"],
       components: {
         skills: [{ name: "poc", file: "skills/poc.md" }],
-        scripts: [{ name: "poc-hook", file: "scripts/poc-hook.js", hook: "pre-commit" }],
+        scripts: [{ name: "poc-hook", file: "scripts/poc-hook.ts", hook: "pre-commit" }],
         resources: [{ name: "readme", file: "resources/readme.md" }],
       },
     }),
@@ -58,7 +57,10 @@ function makeFakeAiskHome(tmpDir: string): string {
   );
 
   // Pre-computed global order (dep before dependent, alphabetical within same depth)
-  writeFileSync(join(aiskHome, "units.json"), JSON.stringify(["poc-dep", "poc"], null, 2) + "\n");
+  writeFileSync(
+    join(aiskHome, "units", "units.json"),
+    JSON.stringify(["poc-dep", "poc"], null, 2) + "\n",
+  );
 
   return aiskHome;
 }
@@ -81,7 +83,7 @@ function captureStdout(fn: () => void): string {
 /**
  * @test-suite  list
  * @target      Installer.list()
- * @strategy    unit; fake ~/.aisk tree
+ * @strategy    unit; fake aiskHome tree
  * @cases
  *   - [PASS] lists all units with installed=false when nothing installed
  *   - [PASS] marks unit as installed=true when present in installed.json
@@ -192,7 +194,7 @@ describe("list", () => {
 /**
  * @test-suite  resolve
  * @target      Installer.resolve()
- * @strategy    unit; fake ~/.aisk tree
+ * @strategy    unit; fake aiskHome tree
  * @cases
  *   - [PASS] returns full ResolveResult with dep in to_install and auto when nothing installed
  *   - [PASS] dep already installed → dep in auto but not to_install, poc in to_install
@@ -770,7 +772,7 @@ describe("update (AISK:CUSTOM merge)", () => {
 /**
  * @test-suite  update
  * @target      Installer.update()
- * @strategy    unit; fake ~/.aisk tree
+ * @strategy    unit; fake aiskHome tree
  * @cases
  *   - [PASS] fails per-unit when unit is not installed
  *   - [PASS] skips optional component that is not on disk
@@ -858,7 +860,7 @@ describe("update", () => {
 /**
  * @test-suite  remove
  * @target      Installer.remove()
- * @strategy    unit; fake ~/.aisk tree; pre-populated installed.json and files
+ * @strategy    unit; fake aiskHome tree; pre-populated installed.json and files
  * @cases
  *   - [PASS] removes skill file and empty parent directory
  *   - [PASS] removes script file and corresponding lefthook entry
@@ -914,10 +916,10 @@ describe("remove", () => {
       const projectDir = join(dir, "project");
       const scriptDir = join(projectDir, ".aisk", "poc", "scripts");
       mkdirSync(scriptDir, { recursive: true });
-      writeFileSync(join(scriptDir, "poc-hook.cjs"), "// hook");
+      writeFileSync(join(scriptDir, "poc-hook.js"), "// hook");
       writeFileSync(
         join(projectDir, "lefthook.yml"),
-        "pre-commit:\n  commands:\n    aisk-poc-poc-hook:\n      run: node .aisk/poc/scripts/poc-hook.cjs\n",
+        "pre-commit:\n  commands:\n    aisk-poc-poc-hook:\n      run: bun .aisk/poc/scripts/poc-hook.js\n",
       );
       writeFileSync(
         join(projectDir, ".aisk", "installed.json"),
@@ -928,7 +930,7 @@ describe("remove", () => {
               components: {
                 skills: [],
                 rules: [],
-                scripts: [{ name: "poc-hook", path: ".aisk/poc/scripts/poc-hook.cjs" }],
+                scripts: [{ name: "poc-hook", path: ".aisk/poc/scripts/poc-hook.js" }],
                 resources: [],
               },
             },
@@ -938,9 +940,7 @@ describe("remove", () => {
 
       new Installer(projectDir, aiskHome).remove(["poc"]);
 
-      expect(existsSync(join(scriptDir, "poc-hook.cjs")), "script file must be removed").toBe(
-        false,
-      );
+      expect(existsSync(join(scriptDir, "poc-hook.js")), "script file must be removed").toBe(false);
       const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
       expect(lefthook, "lefthook entry must be removed").not.toContain("aisk-poc-poc-hook:");
     } finally {
@@ -1145,7 +1145,7 @@ describe("refresh", () => {
 /**
  * @test-suite  show
  * @target      Installer.show()
- * @strategy    unit; fake ~/.aisk tree
+ * @strategy    unit; fake aiskHome tree
  * @cases
  *   - [PASS] returns unit details with installed=false when not installed
  *   - [PASS] returns customStatus from installed.json when installed
@@ -1239,12 +1239,12 @@ describe("add (script/hook)", () => {
 
       new Installer(projectDir, aiskHome).add(["poc"]);
 
-      const scriptFile = join(projectDir, ".aisk", "poc", "scripts", "poc-hook.cjs");
+      const scriptFile = join(projectDir, ".aisk", "poc", "scripts", "poc-hook.js");
       expect(readFileSync(scriptFile, "utf8")).toContain("hook");
 
       const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
       expect(lefthook).toContain("aisk-poc-poc-hook:");
-      expect(lefthook).toContain(".aisk/poc/scripts/poc-hook.cjs");
+      expect(lefthook).toContain("bun .aisk/poc/scripts/poc-hook.js");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -1264,7 +1264,7 @@ describe("add (script/hook)", () => {
             scripts: [
               {
                 name: "poc-hook",
-                file: "scripts/poc-hook.js",
+                file: "scripts/poc-hook.ts",
                 hook: "pre-commit",
                 params: ["staged_files"],
               },
