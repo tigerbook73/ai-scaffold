@@ -8,7 +8,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 
 const scriptPath = resolve("units/test-review-gate/scripts/check-test-cases-match-it.ts");
 const testSuiteTag = `@test-${"suite"}`;

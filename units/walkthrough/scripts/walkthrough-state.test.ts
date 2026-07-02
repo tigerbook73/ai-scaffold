@@ -5,16 +5,15 @@
  * @reviewed-by Shengtian Liao @ [2]
  */
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
+import type { Index } from "./types/types";
 
-const repoRoot = resolve(__dirname, "../../..");
-const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
 const scriptPath = join(__dirname, "walkthrough-state.ts");
 
-const BASE_INDEX = {
+const BASE_INDEX: Index = {
   stateKey: "test-branch",
   originalBranch: "main",
   target: "abc123",
@@ -26,7 +25,7 @@ const BASE_INDEX = {
   created: "2024-01-01T00:00:00.000Z",
   totalGroups: 3,
   currentGroup: 1,
-  status: "active" as const,
+  status: "active",
   groups: [
     { label: "Group 1", files: ["a.ts"], done: false },
     { label: "Group 2", files: ["b.ts"], done: false },
@@ -35,7 +34,7 @@ const BASE_INDEX = {
 };
 
 function run(args: string[], cwd: string) {
-  return spawnSync(tsxBin, [scriptPath, ...args], { cwd, encoding: "utf-8" });
+  return spawnSync("bun", [scriptPath, ...args], { cwd, encoding: "utf-8" });
 }
 
 function makeTempDir(): string {

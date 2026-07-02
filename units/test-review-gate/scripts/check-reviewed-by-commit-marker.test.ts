@@ -8,7 +8,7 @@ import { execSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 
 const scriptPath = join(__dirname, "check-reviewed-by-commit-marker.ts");
 

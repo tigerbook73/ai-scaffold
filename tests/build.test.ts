@@ -7,7 +7,7 @@
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 
 import { checkDependencies, refreshUnit } from "../scripts/build";
 

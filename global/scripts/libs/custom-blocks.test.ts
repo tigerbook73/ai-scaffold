@@ -4,7 +4,7 @@
  * @ai-generated
  * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [1]
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 
 import { mergeCustomContent, parseCustomBlocks } from "./custom-blocks";
 

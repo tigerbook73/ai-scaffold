@@ -9,7 +9,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "bun:test";
 
 import { Installer } from "../global/scripts/installer";
 import type { ResolveResult } from "../global/scripts/types/installer-types";
@@ -1419,4 +1419,3 @@ describe("add (installed record)", () => {
 });
 
 // suppress unused import warning
-void vi;
