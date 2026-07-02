@@ -29,7 +29,7 @@
 运行对应 installer 命令，获取 JSON 输出：
 
 ```
-node ~/.aisk/global/installer.cjs <subcommand> [units...]
+ai-skills <subcommand> [units...]
 ```
 
 若命令失败（exit code 非 0）则输出错误后停止。

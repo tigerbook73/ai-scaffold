@@ -1,0 +1,13 @@
+{
+  "name": "commit",
+  "description": "提交前运行检查清单（verify、测试覆盖、changeset、debug 残留、消息格式），所有检查通过后执行 git commit。",
+  "dependencies": [],
+  "components": {
+    "skills": [
+      {
+        "name": "commit",
+        "file": "skills/commit.md"
+      }
+    ]
+  }
+}

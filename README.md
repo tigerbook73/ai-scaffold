@@ -1,20 +1,21 @@
 # AI Skills
 
-A local AI skill library for Claude Code. Organize reusable AI capabilities as ai-units and publish them globally with a single command.
+A local AI skill library for Claude Code, meant to be used from your own checkout via `bun link` — no separate publish step. Organize reusable AI capabilities as ai-units under `units/`.
 
-## Setup
+## Setup (one-time per machine)
 
-### Option A — Local publish (one-time per machine)
+Requires [Bun](https://bun.sh) on PATH.
 
 ```bash
 git clone .../ai-scaffold ~/code/ai-scaffold
-cd ~/code/ai-scaffold && pnpm install && pnpm register
+cd ~/code/ai-scaffold && bun install && bun link
+
+mkdir -p ~/.claude/skills
+ln -s "$(pwd)/global/setup" ~/.claude/skills/aisk-setup
 ```
 
-After this:
-
-- `~/.aisk/` holds the published units and installer
-- `~/.claude/skills/aisk-setup/SKILL.md` provides the global `/setup` command
+- `bun link` registers this repo as the global `ai-skills` command (`~/.bun/bin/ai-skills`) — it runs `bin/cli.ts` directly out of the repo, so editing `units/` takes effect immediately, no rebuild/republish step.
+- The `ln -s` gives you the global `/setup` command in any Claude Code project. Both commands read `units/` straight from this checkout.
 
 In any project's Claude Code session, use the global setup command:
 
@@ -27,21 +28,19 @@ In any project's Claude Code session, use the global setup command:
 /setup show <unit>        # show unit details and component status
 ```
 
-### Option B — npm package
-
-```bash
-npm install -g ai-skills   # or: npx ai-skills install <unit>
-```
-
-Use the `ai-skills` CLI directly in any project:
+Or use the `ai-skills` CLI directly in any project:
 
 ```
-ai-skills install <unit>   # install a unit (or several, or "all")
+ai-skills install <unit>   # install a unit (or several, or "all"); alias: add
 ai-skills remove <unit>    # uninstall a unit
 ai-skills update [unit]    # update installed units (all if none specified)
 ai-skills list             # show all available units and install status
 ai-skills show <unit>      # show unit details and component status
 ```
+
+`ai-skills update` bundles each unit's scripts on the spot (via `bun build`) and copies the result into the target project's `.aisk/{unit}/scripts/` — script changes need an explicit `update` to reach already-installed projects, same as skills/rules/resources.
+
+> A real `npm install -g ai-skills` (installing a published package instead of this checkout) is scaffolded via `publishConfig` in `package.json` but not yet wired up to an actual npm publish — not part of the day-to-day workflow above.
 
 ## Available units
 
@@ -61,32 +60,32 @@ ai-skills show <unit>      # show unit details and component status
 
 1. Create `units/<name>/unit.json` with `name` and `description` fields
 2. Add skill files to `units/<name>/skills/`, rules to `rules/`, scripts to `scripts/`
-3. Run `pnpm verify` then `git commit`
-4. Run `pnpm register` to publish globally (or `pnpm build:dist` for npm package)
+3. Run `pnpm build` to refresh `unit.json`/`units/units.json` (structural changes like new/renamed files need this; content edits to existing files don't)
+4. Run `pnpm verify` then `git commit`
+
+Since `ai-skills`/`/setup` read straight from this checkout (via `bun link`), no publish step is needed — changes are visible immediately.
 
 ## Repository structure
 
 ```
 bin/
-  cli.ts            # npm CLI entry point (ai-skills command)
+  cli.ts            # ai-skills CLI entry point (bun-linked as the global `ai-skills` command)
 units/              # ai-unit source files
   <unit>/
     unit.json       # unit metadata (auto-refreshed by pnpm build)
     skills/         # Claude Code skill commands
     rules/          # Claude Code rules
-    scripts/        # runtime scripts (compiled to JS on publish)
+    scripts/        # runtime scripts (bundled on demand at `ai-skills update` time)
     resources/      # markdown resources
 global/
-  setup/SKILL.md    # global /setup management command
+  setup/SKILL.md    # global /setup management command (symlinked into ~/.claude/skills/aisk-setup)
   scripts/
-    installer.ts    # target-project installer core
+    installer.ts    # target-project installer core (also the ai-skills CLI backend)
     libs/           # shared utilities (custom-blocks, lefthook, types)
 scripts/
-  build.ts          # scan units/, refresh unit.json and units.json
-  build-dist.ts     # compile npm distribution artifacts (dist/cli.js)
-  publish.ts        # publish to ~/.aisk/, install global setup skill
-  clean.ts          # remove global artifacts recorded in install.log
-tests/              # build, publish, installer baseline tests
+  build.ts          # scan units/, refresh unit.json and units/units.json
+  build-dist.ts     # compile dist/cli.js for a future real npm publish (not part of normal usage)
+tests/              # build, installer baseline tests
 docs/
   OVERVIEW.md       # full design documentation
 ```

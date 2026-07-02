@@ -1,22 +1,30 @@
 {
   "name": "ai-skills",
   "version": "3.0.0",
-  "description": "Local AI skill library — install all skills globally with pnpm register",
+  "description": "Local AI skill library — bun link this repo, then use the ai-skills CLI",
   "bin": {
-    "ai-skills": "./dist/cli.js"
+    "ai-skills": "./bin/cli.ts"
+  },
+  "publishConfig": {
+    "bin": {
+      "ai-skills": "./dist/cli.js"
+    },
+    "engines": {
+      "node": ">=22.0.0"
+    }
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   },
   "files": [
     "dist/",
     "units/",
     "global/setup/",
-    "units.json",
     "README.md"
   ],
   "scripts": {
-    "build": "node --import tsx scripts/build.ts && pnpm format",
-    "build:dist": "node --import tsx scripts/build-dist.ts",
-    "register": "pnpm build && node --import tsx scripts/publish.ts",
-    "clean": "node --import tsx scripts/clean.ts",
+    "build": "bun scripts/build.ts && pnpm format",
+    "build:dist": "bun scripts/build-dist.ts",
     "lint": "pnpm lint:fix",
     "lint:check": "eslint bin/**/*.ts scripts/**/*.ts global/**/*.ts tests/**/*.ts",
     "lint:fix": "eslint bin/**/*.ts scripts/**/*.ts global/**/*.ts tests/**/*.ts --fix",
@@ -36,7 +44,6 @@
     "cac": "^7.0.0"
   },
   "devDependencies": {
-    "tsx": "^4.22.3",
     "@types/node": "^25.9.1",
     "esbuild": "^0.28.0",
     "eslint": "^10.4.0",

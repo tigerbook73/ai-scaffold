@@ -7,11 +7,9 @@
 import { execSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
-const repoRoot = resolve(__dirname, "../../..");
-const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
 const scriptPath = join(__dirname, "check-reviewed-by-commit-marker.ts");
 
 function initRepo(dir: string): void {
@@ -21,7 +19,7 @@ function initRepo(dir: string): void {
 }
 
 function runCheck(cwd: string) {
-  return spawnSync(tsxBin, [scriptPath], { cwd });
+  return spawnSync("bun", [scriptPath], { cwd });
 }
 
 /**

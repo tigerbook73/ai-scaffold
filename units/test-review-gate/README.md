@@ -8,7 +8,7 @@
 
 ## 怎么用
 
-1. 运行 `pnpm register` 安装规则和 hook 脚本。
+1. 运行 `/setup add test-review-gate`（或 `ai-skills add test-review-gate`）安装规则和 hook 脚本。
 2. 修改 `*.test.ts`、`*.spec.ts`、`*.test.js` 或 `*.spec.js` 测试文件时，agent 会按规则维护测试头信息和 suite 元数据。
 3. 提交前，pre-commit hook 会检查 staged 测试文件。
 4. 若检查失败，根据脚本输出修正 `@cases`、测试名称或受保护字段后重新提交。

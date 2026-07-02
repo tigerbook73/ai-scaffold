@@ -1,7 +1,6 @@
 /**
- * Shared type definitions for the aisk installer.
- * Published as source (.ts) to ~/.aisk/global/installer-types.ts so that
- * skill files can reference authoritative type definitions at runtime.
+ * Shared type definitions for the aisk installer, read directly from this
+ * repo (aiskHome) by the installer — there is no separate publish step.
  */
 
 // ─── unit.json ────────────────────────────────────────────────────────────────
@@ -44,7 +43,7 @@ export interface UnitResourceEntry {
   condition?: string;
 }
 
-/** Parsed structure of ~/.aisk/units/{unit}/unit.json. */
+/** Parsed structure of units/{unit}/unit.json. */
 export interface UnitJson {
   name: string;
   description?: string;

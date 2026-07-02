@@ -6,14 +6,13 @@
 
 ## 项目目的
 
-本代码库是一个本地 AI skill 库，以 ai-unit 形式组织在 `units/` 目录下，通过 `pnpm register` 发布到 `~/.aisk/`。目标项目通过全局 `setup` skill（`/setup add <unit>`）按需安装所需 unit。
+本代码库是一个本地 AI skill 库，以 ai-unit 形式组织在 `units/` 目录下。仅供本人在本机使用：通过 `bun link` 把本仓库注册为全局 `ai-skills` 命令，不存在单独的发布步骤——`ai-skills`/`/setup` 都直接读取本仓库的 `units/`，改完 skill/rule/resource 立刻生效。目标项目通过全局 `setup` skill（`/setup add <unit>`）或 `ai-skills` CLI 按需安装所需 unit。
 
 ## 常用命令
 
 ```bash
-pnpm register    # build + 发布到 ~/.aisk/ + 安装全局 setup skill
-pnpm build       # 扫描 units/，刷新 unit.json 和 units.json
-pnpm clean       # 清理本仓库发布到全局位置的内容
+bun link         # 一次性：注册全局 ai-skills 命令，指向本仓库
+pnpm build       # 扫描 units/，刷新 unit.json 和 units/units.json（新增/改名/删除文件后需要）
 pnpm lint:check  # ESLint 检查
 pnpm lint:fix    # ESLint 自动修复
 pnpm typecheck   # TypeScript 检查
@@ -33,24 +32,17 @@ pnpm exec vitest run tests/<file>.test.ts
 ## 当前架构
 
 ```text
-Local skill repository (this repo)
-    -> pnpm register
-         -> pnpm build          刷新 units/*/unit.json 和 units/units.json
-         -> scripts/publish.ts  发布到 ~/.aisk/，安装全局 setup skill
+本仓库（bun link 注册为全局 ai-skills 命令，无发布步骤）
+├── bin/cli.ts                      ai-skills CLI 入口（bun 直接运行源码）
+├── units/{unit}/                   unit 源码（unit.json + 组件内容）
+└── units/units.json                unit 拓扑顺序（pnpm build 生成）
 
-~/.aisk/
-├── config.json                 记录本仓库路径和发布时间
-├── install.log                 精确记录所有发布产物，用于 clean
-├── units.json                  unit 拓扑顺序
-├── units/{unit}/               已发布 unit（unit.json + 组件内容）
-└── global/installer.js         目标项目安装器
+~/.claude/skills/aisk-setup/ -> global/setup（symlink，一次性手动建立）
+└── SKILL.md                        全局 setup 管理命令（/setup），内部调用 `ai-skills` CLI
 
-~/.claude/skills/aisk-setup/
-└── SKILL.md                    全局 setup 管理命令（/setup）
-
-Target project（由 /setup 管理）
-├── .aisk/installed.json        已安装 unit 状态
-├── .aisk/{unit}/               资源与编译后的脚本
+Target project（由 /setup 或 ai-skills CLI 管理）
+├── .aisk/installed.json            已安装 unit 状态
+├── .aisk/{unit}/scripts/{name}.js  脚本在 add/update 时现场用 `bun build` 打包（处理外部依赖/相对 import）
 ├── .claude/skills/aisk-{unit}-{skill}/SKILL.md
 └── .claude/rules/aisk-{unit}/{rule}.md
 ```
@@ -58,8 +50,8 @@ Target project（由 /setup 管理）
 ## 关键文件
 
 - `scripts/build.ts`：扫描 `units/`，刷新各 `unit.json` 和 `units/units.json`，维护拓扑顺序。
-- `scripts/publish.ts`：发布 unit 到 `~/.aisk/`，编译脚本，安装全局 setup skill，写 `install.log`。
-- `scripts/clean.ts`：读取 `install.log`，精确删除本仓库发布的全局产物。
-- `global/setup/SKILL.md`：全局 setup 管理 skill，安装到 `~/.claude/skills/aisk-setup/`。
-- `global/scripts/installer.ts`：目标项目安装器核心实现。
-- `tests/`：build、publish、installer 基线验证测试。
+- `scripts/build-dist.ts`：编译 `dist/cli.js`，为将来真正 `npm publish` 准备（`package.json` 的 `publishConfig` 占位），日常工作流不涉及。
+- `bin/cli.ts`：`ai-skills` CLI 入口，`aiskHome` 固定为本仓库自身（`bun link` 后 `__dirname` 解析到真实仓库路径）。
+- `global/setup/SKILL.md`：全局 setup 管理 skill，通过 symlink 安装到 `~/.claude/skills/aisk-setup/`。
+- `global/scripts/installer.ts`：安装逻辑核心实现（`ai-skills` CLI 和 `/setup` 共用）。
+- `tests/`：build、installer 基线验证测试。

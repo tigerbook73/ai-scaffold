@@ -2,49 +2,33 @@
 
 ## 是什么
 
-AI Skills 是一个本地 ai-unit 库。它把可复用的 AI 能力组织在 `units/` 中，支持两种安装模式：
+AI Skills 是一个本地 ai-unit 库，仅供本人在本机使用。它把可复用的 AI 能力组织在 `units/` 中，通过 `bun link` 把本仓库注册为全局 `ai-skills` 命令——没有单独的发布步骤，`ai-skills` CLI 和全局 `/setup` skill 都直接读取本仓库的 `units/`，改完 skill/rule/resource 立刻对所有目标项目生效。
 
-- **本地发布模式**：通过 `pnpm register` 发布到 `~/.aisk/`，再由目标项目中的全局 `/setup` 管理命令按需安装、更新或卸载。
-- **npm 包模式**：将本仓库作为 npm 包安装，通过 `ai-skills` CLI 直接管理 unit。
-
-核心理念：能力在本仓库集中维护，发布后进入本机全局仓库（或通过 npm 分发），具体项目只安装自己需要的 unit。
+一个真正的 `npm publish`（安装已发布包而非本仓库 checkout）通过 `package.json` 的 `publishConfig` 占位，但尚未接入实际发布流程，不是日常工作流的一部分。
 
 ## 当前架构
 
 ```text
-Local skill repository
-├── bin/                           # npm CLI 入口（ai-skills 命令）
+Local skill repository（bun link 注册为全局 ai-skills 命令，无发布步骤）
+├── bin/cli.ts                     # ai-skills CLI 入口，bun 直接运行源码
 ├── units/                         # ai-unit 源码
 ├── global/                        # 全局 setup skill 和 installer
-└── scripts/                       # build / publish / clean
+└── scripts/                       # build / build-dist
 
   pnpm build
     -> 刷新 units/*/unit.json
     -> 刷新 units/units.json
     -> 运行 Prettier 格式化
 
-  pnpm build:dist
-    -> 编译 bin/cli.ts → dist/cli.js
-    -> 编译各 unit hook 脚本为 .cjs
+  pnpm build:dist（为将来 npm publish 准备，日常不需要）
+    -> 编译 bin/cli.ts → dist/cli.js（node 可执行，shebang 改写为 node）
 
-  pnpm register
-    -> pnpm build
-    -> 发布到 ~/.aisk/
-    -> 安装全局 Claude Code setup skill
+~/.claude/skills/aisk-setup/ -> global/setup（symlink，一次性手动建立）
+└── SKILL.md                       # 全局 setup 管理命令，内部调用 `ai-skills` CLI
 
-~/.aisk/
-├── config.json                    # 记录本仓库路径和发布时间
-├── install.log                    # 精确记录所有发布产物，用于 clean
-├── units.json                     # unit 拓扑顺序
-├── units/{unit}/                  # 已发布 unit
-└── global/installer.js            # 目标项目安装器
-
-~/.claude/skills/aisk-setup/
-└── SKILL.md                       # 全局 setup 管理命令
-
-Target project
+Target project（由 /setup 或 ai-skills CLI 管理）
 ├── .aisk/installed.json           # 已安装 unit 状态
-├── .aisk/{unit}/                  # 资源与编译后的脚本
+├── .aisk/{unit}/scripts/{name}.js # add/update 时用 `bun build` 现场打包（含外部依赖）
 ├── .claude/skills/aisk-{unit}-{skill}/SKILL.md
 └── .claude/rules/aisk-{unit}/{rule}.md
 ```
@@ -58,7 +42,7 @@ units/{unit}/
 ├── unit.json
 ├── skills/       # 安装到目标项目 .claude/skills/
 ├── rules/        # 安装到目标项目 .claude/rules/
-├── scripts/      # 发布时编译为 JS，安装到目标项目 .aisk/{unit}/scripts/
+├── scripts/      # add/update 时用 bun build 现场打包，安装到目标项目 .aisk/{unit}/scripts/
 └── resources/    # 安装到目标项目 .aisk/{unit}/resources/
 ```
 
@@ -93,10 +77,9 @@ units/{unit}/
 
 | 命令              | 用途                                                                    |
 | ----------------- | ----------------------------------------------------------------------- |
+| `bun link`        | 一次性：注册全局 `ai-skills` 命令，指向本仓库                           |
 | `pnpm build`      | 扫描 `units/`，刷新 `unit.json` 和 `units.json`，并运行 Prettier 格式化 |
-| `pnpm build:dist` | 编译 npm 发布产物（`dist/cli.js` 和 unit hook 脚本）                    |
-| `pnpm register`   | 先 build，再发布到 `~/.aisk/`                                           |
-| `pnpm clean`      | 清理本仓库发布到全局位置的内容                                          |
+| `pnpm build:dist` | 编译 `dist/cli.js`，为将来真正 `npm publish` 准备，日常不需要           |
 | `pnpm format`     | Prettier 格式化                                                         |
 | `pnpm lint:check` | ESLint 检查                                                             |
 | `pnpm lint:fix`   | ESLint 自动修复                                                         |
@@ -107,33 +90,13 @@ units/{unit}/
 单独运行测试文件：
 
 ```bash
-node --import tsx --test --test-concurrency=1 --test-reporter=spec tests/<file>.test.ts
-```
-
-Vitest 测试可直接使用：
-
-```bash
 pnpm exec vitest run tests/build.test.ts
 pnpm exec vitest run units/test-review-gate/scripts/check-reviewed-by-commit-marker.test.ts
 ```
 
-## 发布流程
+## `scripts/build.ts`
 
-### `scripts/build-dist.ts`
-
-`pnpm build:dist` 执行该脚本。
-
-职责：
-
-1. 将 `bin/cli.ts` 编译打包为 `dist/cli.js`（npm CLI 入口）
-2. 将各 unit 的 hook 脚本编译为 `units/{unit}/scripts/{name}.cjs`
-3. 将 `units/units.json` 复制到包根目录的 `units.json`
-
-这些产物随代码提交，使通过 GitHub 安装的 npm 包无需额外构建步骤即可运行。
-
-### `scripts/build.ts`
-
-`pnpm build` 执行该脚本。
+`pnpm build` 执行该脚本。这是本仓库唯一还需要的"发布前"步骤——只在新增/删除/改名 unit 组件文件时才需要重新运行；改动已有文件内容不需要（`ai-skills`/`/setup` 直接读取本仓库源码，改完立刻生效）。
 
 职责：
 
@@ -145,42 +108,24 @@ pnpm exec vitest run units/test-review-gate/scripts/check-reviewed-by-commit-mar
 6. 重写各 unit 的 `unit.json`
 7. 计算全局拓扑顺序并写入 `units/units.json`
 
-### `scripts/publish.ts`
+## `scripts/build-dist.ts`（为将来 npm publish 准备，日常不需要）
 
-`pnpm register` 在 build 后执行该脚本。
-
-职责：
-
-1. 将 `units/{unit}/unit.json` 和组件内容发布到 `~/.aisk/units/{public-name}/`
-2. 将 unit 脚本编译为 CommonJS JS 文件
-3. 将 `units/units.json` 复制到 `~/.aisk/units.json`
-4. 将 `global/scripts/*.ts` 编译或复制到 `~/.aisk/global/`
-5. 将 `global/setup/SKILL.md` 安装到 `~/.claude/skills/aisk-setup/SKILL.md`
-6. 写入 `~/.aisk/config.json`
-
-### `scripts/clean.ts`
-
-`pnpm clean` 执行该脚本。
-
-职责：
-
-1. 校验 `~/.aisk/config.json` 是否由当前仓库发布
-2. 删除 `~/.aisk/` 下的所有内容，但保留 `~/.aisk/` 目录
-3. 删除 `~/.claude/skills/` 下由本仓库发布的 `aisk-*` 全局管理 skill
+`pnpm build:dist` 编译 `bin/cli.ts` → `dist/cli.js` 并把 shebang 从 `bun` 改写为 `node`，对应 `package.json` 里 `publishConfig.bin` 指向的产物。这条路径尚未接入真正的 `npm publish` 流程，仅作占位。
 
 ## 目标项目安装器
 
-全局 `setup` skill 通过 `~/.aisk/global/installer.js` 管理目标项目中的 unit。
+`ai-skills` CLI（`bin/cli.ts`）和全局 `/setup` skill 共用同一套安装逻辑（`global/scripts/installer.ts`）；`/setup` 内部就是调用 `ai-skills <subcommand>` 子进程、把 JSON 输出格式化展示。
 
-| 命令                         | 说明                               |
-| ---------------------------- | ---------------------------------- |
-| `/setup list`                | 列出所有 unit 及安装状态           |
-| `/setup add <units\|all>`    | 添加 unit，已安装则转为 update     |
-| `/setup remove <units\|all>` | 卸载 unit                          |
-| `/setup update <units\|all>` | 更新已安装 unit                    |
-| `/setup refresh`             | 扫描定制状态并清理失效 hook        |
-| `/setup show <unit>`         | 展示 unit 详情与组件状态           |
-| `/setup resolve <units>`     | 输出目标安装状态对应的完整变更计划 |
+| 命令                         | 说明                           |
+| ---------------------------- | ------------------------------ |
+| `/setup list`                | 列出所有 unit 及安装状态       |
+| `/setup add <units\|all>`    | 添加 unit，已安装则转为 update |
+| `/setup remove <units\|all>` | 卸载 unit                      |
+| `/setup update <units\|all>` | 更新已安装 unit                |
+| `/setup refresh`             | 扫描定制状态并清理失效 hook    |
+| `/setup show <unit>`         | 展示 unit 详情与组件状态       |
+
+`ai-skills` CLI 提供等价的 `install`（别名 `add`）/`remove`/`update`/`list`/`show`/`refresh` 子命令，默认输出 JSON，加 `--human` 输出可读文本。
 
 安装路径：
 
@@ -230,41 +175,33 @@ rule、skill、resource 可以通过 `AISK:CUSTOM` 标记声明需要项目定�
 
 ## 关键文件
 
-| 文件或目录                                  | 说明                                   |
-| ------------------------------------------- | -------------------------------------- |
-| `units/`                                    | ai-unit 源码                           |
-| `units/units.json`                          | 全局 unit 拓扑顺序                     |
-| `bin/cli.ts`                                | npm 包 CLI 入口（`ai-skills` 命令）    |
-| `global/setup/SKILL.md`                     | 全局 setup 管理 skill                  |
-| `global/scripts/installer.ts`               | 目标项目安装器核心实现                 |
-| `global/scripts/libs/precommit-lefthook.ts` | lefthook 更新工具                      |
-| `global/scripts/libs/installer-types.ts`    | unit 和 installer 输出类型定义         |
-| `global/scripts/libs/custom-blocks.ts`      | AISK:CUSTOM 块解析工具                 |
-| `scripts/build.ts`                          | unit 扫描与注册表刷新                  |
-| `scripts/build-dist.ts`                     | npm 发布产物编译                       |
-| `scripts/publish.ts`                        | 发布到 `~/.aisk/` 和 Claude 全局 skill |
-| `scripts/clean.ts`                          | 清理全局发布产物（依据 `install.log`） |
-| `tests/`                                    | build、publish、installer 基线测试     |
+| 文件或目录                                  | 说明                                          |
+| ------------------------------------------- | --------------------------------------------- |
+| `units/`                                    | ai-unit 源码                                  |
+| `units/units.json`                          | 全局 unit 拓扑顺序                            |
+| `bin/cli.ts`                                | `ai-skills` CLI 入口（`bun link` 后全局可用） |
+| `global/setup/SKILL.md`                     | 全局 setup 管理 skill                         |
+| `global/scripts/installer.ts`               | 安装逻辑核心实现（CLI 和 `/setup` 共用）      |
+| `global/scripts/libs/precommit-lefthook.ts` | lefthook 更新工具                             |
+| `global/scripts/types/installer-types.ts`   | unit 和 installer 输出类型定义                |
+| `global/scripts/libs/custom-blocks.ts`      | AISK:CUSTOM 块解析工具                        |
+| `scripts/build.ts`                          | unit 扫描与注册表刷新                         |
+| `scripts/build-dist.ts`                     | dist/cli.js 编译（为将来 npm publish 准备）   |
+| `tests/`                                    | build、installer 基线测试                     |
 
 ## 开发检查清单
 
-修改 unit、installer、发布脚本或 gate 规则后，提交前运行：
+修改 unit、installer 或 gate 规则后，提交前运行：
 
 ```bash
 pnpm verify
 ```
 
-`pnpm verify` 依次执行：`build` → `build:dist` → `typecheck` → `lint` → `format` → `test`。
+`pnpm verify` 依次执行：`build` → `build:dist` → `typecheck` → `lint` → `format` → `test`（`build:dist` 只是为了让尚未启用的 npm publish 路径保持可编译，不影响日常使用）。
 
 如果只修改构建扫描逻辑，可先跑聚焦测试：
 
 ```bash
 pnpm exec vitest run tests/build.test.ts
 pnpm build
-```
-
-修改 `bin/cli.ts` 或 unit hook 脚本后，还需确保 dist 产物同步：
-
-```bash
-pnpm build:dist
 ```

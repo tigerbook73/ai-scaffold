@@ -1,9 +1,11 @@
 /**
- * Runtime installer for published aisk units.
+ * Runtime installer for aisk units.
  *
- * This file is bundled into ~/.aisk/global/installer.js and then invoked from
- * installed skills. It manages project-local generated files, hook registration,
- * dependency resolution, and preservation of AISK:CUSTOM blocks during updates.
+ * Invoked via the `ai-skills` CLI (bin/cli.ts), which passes the package root
+ * (wherever this repo is `bun link`ed or installed from) as aiskHome — there is
+ * no separate global publish step. It manages project-local generated files,
+ * hook registration, dependency resolution, and preservation of AISK:CUSTOM
+ * blocks during updates.
  */
 import {
   cpSync,
@@ -16,8 +18,7 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join, relative } from "path";
-import { homedir } from "os";
-import { cac } from "cac";
+import { execFileSync } from "child_process";
 import { mergeCustomContent, parseCustomBlocks } from "./libs/custom-blocks";
 import { addPreCommitHook, removePreCommitHook } from "./libs/precommit-lefthook";
 import type {
@@ -46,7 +47,7 @@ export type { ResolveResult, AddResult, RemoveResult, UpdateResult, RefreshResul
  * for a given project directory.
  */
 export class Installer {
-  /** Absolute path to the global aisk home directory (~/.aisk by default). */
+  /** Absolute path to the package root that units/ is read from (the ai-skills package itself). */
   readonly aiskHome: string;
   /** Absolute path to the target project directory. */
   readonly cwd: string;
@@ -55,10 +56,10 @@ export class Installer {
 
   /**
    * @param cwd      Project root to install units into (defaults to process.cwd()).
-   * @param aiskHome Global aisk home directory (defaults to ~/.aisk).
+   * @param aiskHome Package root to read units/ from (the ai-skills package's own directory).
    * @param human    When true, output human-readable text instead of JSON.
    */
-  constructor(cwd = process.cwd(), aiskHome = join(homedir(), ".aisk"), human = false) {
+  constructor(cwd: string, aiskHome: string, human = false) {
     this.cwd = cwd;
     this.aiskHome = aiskHome;
     this.human = human;
@@ -311,7 +312,7 @@ export class Installer {
   show(unitName: string): void {
     const unitJson = this.readUnitJson(unitName);
     if (!unitJson) {
-      console.error(`Error: unit "${unitName}" not found in ~/.aisk/units/`);
+      console.error(`Error: unit "${unitName}" not found in units/`);
       process.exit(1);
     }
 
@@ -682,21 +683,29 @@ export class Installer {
   }
 
   /**
-   * Copy a compiled script to .aisk/{unit}/scripts/ and register its hook.
+   * Bundle a unit script (source .ts, plus any local imports/deps such as
+   * ./libs or npm packages) into a single file at .aisk/{unit}/scripts/{name}.js
+   * and register its hook.
+   *
+   * Bundling happens here rather than at a separate publish step — there is no
+   * global publish step anymore, units are read directly from aiskHome (the
+   * linked/installed ai-skills package). Bundling is still required (not a
+   * plain copy) because scripts may import npm dependencies (e.g. `cac`) or
+   * sibling source files that would not resolve once copied out of the package.
    */
   private installScript(unitName: string, spec: ScriptSpec): InstalledComponent {
-    const srcJs = join(this.aiskHome, "units", unitName, "scripts", `${spec.name}.cjs`);
-    if (!existsSync(srcJs)) throw new Error(`compiled script not found: ${srcJs}`);
+    const entry = join(this.aiskHome, "units", unitName, spec.file);
+    if (!existsSync(entry)) throw new Error(`script source not found: ${entry}`);
 
     const destDir = join(this.cwd, ".aisk", unitName, "scripts");
     mkdirSync(destDir, { recursive: true });
-    const destFile = join(destDir, `${spec.name}.cjs`);
-    cpSync(srcJs, destFile);
+    const destFile = join(destDir, `${spec.name}.js`);
+    execFileSync("bun", ["build", entry, "--outfile", destFile, "--target", "node"]);
 
-    const relPath = join(".aisk", unitName, "scripts", `${spec.name}.cjs`);
+    const relPath = join(".aisk", unitName, "scripts", `${spec.name}.js`);
     if (spec.hook) {
       const paramStr = (spec.params ?? []).map((p) => `{${p}}`).join(" ");
-      const runCmd = paramStr ? `node ${relPath} ${paramStr}` : `node ${relPath}`;
+      const runCmd = paramStr ? `bun ${relPath} ${paramStr}` : `bun ${relPath}`;
       addPreCommitHook(this.cwd, `aisk-${unitName}-${spec.name}`, runCmd);
     }
 
@@ -759,7 +768,7 @@ export class Installer {
       for (const name of names) {
         const unitJson = this.readUnitJson(name);
         if (!unitJson) {
-          console.error(`Error: unit "${name}" not found in ~/.aisk/units/`);
+          console.error(`Error: unit "${name}" not found in units/`);
           process.exit(1);
         }
         for (const dep of unitJson.dependencies) {
@@ -958,7 +967,7 @@ export class Installer {
     writeFileSync(installedPath, JSON.stringify(data, null, 2) + "\n");
   }
 
-  /** Read one published unit definition from ~/.aisk/units. */
+  /** Read one unit definition from aiskHome/units. */
   private readUnitJson(unitName: string): UnitJson | null {
     const path = join(this.aiskHome, "units", unitName, "unit.json");
     if (!existsSync(path)) return null;
@@ -992,9 +1001,9 @@ export class Installer {
       .filter((u): u is NonNullable<typeof u> => u !== null);
   }
 
-  /** Read the registry order produced by build.ts and published to ~/.aisk/units.json. */
+  /** Read the registry order produced by build.ts at units/units.json. */
   private readGlobalOrder(): string[] {
-    const orderPath = join(this.aiskHome, "units.json");
+    const orderPath = join(this.aiskHome, "units", "units.json");
     if (!existsSync(orderPath)) return [];
     return JSON.parse(readFileSync(orderPath, "utf8")) as string[];
   }
@@ -1129,61 +1138,4 @@ export class Installer {
       process.stdout.write("Nothing to change.\n");
     }
   }
-}
-
-// ─── CLI ─────────────────────────────────────────────────────────────────────
-
-if (require.main === module) {
-  const cli = cac("installer");
-
-  cli.option("--human", "Output in human-readable text format instead of JSON");
-
-  cli
-    .command("list", "List all available units with install and customization status")
-    .action((options: { human?: boolean }) =>
-      new Installer(undefined, undefined, options.human).list(),
-    );
-
-  cli
-    .command("add [...units]", 'Install units; use "all" to install all available units')
-    .action((units: string[], options: { human?: boolean }) =>
-      new Installer(undefined, undefined, options.human).add(units ?? []),
-    );
-
-  cli
-    .command("remove [...units]", 'Uninstall units; use "all" to remove all installed units')
-    .action((units: string[], options: { human?: boolean }) =>
-      new Installer(undefined, undefined, options.human).remove(units ?? []),
-    );
-
-  cli
-    .command("update [...units]", 'Update installed units; use "all" to update all')
-    .action((units: string[], options: { human?: boolean }) =>
-      new Installer(undefined, undefined, options.human).update(units ?? []),
-    );
-
-  cli
-    .command("refresh", "Sync customStatus from disk, output TODO list, clean orphaned hooks")
-    .option("--silent", "Suppress output (used for internal pre-operation refresh)")
-    .action((options: { silent?: boolean; human?: boolean }) =>
-      new Installer(undefined, undefined, options.human).refresh(options.silent ?? false),
-    );
-
-  cli
-    .command("show <unit>", "Show unit details and component status")
-    .action((unit: string, options: { human?: boolean }) =>
-      new Installer(undefined, undefined, options.human).show(unit),
-    );
-
-  cli
-    .command(
-      "resolve [...units]",
-      "Resolve transitive deps and output changeset; no args means uninstall all",
-    )
-    .action((units: string[], options: { human?: boolean }) =>
-      new Installer(undefined, undefined, options.human).resolve(units ?? []),
-    );
-
-  cli.help();
-  cli.parse();
 }

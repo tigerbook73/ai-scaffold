@@ -11,13 +11,10 @@ import { join, resolve } from "node:path";
 import { describe, expect, test } from "vitest";
 
 const scriptPath = resolve("units/test-review-gate/scripts/check-test-cases-match-it.ts");
-const tsxLoader = require.resolve("tsx");
 const testSuiteTag = `@test-${"suite"}`;
 
 function runCheck(cwd: string, files: string[] = []) {
-  return spawnSync(process.execPath, ["--import", tsxLoader, scriptPath, ...files], {
-    cwd,
-  });
+  return spawnSync("bun", [scriptPath, ...files], { cwd });
 }
 
 /**
