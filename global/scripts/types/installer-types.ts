@@ -13,8 +13,6 @@ export interface UnitSkillEntry {
   hasCustom?: boolean;
   /** If set, the component is optional. */
   condition?: string;
-  /** If true, this component is copied into the project even without hasCustom (e.g. must run per-project). */
-  localCopy?: true;
 }
 
 /** A rule entry as declared in unit.json components.rules[]. */
@@ -35,8 +33,6 @@ export interface UnitScriptEntry {
   hook?: string;
   /** lefthook template variables to append as CLI args, e.g. ["staged_files"] → {staged_files} */
   params?: string[];
-  /** If true, bundle this script into the project instead of pointing hooks at the global symlink copy. */
-  localCopy?: true;
 }
 
 /** A resource entry as declared in unit.json components.resources[]. */
@@ -45,8 +41,6 @@ export interface UnitResourceEntry {
   file: string;
   hasCustom?: boolean;
   condition?: string;
-  /** If true, this component is copied into the project even without hasCustom. */
-  localCopy?: true;
 }
 
 /** Parsed structure of units/{unit}/unit.json. */
@@ -63,7 +57,7 @@ export interface UnitJson {
   };
 }
 
-// ─── installed.json ───────────────────────────────────────────────────────────
+// ─── installed.json (local units only) ─────────────────────────────────────────
 
 /** A single installed component, identified by name with its project-relative file path. */
 export interface InstalledComponent {
@@ -75,7 +69,7 @@ export interface InstalledComponent {
   customStatus?: "todo" | "done";
 }
 
-/** Installation record for a single unit, written into .aisk/installed.json. */
+/** Installation record for a single local unit, written into .aisk/installed.json. */
 export interface InstalledEntry {
   installedAt: string;
   /** Every installed file, grouped by component type and keyed by component name. */
@@ -87,7 +81,7 @@ export interface InstalledEntry {
   };
 }
 
-/** Shape of .aisk/installed.json — tracks all installed units in the project. */
+/** Shape of .aisk/installed.json — tracks all installed local units in the project. */
 export interface InstalledJson {
   units: Record<string, InstalledEntry>;
 }
@@ -107,10 +101,10 @@ export interface ComponentOpResult {
   optional?: boolean;
 }
 
-/** Result for a single unit in a batch add/update operation. */
+/** Result for a single unit in a batch init/update operation. */
 export interface UnitOpResult {
   name: string;
-  /** True if this unit was auto-added as a transitive dependency. */
+  /** True if this unit was auto-installed as a transitive (local-to-local) dependency. */
   autoDep?: boolean;
   components: ComponentOpResult[];
 }
@@ -121,8 +115,8 @@ export interface FailedUnit {
   reason: string;
 }
 
-/** Output of the add command. */
-export interface AddResult {
+/** Output of the init command. */
+export interface InitResult {
   added: UnitOpResult[];
   updated: UnitOpResult[];
   failed: FailedUnit[];
@@ -151,18 +145,16 @@ export interface RefreshResult {
   todo: RefreshTodoUnit[];
 }
 
-/** A component entry in the show command output. */
+/** A component entry in the show command output. Scope is unit-level (see ShowResult), not per-component. */
 export interface ShowComponentResult {
   type: "skill" | "rule" | "script" | "resource";
   name: string;
   optional: boolean;
   condition?: string;
-  /** "global": served by the sync-global symlink; "local": copied into the project (hasCustom/localCopy). */
-  scope: "global" | "local";
-  /** Present only for local, hasCustom components. */
+  /** Present only for local units' hasCustom components. */
   customStatus?: "todo" | "done";
   hook?: string;
-  /** For scope "global": whether the sync-global symlink exists on disk. For "local": whether the project file exists. */
+  /** Global unit: whether the registered symlink exists on disk. Local unit: whether the project file exists. */
   installed: boolean;
 }
 
@@ -171,10 +163,10 @@ export interface ShowResult {
   name: string;
   description: string;
   dependencies: string[];
+  /** "global": managed only via register/unregister. "local": managed via init/update/remove per project. */
+  scope: "global" | "local";
+  /** Global unit: whether it's in the registry record. Local unit: whether it's installed in this project. */
   installed: boolean;
-  /** True if the unit is temporarily disabled (declares rules components). */
-  disabled: boolean;
-  disabledReason?: string;
   components: ShowComponentResult[];
 }
 
@@ -182,29 +174,11 @@ export interface ShowResult {
 export interface ListUnit {
   name: string;
   description: string;
+  scope: "global" | "local";
+  /** Global unit: whether it's in the registry record. Local unit: whether it's installed in this project. */
   installed: boolean;
-  /** True if any installed component has customStatus "todo". */
+  /** True if any installed component has customStatus "todo" (local units only). */
   hasTodo?: boolean;
-}
-
-// ─── sync-global command output ───────────────────────────────────────────────
-
-/** A single global skill directory that was created/verified by sync-global. */
-export interface SyncGlobalLinkResult {
-  unit: string;
-  skill: string;
-  /** Absolute path of the skill directory under ~/.claude/skills. */
-  path: string;
-}
-
-/** Output of the sync-global command. */
-export interface SyncGlobalResult {
-  /** Skill directories linked (created or already up to date), including aisk-setup. */
-  linked: SyncGlobalLinkResult[];
-  /** Stale managed (aisk-*) entries removed because their unit/skill is gone or disabled. */
-  removedStale: string[];
-  /** Unit names skipped because they are disabled (declare rules components). */
-  skippedDisabled: string[];
 }
 
 /** Output of the list command. */
@@ -212,23 +186,36 @@ export interface ListResult {
   units: ListUnit[];
 }
 
-// ─── resolve command output ───────────────────────────────────────────────────
+// ─── register/unregister command output (global units) ────────────────────────
 
-/**
- * Full changeset returned by `installer resolve`.
- * Computed from the desired state (selected unit names) vs. the current installed state.
- */
-export interface ResolveResult {
-  /** Currently installed units that are not in the desired state and will be removed. */
-  to_remove: string[];
-  /** Units that need to be freshly installed (from selected list + auto-added deps). */
-  to_install: string[];
-  /** Units in the selected list that are already installed and will be updated. */
-  to_update: string[];
-  /** Topologically sorted install order for to_install ∪ to_update. */
-  order: string[];
-  /** Transitive dependencies that were automatically added to to_install. */
-  auto: string[];
+/** One symlinked directory under ~/.claude/skills, tracked so unregister can wipe it deterministically. */
+export interface RegistryEntry {
+  /** "setup" for the fixed aisk-setup entry. */
+  unit: string;
+  /** Absent for the aisk-setup entry. */
+  skill?: string;
+  /** Absolute path of the aisk-* directory under globalSkillsDir. */
+  dir: string;
+}
+
+/** Persisted at {globalSkillsDir}/.aisk-registry.json — the source of truth for what register() must clean up. */
+export interface RegistryJson {
+  registeredAt: string;
+  entries: RegistryEntry[];
+}
+
+/** Output of the register command. */
+export interface RegisterResult {
+  registered: RegistryEntry[];
+  /** Entries removed before rebuilding, read from the previous registry record (not a naming-prefix scan). */
+  unregisteredPrevious: RegistryEntry[];
+  /** Local unit names skipped — they have no global presence. */
+  skippedLocal: string[];
+}
+
+/** Output of the unregister command (whole-registry wipe only, no per-unit granularity). */
+export interface UnregisterResult {
+  removed: RegistryEntry[];
 }
 
 // ─── internal component specs (installer-only) ───────────────────────────────

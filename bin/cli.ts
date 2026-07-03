@@ -6,56 +6,70 @@ import { Installer } from "../global/scripts/installer";
 /** Package root — used as aiskHome so Installer reads units directly from the linked/installed package. */
 const pkgRoot = resolve(__dirname, "..");
 
-function installer(human: boolean): Installer {
-  return new Installer(process.cwd(), pkgRoot, human);
+function installer(json: boolean): Installer {
+  return new Installer(process.cwd(), pkgRoot, json);
 }
 
 const cli = cac("ai-skills");
 
-cli.option("--human", "Output in human-readable text format instead of JSON");
+cli.option("--json", "Output JSON instead of the default human-readable text");
+
+// ─── Global units (machine-wide, no project scoping) ──────────────────────────
 
 cli
-  .command("install [...units]", "Install units into the current project")
-  .alias("add")
-  .example("  ai-skills install quick-ship")
-  .example("  ai-skills install quick-ship staged-plan")
-  .example("  ai-skills install all")
-  .action((units: string[], options: { human?: boolean }) => installer(!!options.human).add(units));
+  .command("register", "Symlink aisk-setup and all global units' skills into ~/.claude/skills")
+  .example("  ai-skills register")
+  .action((options: { json?: boolean }) => installer(!!options.json).register());
 
 cli
-  .command("remove [...units]", "Remove installed units from the current project")
-  .example("  ai-skills remove quick-ship")
-  .action((units: string[], options: { human?: boolean }) =>
-    installer(!!options.human).remove(units),
+  .command("unregister", "Remove everything ever registered under ~/.claude/skills")
+  .example("  ai-skills unregister")
+  .action((options: { json?: boolean }) => installer(!!options.json).unregister());
+
+// ─── Local units (project-scoped) ──────────────────────────────────────────────
+
+cli
+  .command("init [...units]", "Install local units into the current project")
+  .example("  ai-skills init test-review-gate")
+  .example("  ai-skills init test-review-gate ui-coverage")
+  .example("  ai-skills init all")
+  .action((units: string[], options: { json?: boolean }) => installer(!!options.json).init(units));
+
+cli
+  .command("remove [...units]", "Remove installed local units from the current project")
+  .example("  ai-skills remove test-review-gate")
+  .action((units: string[], options: { json?: boolean }) =>
+    installer(!!options.json).remove(units),
   );
 
 cli
-  .command("update [...units]", "Update installed units (all if none specified)")
+  .command("update [...units]", "Update installed local units (all if none specified)")
   .example("  ai-skills update")
-  .example("  ai-skills update quick-ship")
-  .action((units: string[], options: { human?: boolean }) =>
-    installer(!!options.human).update(units.length ? units : ["all"]),
+  .example("  ai-skills update test-review-gate")
+  .action((units: string[], options: { json?: boolean }) =>
+    installer(!!options.json).update(units.length ? units : ["all"]),
   );
 
+// ─── Read-only, dual scope (global + local) ────────────────────────────────────
+
 cli
-  .command("list", "List available units and their install status")
-  .action((options: { human?: boolean }) => installer(!!options.human).list());
+  .command("list", "List all units (global + local) and their status")
+  .option("--scope <scope>", "Filter: global | local | all", { default: "all" })
+  .action((options: { json?: boolean; scope?: "global" | "local" | "all" }) =>
+    installer(!!options.json).list(options.scope ?? "all"),
+  );
 
 cli
   .command("show <unit>", "Show details for a unit")
   .example("  ai-skills show staged-plan")
-  .action((unit: string, options: { human?: boolean }) => installer(!!options.human).show(unit));
+  .action((unit: string, options: { json?: boolean }) => installer(!!options.json).show(unit));
 
 cli
-  .command("refresh", "Sync customStatus from disk, output TODO list, clean orphaned hooks")
+  .command("refresh", "Sync local customStatus from disk, output TODO list, clean orphaned hooks")
   .option("--silent", "Suppress output (used for internal pre-operation refresh)")
-  .action((options: { silent?: boolean; human?: boolean }) =>
-    installer(!!options.human).refresh(options.silent ?? false),
+  .action((options: { silent?: boolean; json?: boolean }) =>
+    installer(!!options.json).refresh(options.silent ?? false),
   );
-
-cli
-  .command("sync-global", "Symlink aisk-setup and all enabled units' skills into ~/.claude/skills")
-  .action((options: { human?: boolean }) => installer(!!options.human).syncGlobal());
 
 cli.help();
 cli.parse();

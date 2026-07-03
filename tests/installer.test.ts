@@ -1,10 +1,11 @@
 /**
  * @test-file   installer
- * @description Verifies the Installer class handles list, resolve (ResolveResult), add, remove,
- *              update (with AISK:CUSTOM merge), refresh, show, optional components, disabled
- *              (rules) units, sync-global symlink management, and lefthook.yml idempotent updates.
+ * @description Verifies the Installer class handles list, show, register/unregister (global
+ *              units), init/update/remove (local units, with AISK:CUSTOM merge), refresh,
+ *              global/local classification, global naming collapse, local-to-local dependency
+ *              auto-install, and lefthook.yml idempotent updates.
  * @ai-generated
- * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [2]
+ * @reviewed-by (!HUMAN EDIT ONLY): Shengtian Liao @ [3]
  */
 import {
   existsSync,
@@ -21,7 +22,7 @@ import { tmpdir } from "node:os";
 import { describe, expect, test } from "bun:test";
 
 import { Installer } from "../global/scripts/installer";
-import type { ResolveResult, SyncGlobalResult } from "../global/scripts/types/installer-types";
+import type { RegisterResult } from "../global/scripts/types/installer-types";
 
 function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), "aisk-installer-"));
@@ -32,17 +33,22 @@ function globalSkillsDirFor(tmpDir: string): string {
   return join(tmpDir, "global-skills");
 }
 
-/** Builds an Installer wired to an isolated globalSkillsDir so tests never write to the real home dir. */
+/** Builds an Installer wired to an isolated globalSkillsDir. json defaults true (structured assertions). */
 function newInstaller(
   tmpDir: string,
   projectDir: string,
   aiskHome: string,
-  human = false,
+  json = true,
 ): Installer {
-  return new Installer(projectDir, aiskHome, human, globalSkillsDirFor(tmpDir));
+  return new Installer(projectDir, aiskHome, json, globalSkillsDirFor(tmpDir));
 }
 
-/** Creates a minimal fake aiskHome (package root) tree for testing, returns its path. */
+/**
+ * Creates a minimal fake aiskHome (package root) tree for testing: a global unit "poc"
+ * (skill name equals unit name, so it collapses to aisk-poc under the naming rule; a plain
+ * script with no hook so it stays global) depending on global unit "poc-dep", plus
+ * global/setup for the aisk-setup symlink target.
+ */
 function makeFakeAiskHome(tmpDir: string): string {
   const aiskHome = join(tmpDir, ".aisk");
   mkdirSync(aiskHome, { recursive: true });
@@ -62,7 +68,7 @@ function makeFakeAiskHome(tmpDir: string): string {
       dependencies: ["poc-dep"],
       components: {
         skills: [{ name: "poc", file: "skills/poc.md" }],
-        scripts: [{ name: "poc-hook", file: "scripts/poc-hook.ts", hook: "pre-commit" }],
+        scripts: [{ name: "poc-hook", file: "scripts/poc-hook.ts" }],
         resources: [{ name: "readme", file: "resources/readme.md" }],
       },
     }),
@@ -80,45 +86,101 @@ function makeFakeAiskHome(tmpDir: string): string {
     }),
   );
 
-  // Pre-computed global order (dep before dependent, alphabetical within same depth)
   writeFileSync(
     join(aiskHome, "units", "units.json"),
     JSON.stringify(["poc-dep", "poc"], null, 2) + "\n",
   );
 
-  // global/setup — the fixed symlink target for `ai-skills sync-global`.
   mkdirSync(join(aiskHome, "global", "setup"), { recursive: true });
   writeFileSync(join(aiskHome, "global", "setup", "SKILL.md"), "# setup\nSetup skill content");
 
   return aiskHome;
 }
 
-/**
- * Adds a disabled (rules-declaring) unit to the fake aiskHome, returns its name.
- * Also appends it to units.json — the precomputed global order build.ts produces,
- * which (like the real registry) still lists disabled units by name.
- */
-function addDisabledUnit(aiskHome: string, name = "poc-rules"): string {
-  const unitDir = join(aiskHome, "units", name);
-  mkdirSync(unitDir, { recursive: true });
-  writeFileSync(
-    join(unitDir, "unit.json"),
-    JSON.stringify({
-      name,
-      description: "PoC unit with rules (disabled)",
-      dependencies: [],
-      components: {
-        skills: [{ name, file: "skills/poc-rules.md" }],
-        rules: [{ name: `${name}-rule`, file: "rules/poc-rules-rule.md" }],
-      },
-    }),
-  );
-
+/** Appends a unit name to the fake registry order (units.json), matching build.ts's real output. */
+function appendToOrder(aiskHome: string, name: string): void {
   const orderPath = join(aiskHome, "units", "units.json");
   const order = JSON.parse(readFileSync(orderPath, "utf8")) as string[];
   writeFileSync(orderPath, JSON.stringify([...order, name], null, 2) + "\n");
+}
 
+/**
+ * Adds a local unit to the fake aiskHome. By default it's local via a hook script;
+ * pass `hook: false` with `rules: true` or `hasCustomResource: true` to test the other
+ * two local-classification triggers in isolation.
+ */
+function addLocalUnit(
+  aiskHome: string,
+  opts: {
+    name: string;
+    dependencies?: string[];
+    hook?: boolean;
+    rules?: boolean;
+    hasCustomResource?: boolean;
+  },
+): string {
+  const { name, dependencies = [], hook = true, rules = false, hasCustomResource = false } = opts;
+  const unitDir = join(aiskHome, "units", name);
+  mkdirSync(join(unitDir, "skills"), { recursive: true });
+  mkdirSync(join(unitDir, "scripts"), { recursive: true });
+  mkdirSync(join(unitDir, "resources"), { recursive: true });
+  writeFileSync(join(unitDir, "skills", `${name}.md`), `# ${name}\n${name} skill content`);
+  writeFileSync(join(unitDir, "scripts", `${name}-script.ts`), 'console.log("script");');
+  writeFileSync(
+    join(unitDir, "resources", "readme.md"),
+    hasCustomResource
+      ? '# AISK:CUSTOM name="paths" status="todo" hint="fill in"\n# AISK:CUSTOM:END\n'
+      : "readme content",
+  );
+
+  const scriptEntry: Record<string, unknown> = {
+    name: `${name}-script`,
+    file: `scripts/${name}-script.ts`,
+  };
+  if (hook) scriptEntry.hook = "pre-commit";
+
+  const resourceEntry: Record<string, unknown> = { name: "readme", file: "resources/readme.md" };
+  if (hasCustomResource) resourceEntry.hasCustom = true;
+
+  const components: Record<string, unknown> = {
+    skills: [{ name, file: `skills/${name}.md` }],
+    scripts: [scriptEntry],
+    resources: [resourceEntry],
+  };
+  if (rules) {
+    mkdirSync(join(unitDir, "rules"), { recursive: true });
+    writeFileSync(join(unitDir, "rules", `${name}-rule.md`), "rule body");
+    components.rules = [{ name: `${name}-rule`, file: `rules/${name}-rule.md` }];
+  }
+
+  writeFileSync(
+    join(unitDir, "unit.json"),
+    JSON.stringify({ name, description: `${name} unit`, dependencies, components }),
+  );
+
+  appendToOrder(aiskHome, name);
   return name;
+}
+
+/** Adds a minimal global unit with a skill name that differs from the unit name (no naming collapse). */
+function addGlobalUnitWithDifferentSkillName(
+  aiskHome: string,
+  unitName: string,
+  skillName: string,
+): void {
+  const unitDir = join(aiskHome, "units", unitName);
+  mkdirSync(join(unitDir, "skills"), { recursive: true });
+  writeFileSync(join(unitDir, "skills", `${skillName}.md`), `# ${skillName}\n${skillName} content`);
+  writeFileSync(
+    join(unitDir, "unit.json"),
+    JSON.stringify({
+      name: unitName,
+      description: `${unitName} unit`,
+      dependencies: [],
+      components: { skills: [{ name: skillName, file: `skills/${skillName}.md` }] },
+    }),
+  );
+  appendToOrder(aiskHome, unitName);
 }
 
 function captureStdout(fn: () => void): string {
@@ -141,126 +203,98 @@ function captureStdout(fn: () => void): string {
  * @target      Installer.list()
  * @strategy    unit; fake aiskHome tree
  * @cases
- *   - [PASS] lists all units with installed=false when nothing installed
- *   - [PASS] marks unit as installed=true when present in installed.json
- *   - [PASS] sets hasTodo=true when a component has customStatus=todo
- *   - [PASS] excludes disabled (rules-declaring) units by default
+ *   - [PASS] lists global and local units together by default, tagged with scope
+ *   - [PASS] --scope filters to only global or only local
+ *   - [PASS] global unit installed reflects the registry record, not the project
+ *   - [PASS] local unit installed reflects .aisk/installed.json, hasTodo when customStatus=todo
  */
 describe("list", () => {
-  test("lists all units with installed=false when nothing installed", () => {
+  test("lists global and local units together by default, tagged with scope", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
 
-      const installer = newInstaller(dir, projectDir, aiskHome);
-      const result = JSON.parse(captureStdout(() => installer.list())) as {
-        units: Array<{ name: string; description: string; installed: boolean }>;
-      };
+      const result = JSON.parse(
+        captureStdout(() => newInstaller(dir, projectDir, aiskHome).list()),
+      ) as { units: Array<{ name: string; scope: string }> };
 
-      expect(result.units.length).toBe(2);
-      expect(result.units.every((u) => u.installed === false)).toBe(true);
-      expect(result.units.some((u) => u.name === "poc" && u.description === "PoC unit")).toBe(true);
-      expect(result.units.some((u) => u.name === "poc-dep")).toBe(true);
+      expect(result.units.find((u) => u.name === "poc")?.scope).toBe("global");
+      expect(result.units.find((u) => u.name === "poc-dep")?.scope).toBe("global");
+      expect(result.units.find((u) => u.name === "loc")?.scope).toBe("local");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test("marks unit as installed=true when present in installed.json", () => {
+  test("--scope filters to only global or only local", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(join(projectDir, ".aisk"), { recursive: true });
-      writeFileSync(
-        join(projectDir, ".aisk", "installed.json"),
-        JSON.stringify({
-          units: {
-            poc: {
-              installedAt: "2026-01-01",
-              components: { skills: [], rules: [], scripts: [], resources: [] },
-            },
-          },
-        }),
-      );
-
-      const installer = newInstaller(dir, projectDir, aiskHome);
-      const result = JSON.parse(captureStdout(() => installer.list())) as {
-        units: Array<{ name: string; installed: boolean }>;
-      };
-
-      const pocUnit = result.units.find((u) => u.name === "poc");
-      const depUnit = result.units.find((u) => u.name === "poc-dep");
-      expect(pocUnit?.installed).toBe(true);
-      expect(depUnit?.installed).toBe(false);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("sets hasTodo=true when a component has customStatus=todo", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(join(projectDir, ".aisk"), { recursive: true });
-      const skillPath = join(projectDir, ".claude", "skills", "aisk-poc-poc");
-      mkdirSync(skillPath, { recursive: true });
-      writeFileSync(
-        join(skillPath, "SKILL.md"),
-        '# AISK:CUSTOM name="paths" status="todo" hint="scan test files"\n# AISK:CUSTOM:END\n',
-      );
-      writeFileSync(
-        join(projectDir, ".aisk", "installed.json"),
-        JSON.stringify({
-          units: {
-            poc: {
-              installedAt: "2026-01-01",
-              components: {
-                skills: [
-                  {
-                    name: "poc",
-                    path: ".claude/skills/aisk-poc-poc/SKILL.md",
-                    customStatus: "todo",
-                  },
-                ],
-                rules: [],
-                scripts: [],
-                resources: [],
-              },
-            },
-          },
-        }),
-      );
-
-      const installer = newInstaller(dir, projectDir, aiskHome);
-      const result = JSON.parse(captureStdout(() => installer.list())) as {
-        units: Array<{ name: string; hasTodo?: boolean }>;
-      };
-
-      const pocUnit = result.units.find((u) => u.name === "poc");
-      expect(pocUnit?.hasTodo).toBe(true);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("excludes disabled (rules-declaring) units by default", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      addDisabledUnit(aiskHome);
+      addLocalUnit(aiskHome, { name: "loc" });
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
-
       const installer = newInstaller(dir, projectDir, aiskHome);
-      const result = JSON.parse(captureStdout(() => installer.list())) as {
+
+      const globalOnly = JSON.parse(captureStdout(() => installer.list("global"))) as {
         units: Array<{ name: string }>;
       };
+      expect(globalOnly.units.some((u) => u.name === "loc")).toBe(false);
+      expect(globalOnly.units.some((u) => u.name === "poc")).toBe(true);
 
-      expect(result.units.some((u) => u.name === "poc-rules")).toBe(false);
+      const localOnly = JSON.parse(captureStdout(() => installer.list("local"))) as {
+        units: Array<{ name: string }>;
+      };
+      expect(localOnly.units.some((u) => u.name === "poc")).toBe(false);
+      expect(localOnly.units.some((u) => u.name === "loc")).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("global unit installed reflects the registry record, not the project", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      const installer = newInstaller(dir, projectDir, aiskHome);
+
+      const before = JSON.parse(captureStdout(() => installer.list("global"))) as {
+        units: Array<{ name: string; installed: boolean }>;
+      };
+      expect(before.units.find((u) => u.name === "poc")?.installed).toBe(false);
+
+      installer.register();
+
+      const after = JSON.parse(captureStdout(() => installer.list("global"))) as {
+        units: Array<{ name: string; installed: boolean }>;
+      };
+      expect(after.units.find((u) => u.name === "poc")?.installed).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("local unit installed reflects .aisk/installed.json, hasTodo when customStatus=todo", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc", hasCustomResource: true, hook: false });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      const installer = newInstaller(dir, projectDir, aiskHome);
+
+      installer.init(["loc"]);
+
+      const result = JSON.parse(captureStdout(() => installer.list("local"))) as {
+        units: Array<{ name: string; installed: boolean; hasTodo?: boolean }>;
+      };
+      const loc = result.units.find((u) => u.name === "loc");
+      expect(loc?.installed).toBe(true);
+      expect(loc?.hasTodo).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -268,96 +302,63 @@ describe("list", () => {
 });
 
 /**
- * @test-suite  resolve
- * @target      Installer.resolve()
+ * @test-suite  show
+ * @target      Installer.show()
  * @strategy    unit; fake aiskHome tree
  * @cases
- *   - [PASS] returns full ResolveResult with dep in to_install and auto when nothing installed
- *   - [PASS] dep already installed → dep in auto but not to_install, poc in to_install
- *   - [PASS] installed unit not in desired state → appears in to_remove
+ *   - [PASS] global unit: scope "global", installed from registry, component installed from disk symlink
+ *   - [PASS] local unit: scope "local", installed from .aisk/installed.json, component customStatus
  */
-describe("resolve", () => {
-  test("returns full ResolveResult with dep in to_install and auto when nothing installed", () => {
+describe("show", () => {
+  test("global unit: scope global, installed from registry, component installed from disk symlink", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
-
       const installer = newInstaller(dir, projectDir, aiskHome);
-      const result = JSON.parse(captureStdout(() => installer.resolve(["poc"]))) as ResolveResult;
 
-      expect(result.to_remove).toEqual([]);
-      expect(result.to_install).toEqual(["poc-dep", "poc"]);
-      expect(result.to_update).toEqual([]);
-      expect(result.auto).toEqual(["poc-dep"]);
-      expect(result.order).toEqual(["poc-dep", "poc"]);
+      const before = JSON.parse(captureStdout(() => installer.show("poc"))) as {
+        scope: string;
+        installed: boolean;
+        components: Array<{ name: string; installed: boolean }>;
+      };
+      expect(before.scope).toBe("global");
+      expect(before.installed).toBe(false);
+      expect(before.components.find((c) => c.name === "poc")?.installed).toBe(false);
+
+      installer.register();
+
+      const after = JSON.parse(captureStdout(() => installer.show("poc"))) as {
+        installed: boolean;
+        components: Array<{ name: string; installed: boolean }>;
+      };
+      expect(after.installed).toBe(true);
+      expect(after.components.find((c) => c.name === "poc")?.installed).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test("dep already installed → dep in auto but not to_install, poc in to_install", () => {
+  test("local unit: scope local, installed from .aisk/installed.json, component customStatus", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc", hasCustomResource: true, hook: false });
       const projectDir = join(dir, "project");
-      mkdirSync(join(projectDir, ".aisk"), { recursive: true });
-      writeFileSync(
-        join(projectDir, ".aisk", "installed.json"),
-        JSON.stringify({
-          units: {
-            "poc-dep": {
-              installedAt: "2026-01-01",
-              components: { skills: [], rules: [], scripts: [], resources: [] },
-            },
-          },
-        }),
-      );
-
+      mkdirSync(projectDir);
       const installer = newInstaller(dir, projectDir, aiskHome);
-      const result = JSON.parse(captureStdout(() => installer.resolve(["poc"]))) as ResolveResult;
 
-      expect(result.to_remove).toEqual([]);
-      expect(result.to_install).toEqual(["poc"]);
-      expect(result.to_update).toEqual([]);
-      expect(result.auto).toEqual(["poc-dep"]);
-      expect(result.order).toEqual(["poc"]);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
+      installer.init(["loc"]);
 
-  test("installed unit not in desired state → appears in to_remove", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(join(projectDir, ".aisk"), { recursive: true });
-      writeFileSync(
-        join(projectDir, ".aisk", "installed.json"),
-        JSON.stringify({
-          units: {
-            poc: {
-              installedAt: "2026-01-01",
-              components: { skills: [], rules: [], scripts: [], resources: [] },
-            },
-            "poc-dep": {
-              installedAt: "2026-01-01",
-              components: { skills: [], rules: [], scripts: [], resources: [] },
-            },
-          },
-        }),
-      );
-
-      const installer = newInstaller(dir, projectDir, aiskHome);
-      const result = JSON.parse(captureStdout(() => installer.resolve([]))) as ResolveResult;
-
-      expect(result.to_remove).toEqual(["poc-dep", "poc"]);
-      expect(result.to_install).toEqual([]);
-      expect(result.to_update).toEqual([]);
-      expect(result.auto).toEqual([]);
-      expect(result.order).toEqual([]);
+      const result = JSON.parse(captureStdout(() => installer.show("loc"))) as {
+        scope: string;
+        installed: boolean;
+        components: Array<{ name: string; customStatus?: string }>;
+      };
+      expect(result.scope).toBe("local");
+      expect(result.installed).toBe(true);
+      expect(result.components.find((c) => c.name === "readme")?.customStatus).toBe("todo");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -365,51 +366,292 @@ describe("resolve", () => {
 });
 
 /**
- * @test-suite  add (skill — global scope)
- * @target      Installer.add() — plain skills are served by the global symlink, not copied
- * @strategy    unit; unit.json declares a skill with no hasCustom/localCopy
+ * @test-suite  register
+ * @target      Installer.register()
+ * @strategy    unit; fake aiskHome tree; isolated globalSkillsDir
  * @cases
- *   - [PASS] does not copy the skill file into the project
- *   - [PASS] still records the unit in installed.json (with an empty skills array)
- *   - [PASS] auto-installs transitive dependency when not yet installed
- *   - [PASS] is idempotent (second add updates cleanly, still no local file)
+ *   - [PASS] creates the aisk-setup symlink pointing at aiskHome/global/setup
+ *   - [PASS] collapses aisk-{unit}-{skill} to aisk-{unit} when the skill name equals the unit name
+ *   - [PASS] keeps aisk-{unit}-{skill} when the skill name differs from the unit name
+ *   - [PASS] symlinks resources/ and scripts/ when the unit declares them
+ *   - [PASS] skips local units entirely
+ *   - [PASS] writes a registry record listing every registered entry
+ *   - [PASS] is idempotent — a second run keeps the same symlinks
+ *   - [PASS] cleanup is driven by the registry record: an unrecorded stale aisk-* dir survives
+ *   - [PASS] cleanup removes entries that WERE in the previous registry record
  */
-describe("add (skill — global scope)", () => {
-  test("does not copy the skill file into the project", () => {
+describe("register", () => {
+  test("creates the aisk-setup symlink pointing at aiskHome/global/setup", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
 
-      newInstaller(dir, projectDir, aiskHome).add(["poc"]);
+      newInstaller(dir, projectDir, aiskHome).register();
 
-      const skillFile = join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md");
-      expect(existsSync(skillFile)).toBe(false);
+      const setupLink = join(globalSkillsDirFor(dir), "aisk-setup");
+      expect(lstatSync(setupLink).isSymbolicLink()).toBe(true);
+      expect(readlinkSync(setupLink)).toBe(join(aiskHome, "global", "setup"));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test("still records the unit in installed.json with an empty skills array", () => {
+  test("collapses aisk-{unit}-{skill} to aisk-{unit} when the skill name equals the unit name", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
 
+      newInstaller(dir, projectDir, aiskHome).register();
+
+      const skillLink = join(globalSkillsDirFor(dir), "aisk-poc", "SKILL.md");
+      expect(lstatSync(skillLink).isSymbolicLink()).toBe(true);
+      expect(readlinkSync(skillLink)).toBe(join(aiskHome, "units", "poc", "skills", "poc.md"));
+      expect(existsSync(join(globalSkillsDirFor(dir), "aisk-poc-poc"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps aisk-{unit}-{skill} when the skill name differs from the unit name", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addGlobalUnitWithDifferentSkillName(aiskHome, "walkthrough", "create-walkthrough");
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      newInstaller(dir, projectDir, aiskHome).register();
+
+      const skillLink = join(
+        globalSkillsDirFor(dir),
+        "aisk-walkthrough-create-walkthrough",
+        "SKILL.md",
+      );
+      expect(lstatSync(skillLink).isSymbolicLink()).toBe(true);
+      expect(existsSync(join(globalSkillsDirFor(dir), "aisk-walkthrough"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("symlinks resources/ and scripts/ when the unit declares them", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      newInstaller(dir, projectDir, aiskHome).register();
+
+      const skillDir = join(globalSkillsDirFor(dir), "aisk-poc");
+      expect(readlinkSync(join(skillDir, "resources"))).toBe(
+        join(aiskHome, "units", "poc", "resources"),
+      );
+      expect(readlinkSync(join(skillDir, "scripts"))).toBe(
+        join(aiskHome, "units", "poc", "scripts"),
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("skips local units entirely", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      const result = JSON.parse(
+        captureStdout(() => newInstaller(dir, projectDir, aiskHome).register()),
+      ) as RegisterResult;
+
+      expect(result.skippedLocal).toContain("loc");
+      expect(existsSync(join(globalSkillsDirFor(dir), "aisk-loc"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("writes a registry record listing every registered entry", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      newInstaller(dir, projectDir, aiskHome).register();
+
+      const registry = JSON.parse(
+        readFileSync(join(globalSkillsDirFor(dir), ".aisk-registry.json"), "utf8"),
+      ) as { entries: Array<{ unit: string; dir: string }> };
+      expect(registry.entries.some((e) => e.unit === "setup")).toBe(true);
+      expect(registry.entries.some((e) => e.unit === "poc")).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("is idempotent — a second run keeps the same symlinks", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
       const installer = newInstaller(dir, projectDir, aiskHome);
-      installer.add(["poc"]);
 
-      const installed = installer.readInstalled();
-      expect("poc" in installed.units).toBe(true);
-      expect(installed.units["poc"]?.components.skills).toEqual([]);
+      installer.register();
+      installer.register();
+
+      const skillLink = join(globalSkillsDirFor(dir), "aisk-poc", "SKILL.md");
+      expect(lstatSync(skillLink).isSymbolicLink()).toBe(true);
+      expect(readlinkSync(skillLink)).toBe(join(aiskHome, "units", "poc", "skills", "poc.md"));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test("auto-installs transitive dependency when not yet installed", () => {
+  test("cleanup is driven by the registry record: an unrecorded stale aisk-* dir survives", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      const staleDir = join(globalSkillsDirFor(dir), "aisk-never-registered");
+      mkdirSync(staleDir, { recursive: true });
+      writeFileSync(join(staleDir, "SKILL.md"), "not tracked by any registry record");
+
+      newInstaller(dir, projectDir, aiskHome).register();
+
+      expect(existsSync(staleDir), "unrecorded aisk-* dirs are not swept").toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("cleanup removes entries that WERE in the previous registry record", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      const installer = newInstaller(dir, projectDir, aiskHome);
+
+      installer.register();
+      const oldSkillDir = join(globalSkillsDirFor(dir), "aisk-poc");
+      expect(existsSync(oldSkillDir)).toBe(true);
+
+      // Rename the unit's skill so the next register() no longer produces aisk-poc.
+      writeFileSync(
+        join(aiskHome, "units", "poc", "unit.json"),
+        JSON.stringify({
+          name: "poc",
+          description: "PoC unit",
+          dependencies: [],
+          components: { skills: [{ name: "renamed", file: "skills/poc.md" }] },
+        }),
+      );
+
+      const result = JSON.parse(captureStdout(() => installer.register())) as RegisterResult;
+
+      expect(existsSync(oldSkillDir), "previously-recorded dir is cleaned up").toBe(false);
+      expect(result.unregisteredPrevious.some((e) => e.dir === oldSkillDir)).toBe(true);
+      expect(existsSync(join(globalSkillsDirFor(dir), "aisk-poc-renamed"))).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  unregister
+ * @target      Installer.unregister()
+ * @strategy    unit; fake aiskHome tree
+ * @cases
+ *   - [PASS] removes every registered directory and deletes the registry file
+ *   - [PASS] is a no-op when nothing was ever registered
+ */
+describe("unregister", () => {
+  test("removes every registered directory and deletes the registry file", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      const installer = newInstaller(dir, projectDir, aiskHome);
+
+      installer.register();
+      expect(existsSync(join(globalSkillsDirFor(dir), "aisk-poc"))).toBe(true);
+
+      installer.unregister();
+
+      expect(existsSync(join(globalSkillsDirFor(dir), "aisk-poc"))).toBe(false);
+      expect(existsSync(join(globalSkillsDirFor(dir), "aisk-setup"))).toBe(false);
+      expect(existsSync(join(globalSkillsDirFor(dir), ".aisk-registry.json"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("is a no-op when nothing was ever registered", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      const result = JSON.parse(
+        captureStdout(() => newInstaller(dir, projectDir, aiskHome).unregister()),
+      ) as { removed: unknown[] };
+
+      expect(result.removed).toHaveLength(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  init (local unit)
+ * @target      Installer.init()
+ * @strategy    unit; fake aiskHome tree
+ * @cases
+ *   - [PASS] installs every component of a local unit unconditionally
+ *   - [PASS] fails to init a global unit by name
+ *   - [PASS] re-init on an already-installed unit converts to update
+ *   - [PASS] init all installs every not-yet-installed local unit, no global units
+ *   - [PASS] auto-installs a local-to-local dependency (autoDep)
+ *   - [PASS] a dependency on a global unit needs no action (no failure, nothing auto-installed)
+ */
+describe("init (local unit)", () => {
+  test("installs every component of a local unit unconditionally", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      newInstaller(dir, projectDir, aiskHome).init(["loc"]);
+
+      expect(existsSync(join(projectDir, ".claude", "skills", "aisk-loc-loc", "SKILL.md"))).toBe(
+        true,
+      );
+      expect(existsSync(join(projectDir, ".aisk", "loc", "resources", "readme.md"))).toBe(true);
+      expect(existsSync(join(projectDir, ".aisk", "loc", "scripts", "loc-script.js"))).toBe(true);
+      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
+      expect(lefthook).toContain("aisk-loc-loc-script:");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("fails to init a global unit by name", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
@@ -417,273 +659,236 @@ describe("add (skill — global scope)", () => {
       mkdirSync(projectDir);
 
       const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).add(["poc"])),
-      ) as {
-        added: Array<{ name: string; autoDep?: boolean }>;
+        captureStdout(() => newInstaller(dir, projectDir, aiskHome).init(["poc"])),
+      ) as { added: unknown[]; failed: Array<{ name: string; reason: string }> };
+
+      expect(out.added).toHaveLength(0);
+      expect(out.failed[0]?.name).toBe("poc");
+      expect(out.failed[0]?.reason).toContain("register");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("re-init on an already-installed unit converts to update", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      const installer = newInstaller(dir, projectDir, aiskHome);
+
+      installer.init(["loc"]);
+      const out = JSON.parse(captureStdout(() => installer.init(["loc"]))) as {
+        added: unknown[];
+        updated: Array<{ name: string }>;
         failed: unknown[];
       };
 
+      expect(out.added).toHaveLength(0);
       expect(out.failed).toHaveLength(0);
-      const dep = out.added.find((u) => u.name === "poc-dep");
+      expect(out.updated.some((u) => u.name === "loc")).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("init all installs every not-yet-installed local unit, no global units", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc-a" });
+      addLocalUnit(aiskHome, { name: "loc-b" });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      const out = JSON.parse(
+        captureStdout(() => newInstaller(dir, projectDir, aiskHome).init(["all"])),
+      ) as { added: Array<{ name: string }> };
+
+      expect(out.added.some((u) => u.name === "loc-a")).toBe(true);
+      expect(out.added.some((u) => u.name === "loc-b")).toBe(true);
+      expect(out.added.some((u) => u.name === "poc")).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("auto-installs a local-to-local dependency (autoDep)", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc-dep" });
+      addLocalUnit(aiskHome, { name: "loc-main", dependencies: ["loc-dep"] });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      const out = JSON.parse(
+        captureStdout(() => newInstaller(dir, projectDir, aiskHome).init(["loc-main"])),
+      ) as { added: Array<{ name: string; autoDep?: boolean }>; failed: unknown[] };
+
+      expect(out.failed).toHaveLength(0);
+      const dep = out.added.find((u) => u.name === "loc-dep");
       expect(dep).toBeTruthy();
       expect(dep?.autoDep).toBe(true);
+      expect(out.added.some((u) => u.name === "loc-main" && !u.autoDep)).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test("is idempotent (second add updates cleanly, still no local file)", () => {
+  test("a dependency on a global unit needs no action", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc-with-global-dep", dependencies: ["poc"] });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      const out = JSON.parse(
+        captureStdout(() => newInstaller(dir, projectDir, aiskHome).init(["loc-with-global-dep"])),
+      ) as { added: Array<{ name: string }>; failed: unknown[] };
+
+      expect(out.failed).toHaveLength(0);
+      expect(out.added.some((u) => u.name === "loc-with-global-dep")).toBe(true);
+      expect(out.added.some((u) => u.name === "poc")).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  init (script/hook)
+ * @target      Installer.init() — local unit scripts are always bundled, hook optional
+ * @strategy    unit; local unit with and without a hook script
+ * @cases
+ *   - [PASS] bundles the script and registers the hook when declared
+ *   - [PASS] bundles the script but registers no hook when not declared
+ *   - [PASS] hook registration is idempotent (no duplicate entries on re-init)
+ *   - [PASS] appends hook entry to existing lefthook.yml
+ */
+describe("init (script/hook)", () => {
+  test("bundles the script and registers the hook when declared", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc", hook: true });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      newInstaller(dir, projectDir, aiskHome).init(["loc"]);
+
+      const scriptFile = join(projectDir, ".aisk", "loc", "scripts", "loc-script.js");
+      expect(readFileSync(scriptFile, "utf8")).toContain("script");
+      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
+      expect(lefthook).toContain("aisk-loc-loc-script:");
+      expect(lefthook).toContain("bun .aisk/loc/scripts/loc-script.js");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("bundles the script but registers no hook when not declared", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc", hook: false, rules: true });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+
+      newInstaller(dir, projectDir, aiskHome).init(["loc"]);
+
+      expect(existsSync(join(projectDir, ".aisk", "loc", "scripts", "loc-script.js"))).toBe(true);
+      expect(existsSync(join(projectDir, "lefthook.yml"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("hook registration is idempotent (no duplicate entries on re-init)", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      const installer = newInstaller(dir, projectDir, aiskHome);
+
+      installer.init(["loc"]);
+      installer.init(["loc"]);
+
+      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
+      const occurrences = lefthook.split("aisk-loc-loc-script:").length - 1;
+      expect(occurrences).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("appends hook entry to existing lefthook.yml", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      writeFileSync(
+        join(projectDir, "lefthook.yml"),
+        "pre-commit:\n  commands:\n    existing-hook:\n      run: echo ok\n",
+      );
+
+      newInstaller(dir, projectDir, aiskHome).init(["loc"]);
+
+      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
+      expect(lefthook).toContain("existing-hook:");
+      expect(lefthook).toContain("aisk-loc-loc-script:");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * @test-suite  init → update (orphan removal)
+ * @target      Installer.init() when unit already installed → updateUnitComponents()
+ * @strategy    unit; simulate unit.json version change removing a resource
+ * @cases
+ *   - [PASS] removes orphaned resource file when unit.json no longer declares it
+ */
+describe("init → update (orphan removal)", () => {
+  test("removes orphaned resource file when unit.json no longer declares it", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
+      const unitJsonPath = join(aiskHome, "units", "loc", "unit.json");
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
 
       const installer = newInstaller(dir, projectDir, aiskHome);
-      installer.add(["poc"]);
-      const out = JSON.parse(captureStdout(() => installer.add(["poc"]))) as {
-        added: unknown[];
-        updated: Array<{ name: string }>;
-      };
-
-      expect(out.added).toHaveLength(0);
-      expect(out.updated.some((u) => u.name === "poc")).toBe(true);
-      expect(existsSync(join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md"))).toBe(
-        false,
-      );
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-});
-
-/**
- * @test-suite  add (skill — local copy)
- * @target      Installer.add() — hasCustom/localCopy skills are still copied into the project
- * @strategy    unit; unit.json skill component with hasCustom or localCopy
- * @cases
- *   - [PASS] hasCustom skill is copied and its customStatus is scanned
- *   - [PASS] localCopy skill (no hasCustom) is copied without a customStatus
- */
-describe("add (skill — local copy)", () => {
-  test("hasCustom skill is copied and its customStatus is scanned", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      writeFileSync(
-        join(aiskHome, "units", "poc", "skills", "poc.md"),
-        '# poc\n# AISK:CUSTOM name="paths" status="todo" hint="scan"\n# AISK:CUSTOM:END\n',
-      );
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: { skills: [{ name: "poc", file: "skills/poc.md", hasCustom: true }] },
-        }),
-      );
-
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).add(["poc"])),
-      ) as {
-        added: Array<{ components: Array<{ name: string; customStatus?: string }> }>;
-      };
-
-      const skillFile = join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md");
-      expect(existsSync(skillFile)).toBe(true);
-      expect(out.added[0]?.components.find((c) => c.name === "poc")?.customStatus).toBe("todo");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("localCopy skill (no hasCustom) is copied without a customStatus", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: { skills: [{ name: "poc", file: "skills/poc.md", localCopy: true }] },
-        }),
-      );
-
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      newInstaller(dir, projectDir, aiskHome).add(["poc"]);
-
-      const skillFile = join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md");
-      expect(readFileSync(skillFile, "utf8")).toContain("PoC skill content");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-});
-
-/**
- * @test-suite  add (disabled unit — rules)
- * @target      Installer.add() — units declaring rules components are wholesale disabled
- * @strategy    unit; unit.json declares a rules component
- * @cases
- *   - [PASS] explicit add of a disabled unit fails with a disabled reason
- *   - [PASS] add(["all"]) silently skips disabled units (not added, not failed)
- */
-describe("add (disabled unit — rules)", () => {
-  test("explicit add of a disabled unit fails with a disabled reason", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      addDisabledUnit(aiskHome);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).add(["poc-rules"])),
-      ) as {
-        added: unknown[];
-        failed: Array<{ name: string; reason: string }>;
-      };
-
-      expect(out.added).toHaveLength(0);
-      expect(out.failed[0]?.name).toBe("poc-rules");
-      expect(out.failed[0]?.reason).toContain("rules");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test('add(["all"]) silently skips disabled units', () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      addDisabledUnit(aiskHome);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).add(["all"])),
-      ) as {
-        added: Array<{ name: string }>;
-        failed: Array<{ name: string }>;
-      };
-
-      expect(out.added.some((u) => u.name === "poc-rules")).toBe(false);
-      expect(out.failed.some((f) => f.name === "poc-rules")).toBe(false);
-      expect(out.added.some((u) => u.name === "poc")).toBe(true);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-});
-
-/**
- * @test-suite  add (optional components)
- * @target      Installer.add() — all optional components are installed, incl. local ones
- * @strategy    unit; unit.json with a required skill and an optional localCopy resource
- * @cases
- *   - [PASS] installs the optional local resource (no user selection required)
- */
-describe("add (optional components)", () => {
-  test("installs the optional local resource (no user selection required)", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      writeFileSync(
-        join(aiskHome, "units", "poc", "resources", "opt.md"),
-        "optional resource content",
-      );
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: {
-            skills: [{ name: "poc", file: "skills/poc.md" }],
-            resources: [
-              {
-                name: "opt-res",
-                file: "resources/opt.md",
-                condition: "has next",
-                localCopy: true,
-              },
-            ],
-          },
-        }),
-      );
-
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      newInstaller(dir, projectDir, aiskHome).add(["poc"]);
-
-      expect(existsSync(join(projectDir, ".aisk", "poc", "resources", "opt.md"))).toBe(true);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-});
-
-/**
- * @test-suite  add → update (orphan removal)
- * @target      Installer.add() when unit already installed → updateUnitComponents()
- * @strategy    unit; simulate unit.json version change removing a localCopy resource
- * @cases
- *   - [PASS] removes orphaned local resource file when unit.json no longer declares it
- */
-describe("add → update (orphan removal)", () => {
-  test("removes orphaned local resource file when unit.json no longer declares it", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      writeFileSync(join(aiskHome, "units", "poc", "resources", "opt.md"), "old resource");
-
-      const unitJsonPath = join(aiskHome, "units", "poc", "unit.json");
-
-      // v1: unit has skill + a localCopy resource
-      writeFileSync(
-        unitJsonPath,
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: {
-            skills: [{ name: "poc", file: "skills/poc.md", localCopy: true }],
-            resources: [{ name: "opt-res", file: "resources/opt.md", localCopy: true }],
-          },
-        }),
-      );
-
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const installer = newInstaller(dir, projectDir, aiskHome);
-      installer.add(["poc"]);
-      const resourceFile = join(projectDir, ".aisk", "poc", "resources", "opt.md");
+      installer.init(["loc"]);
+      const resourceFile = join(projectDir, ".aisk", "loc", "resources", "readme.md");
       expect(existsSync(resourceFile)).toBe(true);
 
       // v2: resource removed from unit.json
       writeFileSync(
         unitJsonPath,
         JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
+          name: "loc",
+          description: "loc unit",
           dependencies: [],
-          components: { skills: [{ name: "poc", file: "skills/poc.md", localCopy: true }] },
+          components: {
+            skills: [{ name: "loc", file: "skills/loc.md" }],
+            scripts: [{ name: "loc-script", file: "scripts/loc-script.ts", hook: "pre-commit" }],
+          },
         }),
       );
 
-      installer.add(["poc"]);
+      installer.init(["loc"]);
       expect(existsSync(resourceFile), "orphaned resource file must be removed").toBe(false);
-      expect(existsSync(join(projectDir, ".claude", "skills", "aisk-poc-poc", "SKILL.md"))).toBe(
+      expect(existsSync(join(projectDir, ".claude", "skills", "aisk-loc-loc", "SKILL.md"))).toBe(
         true,
       );
     } finally {
@@ -705,75 +910,45 @@ describe("update (AISK:CUSTOM merge)", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc", hook: false, hasCustomResource: true });
 
-      // New template with todo block
       writeFileSync(
-        join(aiskHome, "units", "poc", "resources", "readme.md"),
+        join(aiskHome, "units", "loc", "resources", "readme.md"),
         [
           '# AISK:CUSTOM name="pattern" status="todo" hint="new hint"',
           'testMatch: ["**/*.new.ts"]',
           "# AISK:CUSTOM:END",
         ].join("\n"),
       );
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: {
-            resources: [{ name: "readme", file: "resources/readme.md", hasCustom: true }],
-          },
-        }),
-      );
 
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
       const installer = newInstaller(dir, projectDir, aiskHome);
+      installer.init(["loc"]);
 
-      // Create already-installed file with done block
-      const resourceDir = join(projectDir, ".aisk", "poc", "resources");
-      mkdirSync(resourceDir, { recursive: true });
+      const resourceFile = join(projectDir, ".aisk", "loc", "resources", "readme.md");
       writeFileSync(
-        join(resourceDir, "readme.md"),
+        resourceFile,
         [
           '# AISK:CUSTOM name="pattern" status="done" hint="old hint"',
           'testMatch: ["**/*.spec.ts"]',
           "# AISK:CUSTOM:END",
         ].join("\n"),
       );
+      const installedPath = join(projectDir, ".aisk", "installed.json");
+      const installed = JSON.parse(readFileSync(installedPath, "utf8")) as {
+        units: Record<string, { components: { resources: Array<{ customStatus: string }> } }>;
+      };
+      installed.units["loc"]!.components.resources[0]!.customStatus = "done";
+      writeFileSync(installedPath, JSON.stringify(installed, null, 2) + "\n");
 
-      mkdirSync(join(projectDir, ".aisk"), { recursive: true });
-      writeFileSync(
-        join(projectDir, ".aisk", "installed.json"),
-        JSON.stringify({
-          units: {
-            poc: {
-              installedAt: "2026-01-01",
-              components: {
-                skills: [],
-                rules: [],
-                scripts: [],
-                resources: [
-                  {
-                    name: "readme",
-                    path: ".aisk/poc/resources/readme.md",
-                    customStatus: "done",
-                  },
-                ],
-              },
-            },
-          },
-        }),
-      );
+      installer.update(["loc"]);
 
-      installer.update(["poc"]);
-
-      const content = readFileSync(join(resourceDir, "readme.md"), "utf8");
+      const content = readFileSync(resourceFile, "utf8");
       expect(content).toContain('status="done"');
-      expect(content).toContain('hint="new hint"'); // new template's hint
-      expect(content).toContain('["**/*.spec.ts"]'); // old done content preserved
-      expect(content).not.toContain('["**/*.new.ts"]'); // new template default replaced
+      expect(content).toContain('hint="new hint"');
+      expect(content).toContain('["**/*.spec.ts"]');
+      expect(content).not.toContain('["**/*.new.ts"]');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -783,34 +958,24 @@ describe("update (AISK:CUSTOM merge)", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
-
+      addLocalUnit(aiskHome, { name: "loc", hook: false, hasCustomResource: true });
       writeFileSync(
-        join(aiskHome, "units", "poc", "resources", "readme.md"),
+        join(aiskHome, "units", "loc", "resources", "readme.md"),
         [
           '# AISK:CUSTOM name="pattern" status="todo" hint="hint"',
           'testMatch: ["**/*.updated.ts"]',
           "# AISK:CUSTOM:END",
         ].join("\n"),
       );
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: {
-            resources: [{ name: "readme", file: "resources/readme.md", hasCustom: true }],
-          },
-        }),
-      );
 
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
+      const installer = newInstaller(dir, projectDir, aiskHome);
+      installer.init(["loc"]);
 
-      const resourceDir = join(projectDir, ".aisk", "poc", "resources");
-      mkdirSync(resourceDir, { recursive: true });
+      const resourceFile = join(projectDir, ".aisk", "loc", "resources", "readme.md");
       writeFileSync(
-        join(resourceDir, "readme.md"),
+        resourceFile,
         [
           '# AISK:CUSTOM name="pattern" status="todo" hint="hint"',
           'testMatch: ["**/*.old.ts"]',
@@ -818,34 +983,10 @@ describe("update (AISK:CUSTOM merge)", () => {
         ].join("\n"),
       );
 
-      mkdirSync(join(projectDir, ".aisk"), { recursive: true });
-      writeFileSync(
-        join(projectDir, ".aisk", "installed.json"),
-        JSON.stringify({
-          units: {
-            poc: {
-              installedAt: "2026-01-01",
-              components: {
-                skills: [],
-                rules: [],
-                scripts: [],
-                resources: [
-                  {
-                    name: "readme",
-                    path: ".aisk/poc/resources/readme.md",
-                    customStatus: "todo",
-                  },
-                ],
-              },
-            },
-          },
-        }),
-      );
+      installer.update(["loc"]);
 
-      newInstaller(dir, projectDir, aiskHome).update(["poc"]);
-
-      const content = readFileSync(join(resourceDir, "readme.md"), "utf8");
-      expect(content).toContain('["**/*.updated.ts"]'); // new template default used
+      const content = readFileSync(resourceFile, "utf8");
+      expect(content).toContain('["**/*.updated.ts"]');
       expect(content).not.toContain('["**/*.old.ts"]');
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -859,79 +1000,75 @@ describe("update (AISK:CUSTOM merge)", () => {
  * @strategy    unit; fake aiskHome tree
  * @cases
  *   - [PASS] fails per-unit when unit is not installed
- *   - [PASS] skips optional local component that is not on disk
+ *   - [PASS] skips optional component that is not on disk
  */
 describe("update", () => {
   test("fails per-unit when unit is not installed", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
 
       const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).update(["poc"])),
-      ) as {
-        updated: unknown[];
-        failed: Array<{ name: string; reason: string }>;
-      };
+        captureStdout(() => newInstaller(dir, projectDir, aiskHome).update(["loc"])),
+      ) as { updated: unknown[]; failed: Array<{ name: string; reason: string }> };
 
       expect(out.updated).toHaveLength(0);
-      expect(out.failed[0]?.name).toBe("poc");
+      expect(out.failed[0]?.name).toBe("loc");
       expect(out.failed[0]?.reason).toContain("未安装");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test("skips optional local component that is not on disk", () => {
+  test("skips optional component that is not on disk", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc", rules: true });
       writeFileSync(
-        join(aiskHome, "units", "poc", "resources", "opt.md"),
-        "optional resource content",
-      );
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
+        join(aiskHome, "units", "loc", "unit.json"),
         JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
+          name: "loc",
+          description: "loc unit",
           dependencies: [],
           components: {
-            skills: [{ name: "poc", file: "skills/poc.md" }],
-            resources: [
-              {
-                name: "opt-res",
-                file: "resources/opt.md",
-                condition: "has next",
-                localCopy: true,
-              },
-            ],
+            skills: [{ name: "loc", file: "skills/loc.md" }],
+            rules: [{ name: "loc-rule", file: "rules/loc-rule.md", condition: "has next" }],
           },
         }),
       );
 
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
-
-      // Pre-populate installed.json — optional resource NOT installed
       mkdirSync(join(projectDir, ".aisk"), { recursive: true });
+      const skillDir = join(projectDir, ".claude", "skills", "aisk-loc-loc");
+      mkdirSync(skillDir, { recursive: true });
+      writeFileSync(join(skillDir, "SKILL.md"), "# loc");
       writeFileSync(
         join(projectDir, ".aisk", "installed.json"),
         JSON.stringify({
           units: {
-            poc: {
+            loc: {
               installedAt: "2026-01-01",
-              components: { skills: [], rules: [], scripts: [], resources: [] },
+              components: {
+                skills: [{ name: "loc", path: ".claude/skills/aisk-loc-loc/SKILL.md" }],
+                rules: [],
+                scripts: [],
+                resources: [],
+              },
             },
           },
         }),
       );
 
-      newInstaller(dir, projectDir, aiskHome).update(["poc"]);
+      newInstaller(dir, projectDir, aiskHome).update(["loc"]);
 
-      expect(existsSync(join(projectDir, ".aisk", "poc", "resources", "opt.md"))).toBe(false);
+      expect(existsSync(join(projectDir, ".claude", "rules", "aisk-loc", "loc-rule.md"))).toBe(
+        false,
+      );
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -944,8 +1081,7 @@ describe("update", () => {
  * @strategy    unit; fake aiskHome tree; pre-populated installed.json and files
  * @cases
  *   - [PASS] removes skill file and empty parent directory
- *   - [PASS] removes local script file and corresponding lefthook entry
- *   - [PASS] removes hook registration for a global-hook script without deleting the global path
+ *   - [PASS] removes script file and corresponding lefthook entry
  *   - [PASS] fails per-unit when unit is not installed
  *   - [PASS] all removes all installed units
  */
@@ -955,18 +1091,18 @@ describe("remove", () => {
     try {
       const aiskHome = makeFakeAiskHome(dir);
       const projectDir = join(dir, "project");
-      const skillDir = join(projectDir, ".claude", "skills", "aisk-poc-poc");
+      const skillDir = join(projectDir, ".claude", "skills", "aisk-loc-loc");
       mkdirSync(skillDir, { recursive: true });
-      writeFileSync(join(skillDir, "SKILL.md"), "# poc");
+      writeFileSync(join(skillDir, "SKILL.md"), "# loc");
       mkdirSync(join(projectDir, ".aisk"), { recursive: true });
       writeFileSync(
         join(projectDir, ".aisk", "installed.json"),
         JSON.stringify({
           units: {
-            poc: {
+            loc: {
               installedAt: "2026-01-01",
               components: {
-                skills: [{ name: "poc", path: ".claude/skills/aisk-poc-poc/SKILL.md" }],
+                skills: [{ name: "loc", path: ".claude/skills/aisk-loc-loc/SKILL.md" }],
                 rules: [],
                 scripts: [],
                 resources: [],
@@ -976,89 +1112,42 @@ describe("remove", () => {
         }),
       );
 
-      newInstaller(dir, projectDir, aiskHome).remove(["poc"]);
+      newInstaller(dir, projectDir, aiskHome).remove(["loc"]);
 
       expect(existsSync(join(skillDir, "SKILL.md")), "skill file must be removed").toBe(false);
       expect(existsSync(skillDir), "empty parent dir must be removed").toBe(false);
       const data = JSON.parse(
         readFileSync(join(projectDir, ".aisk", "installed.json"), "utf8"),
-      ) as {
-        units: Record<string, unknown>;
-      };
-      expect("poc" in data.units, "unit must be removed from installed.json").toBe(false);
+      ) as { units: Record<string, unknown> };
+      expect("loc" in data.units, "unit must be removed from installed.json").toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test("removes local script file and corresponding lefthook entry", () => {
+  test("removes script file and corresponding lefthook entry", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
       const projectDir = join(dir, "project");
-      const scriptDir = join(projectDir, ".aisk", "poc", "scripts");
+      const scriptDir = join(projectDir, ".aisk", "loc", "scripts");
       mkdirSync(scriptDir, { recursive: true });
-      writeFileSync(join(scriptDir, "poc-hook.js"), "// hook");
+      writeFileSync(join(scriptDir, "loc-script.js"), "// hook");
       writeFileSync(
         join(projectDir, "lefthook.yml"),
-        "pre-commit:\n  commands:\n    aisk-poc-poc-hook:\n      run: bun .aisk/poc/scripts/poc-hook.js\n",
-      );
-      writeFileSync(
-        join(projectDir, ".aisk", "installed.json"),
-        JSON.stringify({
-          units: {
-            poc: {
-              installedAt: "2026-01-01",
-              components: {
-                skills: [],
-                rules: [],
-                scripts: [{ name: "poc-hook", path: ".aisk/poc/scripts/poc-hook.js" }],
-                resources: [],
-              },
-            },
-          },
-        }),
-      );
-
-      newInstaller(dir, projectDir, aiskHome).remove(["poc"]);
-
-      expect(existsSync(join(scriptDir, "poc-hook.js")), "script file must be removed").toBe(false);
-      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-      expect(lefthook, "lefthook entry must be removed").not.toContain("aisk-poc-poc-hook:");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("removes hook registration for a global-hook script without deleting the global path", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-      const globalScriptPath = join(
-        globalSkillsDirFor(dir),
-        "aisk-poc-poc",
-        "scripts",
-        "poc-hook.ts",
-      );
-      mkdirSync(join(globalSkillsDirFor(dir), "aisk-poc-poc", "scripts"), { recursive: true });
-      writeFileSync(globalScriptPath, "// global script, owned by sync-global");
-      writeFileSync(
-        join(projectDir, "lefthook.yml"),
-        `pre-commit:\n  commands:\n    aisk-poc-poc-hook:\n      run: bun ${globalScriptPath}\n`,
+        "pre-commit:\n  commands:\n    aisk-loc-loc-script:\n      run: bun .aisk/loc/scripts/loc-script.js\n",
       );
       mkdirSync(join(projectDir, ".aisk"), { recursive: true });
       writeFileSync(
         join(projectDir, ".aisk", "installed.json"),
         JSON.stringify({
           units: {
-            poc: {
+            loc: {
               installedAt: "2026-01-01",
               components: {
                 skills: [],
                 rules: [],
-                scripts: [{ name: "poc-hook", path: globalScriptPath }],
+                scripts: [{ name: "loc-script", path: ".aisk/loc/scripts/loc-script.js" }],
                 resources: [],
               },
             },
@@ -1066,11 +1155,13 @@ describe("remove", () => {
         }),
       );
 
-      newInstaller(dir, projectDir, aiskHome).remove(["poc"]);
+      newInstaller(dir, projectDir, aiskHome).remove(["loc"]);
 
+      expect(existsSync(join(scriptDir, "loc-script.js")), "script file must be removed").toBe(
+        false,
+      );
       const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-      expect(lefthook, "lefthook entry must be removed").not.toContain("aisk-poc-poc-hook:");
-      expect(existsSync(globalScriptPath), "global script must not be deleted").toBe(true);
+      expect(lefthook, "lefthook entry must be removed").not.toContain("aisk-loc-loc-script:");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -1084,14 +1175,11 @@ describe("remove", () => {
       mkdirSync(projectDir);
 
       const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).remove(["poc"])),
-      ) as {
-        removed: unknown[];
-        failed: Array<{ name: string; reason: string }>;
-      };
+        captureStdout(() => newInstaller(dir, projectDir, aiskHome).remove(["loc"])),
+      ) as { removed: unknown[]; failed: Array<{ name: string; reason: string }> };
 
       expect(out.removed).toHaveLength(0);
-      expect(out.failed[0]?.name).toBe("poc");
+      expect(out.failed[0]?.name).toBe("loc");
       expect(out.failed[0]?.reason).toContain("未安装");
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -1103,18 +1191,18 @@ describe("remove", () => {
     try {
       const aiskHome = makeFakeAiskHome(dir);
       const projectDir = join(dir, "project");
-      const skillDir = join(projectDir, ".claude", "skills", "aisk-poc-poc");
+      const skillDir = join(projectDir, ".claude", "skills", "aisk-loc-loc");
       mkdirSync(skillDir, { recursive: true });
-      writeFileSync(join(skillDir, "SKILL.md"), "# poc");
+      writeFileSync(join(skillDir, "SKILL.md"), "# loc");
       mkdirSync(join(projectDir, ".aisk"), { recursive: true });
       writeFileSync(
         join(projectDir, ".aisk", "installed.json"),
         JSON.stringify({
           units: {
-            poc: {
+            loc: {
               installedAt: "2026-01-01",
               components: {
-                skills: [{ name: "poc", path: ".claude/skills/aisk-poc-poc/SKILL.md" }],
+                skills: [{ name: "loc", path: ".claude/skills/aisk-loc-loc/SKILL.md" }],
                 rules: [],
                 scripts: [],
                 resources: [],
@@ -1126,12 +1214,9 @@ describe("remove", () => {
 
       const out = JSON.parse(
         captureStdout(() => newInstaller(dir, projectDir, aiskHome).remove(["all"])),
-      ) as {
-        removed: Array<{ name: string }>;
-        failed: unknown[];
-      };
+      ) as { removed: Array<{ name: string }>; failed: unknown[] };
 
-      expect(out.removed.some((u) => u.name === "poc")).toBe(true);
+      expect(out.removed.some((u) => u.name === "loc")).toBe(true);
       expect(out.failed).toHaveLength(0);
       expect(existsSync(join(skillDir, "SKILL.md"))).toBe(false);
     } finally {
@@ -1155,7 +1240,7 @@ describe("refresh", () => {
     try {
       const aiskHome = makeFakeAiskHome(dir);
       const projectDir = join(dir, "project");
-      const resourceDir = join(projectDir, ".aisk", "poc", "resources");
+      const resourceDir = join(projectDir, ".aisk", "loc", "resources");
       mkdirSync(resourceDir, { recursive: true });
       writeFileSync(
         join(resourceDir, "readme.md"),
@@ -1170,7 +1255,7 @@ describe("refresh", () => {
         join(projectDir, ".aisk", "installed.json"),
         JSON.stringify({
           units: {
-            poc: {
+            loc: {
               installedAt: "2026-01-01",
               components: {
                 skills: [],
@@ -1179,7 +1264,7 @@ describe("refresh", () => {
                 resources: [
                   {
                     name: "readme",
-                    path: ".aisk/poc/resources/readme.md",
+                    path: ".aisk/loc/resources/readme.md",
                     customStatus: "todo",
                   },
                 ],
@@ -1196,7 +1281,7 @@ describe("refresh", () => {
       ) as {
         units: Record<string, { components: { resources: Array<{ customStatus: string }> } }>;
       };
-      expect(installed.units["poc"]?.components.resources[0]?.customStatus).toBe("done");
+      expect(installed.units["loc"]?.components.resources[0]?.customStatus).toBe("done");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -1207,7 +1292,7 @@ describe("refresh", () => {
     try {
       const aiskHome = makeFakeAiskHome(dir);
       const projectDir = join(dir, "project");
-      const resourceDir = join(projectDir, ".aisk", "poc", "resources");
+      const resourceDir = join(projectDir, ".aisk", "loc", "resources");
       mkdirSync(resourceDir, { recursive: true });
       writeFileSync(
         join(resourceDir, "readme.md"),
@@ -1222,7 +1307,7 @@ describe("refresh", () => {
         join(projectDir, ".aisk", "installed.json"),
         JSON.stringify({
           units: {
-            poc: {
+            loc: {
               installedAt: "2026-01-01",
               components: {
                 skills: [],
@@ -1231,7 +1316,7 @@ describe("refresh", () => {
                 resources: [
                   {
                     name: "readme",
-                    path: ".aisk/poc/resources/readme.md",
+                    path: ".aisk/loc/resources/readme.md",
                     customStatus: "todo",
                   },
                 ],
@@ -1243,12 +1328,10 @@ describe("refresh", () => {
 
       const out = JSON.parse(
         captureStdout(() => newInstaller(dir, projectDir, aiskHome).refresh(false)),
-      ) as {
-        todo: Array<{ unit: string; files: string[] }>;
-      };
+      ) as { todo: Array<{ unit: string; files: string[] }> };
 
       expect(out.todo.length).toBeGreaterThan(0);
-      expect(out.todo[0]?.unit).toBe("poc");
+      expect(out.todo[0]?.unit).toBe("loc");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -1271,374 +1354,23 @@ describe("refresh", () => {
 });
 
 /**
- * @test-suite  show
- * @target      Installer.show()
- * @strategy    unit; fake aiskHome tree
- * @cases
- *   - [PASS] returns unit details with installed=false when not installed
- *   - [PASS] returns customStatus from installed.json when installed
- *   - [PASS] marks disabled:true with a reason for a unit that declares rules
- *   - [PASS] plain skill has scope "global"; hasCustom skill has scope "local"
- *   - [PASS] global skill installed=true once its sync-global symlink file exists on disk
- */
-describe("show", () => {
-  test("returns unit details with installed=false when not installed", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).show("poc")),
-      ) as {
-        name: string;
-        installed: boolean;
-        dependencies: string[];
-        disabled: boolean;
-      };
-
-      expect(out.name).toBe("poc");
-      expect(out.installed).toBe(false);
-      expect(out.disabled).toBe(false);
-      expect(out.dependencies).toContain("poc-dep");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("returns customStatus from installed.json when installed", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(join(projectDir, ".aisk"), { recursive: true });
-      writeFileSync(
-        join(projectDir, ".aisk", "installed.json"),
-        JSON.stringify({
-          units: {
-            poc: {
-              installedAt: "2026-01-01",
-              components: {
-                skills: [
-                  {
-                    name: "poc",
-                    path: ".claude/skills/aisk-poc-poc/SKILL.md",
-                    customStatus: "done",
-                  },
-                ],
-                rules: [],
-                scripts: [],
-                resources: [],
-              },
-            },
-          },
-        }),
-      );
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).show("poc")),
-      ) as {
-        installed: boolean;
-        components: Array<{ name: string; customStatus?: string }>;
-      };
-
-      expect(out.installed).toBe(true);
-      const skillComp = out.components.find((c) => c.name === "poc");
-      expect(skillComp?.customStatus).toBe("done");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("marks disabled:true with a reason for a unit that declares rules", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      addDisabledUnit(aiskHome);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).show("poc-rules")),
-      ) as { disabled: boolean; disabledReason?: string };
-
-      expect(out.disabled).toBe(true);
-      expect(out.disabledReason).toBeTruthy();
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test('plain skill has scope "global"; hasCustom skill has scope "local"', () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: {
-            skills: [
-              { name: "poc", file: "skills/poc.md" },
-              { name: "poc-custom", file: "skills/poc.md", hasCustom: true },
-            ],
-          },
-        }),
-      );
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).show("poc")),
-      ) as { components: Array<{ name: string; scope: string }> };
-
-      expect(out.components.find((c) => c.name === "poc")?.scope).toBe("global");
-      expect(out.components.find((c) => c.name === "poc-custom")?.scope).toBe("local");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("global skill installed=true once its sync-global symlink file exists on disk", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const before = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).show("poc")),
-      ) as { components: Array<{ name: string; installed: boolean }> };
-      expect(before.components.find((c) => c.name === "poc")?.installed).toBe(false);
-
-      mkdirSync(join(globalSkillsDirFor(dir), "aisk-poc-poc"), { recursive: true });
-      writeFileSync(join(globalSkillsDirFor(dir), "aisk-poc-poc", "SKILL.md"), "# poc");
-
-      const after = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).show("poc")),
-      ) as { components: Array<{ name: string; installed: boolean }> };
-      expect(after.components.find((c) => c.name === "poc")?.installed).toBe(true);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-});
-
-/**
- * @test-suite  add (script/hook — global default)
- * @target      Installer.add() — hook scripts point at the global symlink path by default
- * @strategy    unit; unit.json declares a script component with a hook, no localCopy
- * @cases
- *   - [PASS] registers a lefthook entry pointing at the global script path, no local bundle
- *   - [PASS] appends lefthook template vars when params declared
- *   - [PASS] hook registration is idempotent (no duplicate entries on re-add)
- *   - [PASS] appends hook entry to existing lefthook.yml
- *   - [PASS] fails the unit when it declares a hook script but has no skill to host it
- */
-describe("add (script/hook — global default)", () => {
-  test("registers a lefthook entry pointing at the global script path, no local bundle", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      newInstaller(dir, projectDir, aiskHome).add(["poc"]);
-
-      expect(existsSync(join(projectDir, ".aisk", "poc", "scripts", "poc-hook.js"))).toBe(false);
-
-      const globalScriptPath = join(
-        globalSkillsDirFor(dir),
-        "aisk-poc-poc",
-        "scripts",
-        "poc-hook.ts",
-      );
-      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-      expect(lefthook).toContain("aisk-poc-poc-hook:");
-      expect(lefthook).toContain(`bun ${globalScriptPath}`);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("appends lefthook template vars when params declared", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: {
-            skills: [{ name: "poc", file: "skills/poc.md" }],
-            scripts: [
-              {
-                name: "poc-hook",
-                file: "scripts/poc-hook.ts",
-                hook: "pre-commit",
-                params: ["staged_files"],
-              },
-            ],
-          },
-        }),
-      );
-
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      newInstaller(dir, projectDir, aiskHome).add(["poc"]);
-
-      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-      expect(lefthook).toContain("{staged_files}");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("hook registration is idempotent (no duplicate entries on re-add)", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const installer = newInstaller(dir, projectDir, aiskHome);
-      installer.add(["poc"]);
-      installer.add(["poc"]); // second call → update path
-
-      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-      const occurrences = lefthook.split("aisk-poc-poc-hook:").length - 1;
-      expect(occurrences).toBe(1);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("appends hook entry to existing lefthook.yml", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-      writeFileSync(
-        join(projectDir, "lefthook.yml"),
-        "pre-commit:\n  commands:\n    existing-hook:\n      run: echo ok\n",
-      );
-
-      newInstaller(dir, projectDir, aiskHome).add(["poc"]);
-
-      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-      expect(lefthook).toContain("existing-hook:");
-      expect(lefthook).toContain("aisk-poc-poc-hook:");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("fails the unit when it declares a hook script but has no skill to host it", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: {
-            scripts: [{ name: "poc-hook", file: "scripts/poc-hook.ts", hook: "pre-commit" }],
-          },
-        }),
-      );
-
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).add(["poc"])),
-      ) as {
-        added: unknown[];
-        failed: Array<{ name: string; reason: string }>;
-      };
-
-      expect(out.added).toHaveLength(0);
-      expect(out.failed[0]?.name).toBe("poc");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-});
-
-/**
- * @test-suite  add (script/hook — localCopy)
- * @target      Installer.add() — localCopy scripts are still bundled into the project
- * @strategy    unit; unit.json declares a script component with hook + localCopy
- * @cases
- *   - [PASS] bundles the script into .aisk/{unit}/scripts and registers a local hook
- */
-describe("add (script/hook — localCopy)", () => {
-  test("bundles the script into .aisk/{unit}/scripts and registers a local hook", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: {
-            scripts: [
-              {
-                name: "poc-hook",
-                file: "scripts/poc-hook.ts",
-                hook: "pre-commit",
-                localCopy: true,
-              },
-            ],
-          },
-        }),
-      );
-
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      newInstaller(dir, projectDir, aiskHome).add(["poc"]);
-
-      const scriptFile = join(projectDir, ".aisk", "poc", "scripts", "poc-hook.js");
-      expect(readFileSync(scriptFile, "utf8")).toContain("hook");
-
-      const lefthook = readFileSync(join(projectDir, "lefthook.yml"), "utf8");
-      expect(lefthook).toContain("aisk-poc-poc-hook:");
-      expect(lefthook).toContain("bun .aisk/poc/scripts/poc-hook.js");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-});
-
-/**
- * @test-suite  add (.gitignore)
- * @target      Installer.add() — .gitignore file management
+ * @test-suite  init (.gitignore)
+ * @target      Installer.init() — .gitignore file management
  * @strategy    unit; isolated project dirs
  * @cases
  *   - [PASS] creates .gitignore files in .aisk/ and .claude/ on install
  *   - [PASS] does not overwrite existing .gitignore files
  */
-describe("add (.gitignore)", () => {
+describe("init (.gitignore)", () => {
   test("creates .gitignore files in .aisk/ and .claude/ on install", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
 
-      newInstaller(dir, projectDir, aiskHome).add(["poc"]);
+      newInstaller(dir, projectDir, aiskHome).init(["loc"]);
 
       expect(readFileSync(join(projectDir, ".aisk", ".gitignore"), "utf8")).toBe("*\n");
       expect(readFileSync(join(projectDir, ".claude", ".gitignore"), "utf8")).toBe(
@@ -1653,11 +1385,12 @@ describe("add (.gitignore)", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
       const projectDir = join(dir, "project");
       mkdirSync(join(projectDir, ".claude"), { recursive: true });
       writeFileSync(join(projectDir, ".claude", ".gitignore"), "custom-content\n");
 
-      newInstaller(dir, projectDir, aiskHome).add(["poc"]);
+      newInstaller(dir, projectDir, aiskHome).init(["loc"]);
 
       expect(readFileSync(join(projectDir, ".claude", ".gitignore"), "utf8")).toBe(
         "custom-content\n",
@@ -1669,37 +1402,27 @@ describe("add (.gitignore)", () => {
 });
 
 /**
- * @test-suite  add (installed record)
- * @target      Installer.add() — installed.json only tracks local (hasCustom/localCopy) components
- * @strategy    unit; unit.json with a plain required skill and an optional localCopy resource
+ * @test-suite  init (installed record)
+ * @target      Installer.init() — installed.json record writing
+ * @strategy    unit; local unit with a required skill and an optional rule
  * @cases
- *   - [PASS] writes installed.json with only the local resource tracked
+ *   - [PASS] writes installed.json with every component tracked (no local/global split within the unit)
  */
-describe("add (installed record)", () => {
-  test("writes installed.json with only the local resource tracked", () => {
+describe("init (installed record)", () => {
+  test("writes installed.json with every component tracked", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc", rules: true });
       writeFileSync(
-        join(aiskHome, "units", "poc", "resources", "opt.md"),
-        "optional resource content",
-      );
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
+        join(aiskHome, "units", "loc", "unit.json"),
         JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
+          name: "loc",
+          description: "loc unit",
           dependencies: [],
           components: {
-            skills: [{ name: "poc", file: "skills/poc.md" }],
-            resources: [
-              {
-                name: "opt-res",
-                file: "resources/opt.md",
-                condition: "has next",
-                localCopy: true,
-              },
-            ],
+            skills: [{ name: "loc", file: "skills/loc.md" }],
+            rules: [{ name: "loc-rule", file: "rules/loc-rule.md", condition: "has next" }],
           },
         }),
       );
@@ -1708,14 +1431,13 @@ describe("add (installed record)", () => {
       mkdirSync(projectDir);
 
       const installer = newInstaller(dir, projectDir, aiskHome);
-      installer.add(["poc"]);
+      installer.init(["loc"]);
 
       const installed = installer.readInstalled();
-      expect("poc" in installed.units).toBe(true);
-      expect(installed.units["poc"]?.installedAt).toBeTruthy();
-      // Plain skill served globally (not tracked); optional local resource tracked.
-      expect(installed.units["poc"]?.components.skills.length).toBe(0);
-      expect(installed.units["poc"]?.components.resources.length).toBe(1);
+      expect("loc" in installed.units).toBe(true);
+      expect(installed.units["loc"]?.installedAt).toBeTruthy();
+      expect(installed.units["loc"]?.components.skills.length).toBe(1);
+      expect(installed.units["loc"]?.components.rules.length).toBe(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -1723,174 +1445,43 @@ describe("add (installed record)", () => {
 });
 
 /**
- * @test-suite  sync-global
- * @target      Installer.syncGlobal()
- * @strategy    unit; fake aiskHome tree; isolated globalSkillsDir under the temp dir
+ * @test-suite  human-readable output (default)
+ * @target      Installer output formatting when json=false (the default)
+ * @strategy    unit; construct with json=false explicitly
  * @cases
- *   - [PASS] creates the aisk-setup symlink pointing at aiskHome/global/setup
- *   - [PASS] creates aisk-{unit}-{skill}/SKILL.md as a symlink to the unit's skill file
- *   - [PASS] symlinks resources/ and scripts/ when the unit declares them
- *   - [PASS] does not create resources/scripts symlinks for a unit with neither
- *   - [PASS] is idempotent — a second run makes no changes and reports nothing removed
- *   - [PASS] skips disabled (rules) units and reports them in skippedDisabled
- *   - [PASS] removes stale managed entries whose unit/skill no longer resolves
- *   - [PASS] does not touch non-managed entries in the skills dir
+ *   - [PASS] list prints Chinese section headers for global/local units
+ *   - [PASS] init failure prints the Chinese reason text
  */
-describe("sync-global", () => {
-  test("creates the aisk-setup symlink pointing at aiskHome/global/setup", () => {
+describe("human-readable output (default)", () => {
+  test("list prints Chinese section headers for global/local units", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
+      addLocalUnit(aiskHome, { name: "loc" });
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
 
-      newInstaller(dir, projectDir, aiskHome).syncGlobal();
+      const out = captureStdout(() => newInstaller(dir, projectDir, aiskHome, false).list());
 
-      const setupLink = join(globalSkillsDirFor(dir), "aisk-setup");
-      expect(lstatSync(setupLink).isSymbolicLink()).toBe(true);
-      expect(readlinkSync(setupLink)).toBe(join(aiskHome, "global", "setup"));
+      expect(out).toContain("全局 unit");
+      expect(out).toContain("本地 unit");
+      expect(() => JSON.parse(out)).toThrow();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test("creates aisk-{unit}-{skill}/SKILL.md as a symlink to the unit's skill file", () => {
+  test("init failure prints the Chinese reason text", () => {
     const dir = makeTempDir();
     try {
       const aiskHome = makeFakeAiskHome(dir);
       const projectDir = join(dir, "project");
       mkdirSync(projectDir);
 
-      newInstaller(dir, projectDir, aiskHome).syncGlobal();
+      const out = captureStdout(() => newInstaller(dir, projectDir, aiskHome, false).init(["poc"]));
 
-      const skillLink = join(globalSkillsDirFor(dir), "aisk-poc-poc", "SKILL.md");
-      expect(lstatSync(skillLink).isSymbolicLink()).toBe(true);
-      expect(readlinkSync(skillLink)).toBe(join(aiskHome, "units", "poc", "skills", "poc.md"));
-      expect(readFileSync(skillLink, "utf8")).toContain("PoC skill content");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("symlinks resources/ and scripts/ when the unit declares them", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      newInstaller(dir, projectDir, aiskHome).syncGlobal();
-
-      const skillDir = join(globalSkillsDirFor(dir), "aisk-poc-poc");
-      expect(readlinkSync(join(skillDir, "resources"))).toBe(
-        join(aiskHome, "units", "poc", "resources"),
-      );
-      expect(readlinkSync(join(skillDir, "scripts"))).toBe(
-        join(aiskHome, "units", "poc", "scripts"),
-      );
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("does not create resources/scripts symlinks for a unit with neither", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      writeFileSync(
-        join(aiskHome, "units", "poc", "unit.json"),
-        JSON.stringify({
-          name: "poc",
-          description: "PoC unit",
-          dependencies: [],
-          components: { skills: [{ name: "poc", file: "skills/poc.md" }] },
-        }),
-      );
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      newInstaller(dir, projectDir, aiskHome).syncGlobal();
-
-      const skillDir = join(globalSkillsDirFor(dir), "aisk-poc-poc");
-      expect(existsSync(join(skillDir, "resources"))).toBe(false);
-      expect(existsSync(join(skillDir, "scripts"))).toBe(false);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("is idempotent — a second run makes no changes and reports nothing removed", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-      const installer = newInstaller(dir, projectDir, aiskHome);
-
-      installer.syncGlobal();
-      const out = JSON.parse(captureStdout(() => installer.syncGlobal())) as SyncGlobalResult;
-
-      expect(out.removedStale).toEqual([]);
-      const skillLink = join(globalSkillsDirFor(dir), "aisk-poc-poc", "SKILL.md");
-      expect(lstatSync(skillLink).isSymbolicLink()).toBe(true);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("skips disabled (rules) units and reports them in skippedDisabled", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      addDisabledUnit(aiskHome);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).syncGlobal()),
-      ) as SyncGlobalResult;
-
-      expect(out.skippedDisabled).toContain("poc-rules");
-      expect(existsSync(join(globalSkillsDirFor(dir), "aisk-poc-rules-poc-rules"))).toBe(false);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("removes stale managed entries whose unit/skill no longer resolves", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-      const staleDir = join(globalSkillsDirFor(dir), "aisk-poc-old-skill");
-      mkdirSync(staleDir, { recursive: true });
-      writeFileSync(join(staleDir, "SKILL.md"), "stale");
-
-      const out = JSON.parse(
-        captureStdout(() => newInstaller(dir, projectDir, aiskHome).syncGlobal()),
-      ) as SyncGlobalResult;
-
-      expect(existsSync(staleDir)).toBe(false);
-      expect(out.removedStale).toContain(staleDir);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("does not touch non-managed entries in the skills dir", () => {
-    const dir = makeTempDir();
-    try {
-      const aiskHome = makeFakeAiskHome(dir);
-      const projectDir = join(dir, "project");
-      mkdirSync(projectDir);
-      const unmanagedDir = join(globalSkillsDirFor(dir), "not-managed-by-aisk");
-      mkdirSync(unmanagedDir, { recursive: true });
-      writeFileSync(join(unmanagedDir, "SKILL.md"), "user-owned");
-
-      newInstaller(dir, projectDir, aiskHome).syncGlobal();
-
-      expect(existsSync(join(unmanagedDir, "SKILL.md"))).toBe(true);
+      expect(out).toContain("失败");
+      expect(out).toContain("register");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
