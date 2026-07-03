@@ -10,14 +10,18 @@
 import {
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   rmdirSync,
   readFileSync,
   readdirSync,
+  readlinkSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "fs";
-import { dirname, join, relative } from "path";
+import { dirname, isAbsolute, join, relative } from "path";
+import { homedir } from "os";
 import { execFileSync } from "child_process";
 import { mergeCustomContent, parseCustomBlocks } from "./libs/custom-blocks";
 import { addPreCommitHook, removePreCommitHook } from "./libs/precommit-lefthook";
@@ -36,9 +40,24 @@ import type {
   ListResult,
   ComponentOpResult,
   ResolveResult,
+  SyncGlobalResult,
+  SyncGlobalLinkResult,
 } from "./types/installer-types";
 
-export type { ResolveResult, AddResult, RemoveResult, UpdateResult, RefreshResult, ShowResult };
+export type {
+  ResolveResult,
+  AddResult,
+  RemoveResult,
+  UpdateResult,
+  RefreshResult,
+  ShowResult,
+  SyncGlobalResult,
+};
+
+/** Prefix marking a `~/.claude/skills` entry as managed by sync-global (safe to clean up when stale). */
+const GLOBAL_MANAGED_PREFIX = "aisk-";
+/** Fixed symlink name for the global setup skill. */
+const SETUP_SKILL_NAME = "aisk-setup";
 
 // ─── Installer ───────────────────────────────────────────────────────────────
 
@@ -53,16 +72,20 @@ export class Installer {
   readonly cwd: string;
   /** When true, output is human-readable text instead of JSON. */
   readonly human: boolean;
+  /** Absolute path to `~/.claude/skills` (injectable so tests never touch the real home dir). */
+  readonly globalSkillsDir: string;
 
   /**
-   * @param cwd      Project root to install units into (defaults to process.cwd()).
-   * @param aiskHome Package root to read units/ from (the ai-skills package's own directory).
-   * @param human    When true, output human-readable text instead of JSON.
+   * @param cwd            Project root to install units into (defaults to process.cwd()).
+   * @param aiskHome       Package root to read units/ from (the ai-skills package's own directory).
+   * @param human          When true, output human-readable text instead of JSON.
+   * @param globalSkillsDir Override for `~/.claude/skills` (defaults to the real home dir; tests inject a temp dir).
    */
-  constructor(cwd: string, aiskHome: string, human = false) {
+  constructor(cwd: string, aiskHome: string, human = false, globalSkillsDir?: string) {
     this.cwd = cwd;
     this.aiskHome = aiskHome;
     this.human = human;
+    this.globalSkillsDir = globalSkillsDir ?? join(homedir(), ".claude", "skills");
   }
 
   // ─── Public API ────────────────────────────────────────────────────────────
@@ -107,11 +130,12 @@ export class Installer {
   add(names: string[]): void {
     this.refresh(true);
     const installed = this.readInstalled();
-    const available = this.getUnitList().map((u) => u.name);
-    const availableSet = new Set(available);
+    const enabledNames = this.getUnitList(false).map((u) => u.name);
+    const availableSet = new Set(this.getUnitList(true).map((u) => u.name));
+    const enabledSet = new Set(enabledNames);
 
     const requestedNames = names.includes("all")
-      ? available.filter((n) => !installed.units[n])
+      ? enabledNames.filter((n) => !installed.units[n])
       : names;
 
     const result: AddResult = { added: [], updated: [], failed: [] };
@@ -123,6 +147,14 @@ export class Installer {
     for (const name of requestedNames) {
       if (!availableSet.has(name)) {
         result.failed.push({ name, reason: "unit 不在注册表中" });
+        continue;
+      }
+      if (!enabledSet.has(name)) {
+        const unitJson = this.readUnitJson(name);
+        result.failed.push({
+          name,
+          reason: unitJson ? this.disabledReason(unitJson)! : "unit disabled",
+        });
         continue;
       }
       if (installed.units[name]) {
@@ -278,9 +310,10 @@ export class Installer {
         }
       }
 
-      // Clean up hooks for scripts whose files no longer exist
+      // Clean up hooks for scripts whose files no longer exist. A global-hook
+      // script's path is already absolute (the shared symlink location).
       for (const comp of entry.components.scripts) {
-        const absPath = join(this.cwd, comp.path);
+        const absPath = isAbsolute(comp.path) ? comp.path : join(this.cwd, comp.path);
         if (!existsSync(absPath)) {
           removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
         }
@@ -318,18 +351,23 @@ export class Installer {
 
     const installed = this.readInstalled();
     const entry = installed.units[unitName];
+    const firstSkillName = (unitJson.components.skills ?? [])[0]?.name;
+    const globalDir = (skillName: string) =>
+      join(this.globalSkillsDir, `aisk-${unitName}-${skillName}`);
 
     const components: ShowResult["components"] = [];
 
     for (const comp of unitJson.components.skills ?? []) {
+      const local = !!(comp.hasCustom || comp.localCopy);
       const ic = entry?.components.skills.find((c) => c.name === comp.name);
       components.push({
         type: "skill",
         name: comp.name,
         optional: !!comp.condition,
         condition: comp.condition,
+        scope: local ? "local" : "global",
         customStatus: ic?.customStatus,
-        installed: !!ic,
+        installed: local ? !!ic : existsSync(join(globalDir(comp.name), "SKILL.md")),
       });
     }
     for (const comp of unitJson.components.rules ?? []) {
@@ -339,29 +377,41 @@ export class Installer {
         name: comp.name,
         optional: !!comp.condition,
         condition: comp.condition,
+        scope: "local",
         customStatus: ic?.customStatus,
         installed: !!ic,
       });
     }
     for (const comp of unitJson.components.scripts ?? []) {
+      const local = !!comp.localCopy;
       const ic = entry?.components.scripts.find((c) => c.name === comp.name);
+      const installedFlag =
+        local || comp.hook
+          ? !!ic // localCopy files and hook registrations are project-local, tracked state
+          : !!firstSkillName && existsSync(join(globalDir(firstSkillName), comp.file));
       components.push({
         type: "script",
         name: comp.name,
         optional: false,
+        scope: local ? "local" : "global",
         hook: comp.hook,
-        installed: !!ic,
+        installed: installedFlag,
       });
     }
     for (const comp of unitJson.components.resources ?? []) {
+      const local = !!(comp.hasCustom || comp.localCopy);
       const ic = entry?.components.resources.find((c) => c.name === comp.name);
+      const installedFlag = local
+        ? !!ic
+        : !!firstSkillName && existsSync(join(globalDir(firstSkillName), comp.file));
       components.push({
         type: "resource",
         name: comp.name,
         optional: !!comp.condition,
         condition: comp.condition,
+        scope: local ? "local" : "global",
         customStatus: ic?.customStatus,
-        installed: !!ic,
+        installed: installedFlag,
       });
     }
 
@@ -370,6 +420,8 @@ export class Installer {
       description: unitJson.description ?? "",
       dependencies: unitJson.dependencies,
       installed: !!entry,
+      disabled: !this.isUnitEnabled(unitJson),
+      disabledReason: this.disabledReason(unitJson),
       components,
     };
 
@@ -388,6 +440,20 @@ export class Installer {
     const result = this.resolveDeps(selectedNames);
     if (this.human) {
       this.printResolveHuman(result);
+    } else {
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    }
+  }
+
+  /**
+   * Ensure `~/.claude/skills/aisk-setup` and every enabled unit's skill directories
+   * are symlinked into `~/.claude/skills`, and remove stale managed (`aisk-*`)
+   * entries whose unit/skill no longer exists or is now disabled. Idempotent.
+   */
+  syncGlobal(): void {
+    const result = this.syncGlobalInternal();
+    if (this.human) {
+      this.printSyncGlobalHuman(result);
     } else {
       process.stdout.write(JSON.stringify(result, null, 2) + "\n");
     }
@@ -421,6 +487,7 @@ export class Installer {
     for (const spec of specs) {
       switch (spec.type) {
         case "skill": {
+          if (!spec.hasCustom && !spec.localCopy) break; // served by the global symlink
           const ic = this.copyComponentDirect(
             join(this.aiskHome, "units", unitName, spec.file),
             join(this.cwd, ".claude", "skills", `aisk-${unitName}-${spec.name}`, "SKILL.md"),
@@ -454,12 +521,14 @@ export class Installer {
           break;
         }
         case "script": {
-          const ic = this.installScript(unitName, spec);
+          const ic = this.installOrRegisterScript(unitName, unitJson, spec);
+          if (!ic) break; // served by the global symlink, no hook to register
           comps.scripts.push(ic);
           results.push({ type: "script", name: spec.name, path: ic.path, hook: spec.hook });
           break;
         }
         case "resource": {
+          if (!spec.hasCustom && !spec.localCopy) break; // served by the global symlink
           const ic = this.copyComponentDirect(
             join(this.aiskHome, "units", unitName, spec.file),
             join(this.cwd, ".aisk", unitName, spec.file),
@@ -510,6 +579,7 @@ export class Installer {
     for (const spec of specs) {
       switch (spec.type) {
         case "skill": {
+          if (!spec.hasCustom && !spec.localCopy) break; // served by the global symlink
           const destFile = join(
             this.cwd,
             ".claude",
@@ -561,12 +631,14 @@ export class Installer {
           break;
         }
         case "script": {
-          const ic = this.installScript(unitName, spec);
+          const ic = this.installOrRegisterScript(unitName, unitJson, spec);
+          if (!ic) break; // served by the global symlink, no hook to register
           comps.scripts.push(ic);
           results.push({ type: "script", name: spec.name, path: ic.path, hook: spec.hook });
           break;
         }
         case "resource": {
+          if (!spec.hasCustom && !spec.localCopy) break; // served by the global symlink
           const destFile = join(this.cwd, ".aisk", unitName, spec.file);
           const existingPath = entry?.components.resources.find((c) => c.name === spec.name)?.path;
           const ic = this.updateComponentDirect(
@@ -615,10 +687,14 @@ export class Installer {
 
     for (const comp of entry.components.scripts) {
       removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
-      const fullPath = join(this.cwd, comp.path);
-      if (existsSync(fullPath)) {
-        rmSync(fullPath);
-        this.tryRemoveEmptyDir(fullPath);
+      // A global-hook script's "path" is an absolute path to the shared symlink,
+      // not a project-owned file — only delete project-relative (localCopy) files.
+      if (!isAbsolute(comp.path)) {
+        const fullPath = join(this.cwd, comp.path);
+        if (existsSync(fullPath)) {
+          rmSync(fullPath);
+          this.tryRemoveEmptyDir(fullPath);
+        }
       }
       results.push({ type: "script", name: comp.name, path: comp.path });
     }
@@ -683,17 +759,50 @@ export class Installer {
   }
 
   /**
+   * Register a script component. Scripts default to the sync-global symlink copy
+   * (bun executes .ts source directly and follows the symlink to its real path to
+   * resolve node_modules/sibling imports — bundling is unnecessary). Only a hook
+   * script needs project-local state (the lefthook.yml entry); a script with
+   * neither a hook nor localCopy has nothing project-local to track.
+   */
+  private installOrRegisterScript(
+    unitName: string,
+    unitJson: UnitJson,
+    spec: ScriptSpec,
+  ): InstalledComponent | null {
+    if (spec.localCopy) return this.bundleScriptLocally(unitName, spec);
+    if (!spec.hook) return null;
+
+    const globalPath = this.globalScriptPath(unitName, unitJson, spec);
+    const paramStr = (spec.params ?? []).map((p) => `{${p}}`).join(" ");
+    const runCmd = paramStr ? `bun ${globalPath} ${paramStr}` : `bun ${globalPath}`;
+    addPreCommitHook(this.cwd, `aisk-${unitName}-${spec.name}`, runCmd);
+
+    return { name: spec.name, path: globalPath };
+  }
+
+  /**
+   * Absolute path a hook script resolves to once sync-global has symlinked it.
+   * Scripts are unit-level but sync-global nests them under a skill's global
+   * directory, so the unit must have at least one skill to host the symlink.
+   */
+  private globalScriptPath(unitName: string, unitJson: UnitJson, spec: ScriptSpec): string {
+    const skillName = (unitJson.components.skills ?? [])[0]?.name;
+    if (!skillName) {
+      throw new Error(
+        `unit "${unitName}" declares a hook script but has no skill to host its global directory`,
+      );
+    }
+    return join(this.globalSkillsDir, `aisk-${unitName}-${skillName}`, spec.file);
+  }
+
+  /**
    * Bundle a unit script (source .ts, plus any local imports/deps such as
    * ./libs or npm packages) into a single file at .aisk/{unit}/scripts/{name}.js
-   * and register its hook.
-   *
-   * Bundling happens here rather than at a separate publish step — there is no
-   * global publish step anymore, units are read directly from aiskHome (the
-   * linked/installed ai-skills package). Bundling is still required (not a
-   * plain copy) because scripts may import npm dependencies (e.g. `cac`) or
-   * sibling source files that would not resolve once copied out of the package.
+   * and register its hook. Used only for `localCopy: true` scripts that must run
+   * from project-local state rather than the shared global symlink.
    */
-  private installScript(unitName: string, spec: ScriptSpec): InstalledComponent {
+  private bundleScriptLocally(unitName: string, spec: ScriptSpec): InstalledComponent {
     const entry = join(this.aiskHome, "units", unitName, spec.file);
     if (!existsSync(entry)) throw new Error(`script source not found: ${entry}`);
 
@@ -710,6 +819,104 @@ export class Installer {
     }
 
     return { name: spec.name, path: relPath };
+  }
+
+  // ─── sync-global ────────────────────────────────────────────────────────────
+
+  private syncGlobalInternal(): SyncGlobalResult {
+    const skillsDir = this.globalSkillsDir;
+    mkdirSync(skillsDir, { recursive: true });
+
+    const linked: SyncGlobalLinkResult[] = [];
+    const skippedDisabled: string[] = [];
+    const desired = new Set<string>();
+
+    const setupSrc = join(this.aiskHome, "global", "setup");
+    const setupDest = join(skillsDir, SETUP_SKILL_NAME);
+    this.ensureSymlink(setupSrc, setupDest);
+    desired.add(SETUP_SKILL_NAME);
+    linked.push({ unit: "setup", skill: "setup", path: setupDest });
+
+    const unitsDir = join(this.aiskHome, "units");
+    const unitNames = existsSync(unitsDir)
+      ? readdirSync(unitsDir).filter((n) => existsSync(join(unitsDir, n, "unit.json")))
+      : [];
+
+    for (const unitName of unitNames) {
+      const unitJson = this.readUnitJson(unitName);
+      if (!unitJson) continue;
+      if (!this.isUnitEnabled(unitJson)) {
+        skippedDisabled.push(unitName);
+        continue;
+      }
+
+      for (const skill of unitJson.components.skills ?? []) {
+        const dirName = `aisk-${unitName}-${skill.name}`;
+        const dest = join(skillsDir, dirName);
+        mkdirSync(dest, { recursive: true });
+
+        this.ensureSymlink(
+          join(this.aiskHome, "units", unitName, skill.file),
+          join(dest, "SKILL.md"),
+        );
+
+        const resourcesDest = join(dest, "resources");
+        if ((unitJson.components.resources ?? []).length > 0) {
+          this.ensureSymlink(join(this.aiskHome, "units", unitName, "resources"), resourcesDest);
+        } else {
+          this.removeIfSymlink(resourcesDest);
+        }
+
+        const scriptsDest = join(dest, "scripts");
+        if ((unitJson.components.scripts ?? []).length > 0) {
+          this.ensureSymlink(join(this.aiskHome, "units", unitName, "scripts"), scriptsDest);
+        } else {
+          this.removeIfSymlink(scriptsDest);
+        }
+
+        desired.add(dirName);
+        linked.push({ unit: unitName, skill: skill.name, path: dest });
+      }
+    }
+
+    const removedStale: string[] = [];
+    for (const entryName of readdirSync(skillsDir)) {
+      if (!entryName.startsWith(GLOBAL_MANAGED_PREFIX) || desired.has(entryName)) continue;
+      rmSync(join(skillsDir, entryName), { recursive: true, force: true });
+      removedStale.push(join(skillsDir, entryName));
+    }
+
+    return { linked, removedStale, skippedDisabled };
+  }
+
+  /** Create/replace a symlink at dest pointing to src. No-op if already correct. */
+  private ensureSymlink(src: string, dest: string): void {
+    let existingType: "symlink" | "other" | "none" = "none";
+    try {
+      existingType = lstatSync(dest).isSymbolicLink() ? "symlink" : "other";
+    } catch {
+      existingType = "none";
+    }
+
+    if (existingType === "symlink") {
+      if (readlinkSync(dest) === src) return;
+      rmSync(dest);
+    } else if (existingType === "other") {
+      // Everything under the aisk-* managed prefix is owned by sync-global.
+      rmSync(dest, { recursive: true, force: true });
+    }
+
+    mkdirSync(dirname(dest), { recursive: true });
+    symlinkSync(src, dest);
+  }
+
+  /** Remove dest if it is a symlink (used to prune components a unit no longer declares). */
+  private removeIfSymlink(dest: string): void {
+    try {
+      if (lstatSync(dest).isSymbolicLink()) rmSync(dest);
+    } catch {
+      /* doesn't exist */
+    }
   }
 
   // ─── Dependency resolution ─────────────────────────────────────────────────
@@ -733,6 +940,11 @@ export class Installer {
       const unitJson = this.readUnitJson(name);
       if (!unitJson) {
         result.failed.push({ name, reason: "unit 不在注册表中" });
+        toInstall.delete(name);
+        return;
+      }
+      if (!this.isUnitEnabled(unitJson)) {
+        result.failed.push({ name, reason: this.disabledReason(unitJson)! });
         toInstall.delete(name);
         return;
       }
@@ -769,6 +981,10 @@ export class Installer {
         const unitJson = this.readUnitJson(name);
         if (!unitJson) {
           console.error(`Error: unit "${name}" not found in units/`);
+          process.exit(1);
+        }
+        if (!this.isUnitEnabled(unitJson)) {
+          console.error(`Error: unit "${name}" is disabled — ${this.disabledReason(unitJson)}`);
           process.exit(1);
         }
         for (const dep of unitJson.dependencies) {
@@ -835,6 +1051,7 @@ export class Installer {
           name: comp.name,
           file: comp.file,
           hasCustom: comp.hasCustom,
+          localCopy: comp.localCopy,
           optional: !!comp.condition,
         });
       }
@@ -858,6 +1075,7 @@ export class Installer {
         file: comp.file,
         hook: comp.hook,
         params: comp.params,
+        localCopy: comp.localCopy,
       });
     }
     for (const comp of unitJson.components.resources ?? []) {
@@ -867,6 +1085,7 @@ export class Installer {
           name: comp.name,
           file: comp.file,
           hasCustom: comp.hasCustom,
+          localCopy: comp.localCopy,
           optional: !!comp.condition,
         });
       }
@@ -881,9 +1100,15 @@ export class Installer {
     const entry = installed.units[unitName];
     if (!entry) return;
 
+    // Only components that would actually be copied locally (hasCustom/localCopy) are
+    // tracked in installed.json — the orphan set must match that same criterion.
     const newSkillNames = new Set(
       (unitJson.components.skills ?? [])
-        .filter((c) => !c.condition || optionalNames.includes(`skill:${c.name}`))
+        .filter(
+          (c) =>
+            (c.hasCustom || c.localCopy) &&
+            (!c.condition || optionalNames.includes(`skill:${c.name}`)),
+        )
         .map((c) => c.name),
     );
     const newRuleNames = new Set(
@@ -893,10 +1118,16 @@ export class Installer {
     );
     const newResourceNames = new Set(
       (unitJson.components.resources ?? [])
-        .filter((c) => !c.condition || optionalNames.includes(`resource:${c.name}`))
+        .filter(
+          (c) =>
+            (c.hasCustom || c.localCopy) &&
+            (!c.condition || optionalNames.includes(`resource:${c.name}`)),
+        )
         .map((c) => c.name),
     );
-    const newScriptNames = new Set((unitJson.components.scripts ?? []).map((c) => c.name));
+    const newScriptNames = new Set(
+      (unitJson.components.scripts ?? []).filter((c) => c.hook || c.localCopy).map((c) => c.name),
+    );
 
     for (const comp of entry.components.skills) {
       if (!newSkillNames.has(comp.name)) this.deleteFile(join(this.cwd, comp.path));
@@ -910,7 +1141,9 @@ export class Installer {
     for (const comp of entry.components.scripts) {
       if (!newScriptNames.has(comp.name)) {
         removePreCommitHook(this.cwd, `aisk-${unitName}-${comp.name}`);
-        this.deleteFile(join(this.cwd, comp.path));
+        // A global-hook script's "path" is an absolute path to the shared symlink,
+        // not a project-owned file — only delete project-relative (localCopy) files.
+        if (!isAbsolute(comp.path)) this.deleteFile(join(this.cwd, comp.path));
       }
     }
   }
@@ -974,8 +1207,29 @@ export class Installer {
     return JSON.parse(readFileSync(path, "utf8")) as UnitJson;
   }
 
-  /** List published units in registry order with their current project install state. */
-  private getUnitList(): Array<{ name: string; description: string; installed: boolean }> {
+  /**
+   * A unit with any `rules` components is temporarily disabled: rule installation
+   * (project-local `.claude/rules` files) is not supported by the current
+   * local/global split and is blocked wholesale until that lands.
+   */
+  private isUnitEnabled(unitJson: UnitJson): boolean {
+    return (unitJson.components.rules ?? []).length === 0;
+  }
+
+  /** Human-readable reason a unit is disabled, or undefined if it is enabled. */
+  private disabledReason(unitJson: UnitJson): string | undefined {
+    return this.isUnitEnabled(unitJson)
+      ? undefined
+      : "unit 包含 rules 组件,rules 暂不支持,已临时禁用";
+  }
+
+  /**
+   * List published units in registry order with their current project install state.
+   * @param includeDisabled When false (default), units with rules components are excluded.
+   */
+  private getUnitList(
+    includeDisabled = false,
+  ): Array<{ name: string; description: string; installed: boolean }> {
     const unitsDir = join(this.aiskHome, "units");
     if (!existsSync(unitsDir)) return [];
 
@@ -992,6 +1246,7 @@ export class Installer {
       .map((dir) => {
         const unitJson = this.readUnitJson(dir);
         if (!unitJson) return null;
+        if (!includeDisabled && !this.isUnitEnabled(unitJson)) return null;
         return {
           name: dir,
           description: unitJson.description ?? "",
@@ -1101,14 +1356,28 @@ export class Installer {
     if (result.dependencies.length > 0) {
       process.stdout.write(`Dependencies: ${result.dependencies.join(", ")}\n`);
     }
+    if (result.disabled) {
+      process.stdout.write(`Status: disabled — ${result.disabledReason}\n\n`);
+      return;
+    }
     process.stdout.write(`Status: ${result.installed ? "installed" : "not installed"}\n\n`);
     process.stdout.write("Components:\n");
     for (const c of result.components) {
-      const mark = !c.installed ? "·" : c.customStatus === "todo" ? "!" : "✓";
+      const mark =
+        c.scope === "global"
+          ? c.installed
+            ? "✓"
+            : "·"
+          : !c.installed
+            ? "·"
+            : c.customStatus === "todo"
+              ? "!"
+              : "✓";
       const typePad = c.type.padEnd(8);
+      const scopeTag = c.scope === "global" ? "  (global)" : "";
       const todo = c.customStatus === "todo" ? "  [todo]" : "";
       const notInstalled = !c.installed && c.optional ? "  (optional, not installed)" : "";
-      process.stdout.write(`  ${mark} ${typePad} ${c.name}${todo}${notInstalled}\n`);
+      process.stdout.write(`  ${mark} ${typePad} ${c.name}${scopeTag}${todo}${notInstalled}\n`);
     }
   }
 
@@ -1136,6 +1405,20 @@ export class Installer {
       result.to_remove.length === 0
     ) {
       process.stdout.write("Nothing to change.\n");
+    }
+  }
+
+  private printSyncGlobalHuman({ linked, removedStale, skippedDisabled }: SyncGlobalResult): void {
+    process.stdout.write(`Linked ${linked.length} skill${linked.length !== 1 ? "s" : ""}:\n`);
+    for (const l of linked) {
+      process.stdout.write(`  ${l.unit}/${l.skill} -> ${l.path}\n`);
+    }
+    if (removedStale.length > 0) {
+      process.stdout.write(`\nRemoved stale (${removedStale.length}):\n`);
+      for (const p of removedStale) process.stdout.write(`  ${p}\n`);
+    }
+    if (skippedDisabled.length > 0) {
+      process.stdout.write(`\nSkipped disabled units: ${skippedDisabled.join(", ")}\n`);
     }
   }
 }

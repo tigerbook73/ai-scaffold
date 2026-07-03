@@ -2,6 +2,8 @@
 
 在目标项目中管理 ai-unit 安装（添加 / 更新 / 删除）。
 
+**注意**：默认安装模型是"全局可用，项目内仅保存本地定制/状态"。普通 skill/script/resource 由 `ai-skills sync-global` 以 symlink 形式装到 `~/.claude/skills`（对所有本机项目生效），本命令只处理声明了 `hasCustom` 或 `localCopy: true` 的组件，以及 hook 注册。声明了 `rules` 组件的 unit 暂时整体屏蔽（`list` 默认不展示；显式 `add` 报 disabled 错误；`add all` 静默跳过）。
+
 ## 命令
 
 | 命令                         | 说明                                  |
@@ -46,8 +48,8 @@ ai-skills <subcommand> [units...]
 
 ```
 已安装：
-  test-review-gate — Test review gate           [有待定制]
-  smart-review     — Smart review skill
+  staged-plan  — Staged planning workflow        [有待定制]
+  smart-review — Smart review skill
 
 未安装：
   confirm-intent — Confirm intent before acting
@@ -56,23 +58,26 @@ ai-skills <subcommand> [units...]
 
 `hasTodo: true` 时在名称右侧标注 `[有待定制]`。
 
+声明了 `rules` 组件的 unit（暂时禁用）不出现在此列表中。
+
 ---
 
 #### add / update 格式
 
-按三类（已添加 / 已更新 / 失败）分组展示。每个 unit 显示安装状态；仅当组件含未填写的 AISK:CUSTOM 块时，在 unit 名下列出对应路径：
+按三类（已添加 / 已更新 / 失败）分组展示。每个 unit 显示安装状态；仅当组件含未填写的 AISK:CUSTOM 块时，在 unit 名下列出对应路径。普通（全局）组件不写入项目，不会出现在 `components` 里：
 
 ```
 已添加：
-  confirm-intent              [installed]
-  test-review-gate            [installed]
-    rule: .claude/rules/aisk-test-review-gate/test-review-gate.md    [待定制]
+  confirm-intent               [installed]
+  staged-plan                  [installed]
+    resource: .aisk/staged-plan/resources/assets/brief-template.md    [待定制]
 
 已更新：
-  smart-review                [updated]
+  smart-review                 [updated]
 
 失败：
   unknown-unit — unit 不在注册表中
+  test-review-gate — unit 包含 rules 组件，rules 暂不支持，已临时禁用
 ```
 
 `autoDep: true` 的 unit 在名称后标注 `（自动依赖）`。
@@ -97,32 +102,44 @@ ai-skills <subcommand> [units...]
 refresh 完成。
 
 待定制（需处理）：
-  test-review-gate
-    .claude/rules/aisk-trg/test-review-gate.md  [todo]
+  staged-plan
+    .aisk/staged-plan/resources/assets/brief-template.md  [todo]
 ```
 
 `todo` 数组为空时输出：`所有定制项已完成。`
+
+refresh 只扫描项目本地文件（hasCustom/localCopy 组件），不涉及 `~/.claude/skills` 下的全局 symlink。
 
 ---
 
 #### show 格式
 
 ```
-test-review-gate — Enforce human review markers on test files
+staged-plan — Staged planning workflow
 
 组件：
-  rule:   .claude/rules/aisk-trg/test-review-gate.md           [待定制]
-  script: .aisk/trg/scripts/check-reviewed-by-commit-marker.js [installed, hook: pre-commit]
-  script: .aisk/trg/scripts/check-test-cases-match-it.js       [installed]
+  skill:    staged-plan                                              (global)
+  resource: assets/brief-template                                    (global)  [待定制]
+  script:   walkthrough-state                                        (global, hook: pre-commit)
+```
+
+`(global)` 标注的组件由 `ai-skills sync-global` 提供，不写入项目；仅当组件为 `local`（hasCustom/localCopy）且实际已复制到项目时才不带此标注。
+
+disabled unit（含 rules 组件）展示为：
+
+```
+test-review-gate — 禁用: unit 包含 rules 组件，rules 暂不支持，已临时禁用
 ```
 
 ---
 
 ### 状态标签
 
-| 标签                | 含义                                          |
-| ------------------- | --------------------------------------------- |
-| `installed`         | 已安装，无需定制                              |
-| `updated`           | 已更新，无需定制                              |
-| `待定制`            | 已安装，含未填写的 AISK:CUSTOM 块（高亮显示） |
-| `optional, skipped` | 可选组件，本次未安装（仅 update 时出现）      |
+| 标签                | 含义                                                       |
+| ------------------- | ---------------------------------------------------------- |
+| `installed`         | 已安装，无需定制                                           |
+| `updated`           | 已更新，无需定制                                           |
+| `待定制`            | 已安装，含未填写的 AISK:CUSTOM 块（高亮显示）              |
+| `optional, skipped` | 可选组件，本次未安装（仅 update 时出现）                   |
+| `(global)`          | 由 `ai-skills sync-global` 提供，不写入项目                |
+| `禁用`              | unit 声明了 rules 组件，rules 暂不支持，本次操作不会安装它 |

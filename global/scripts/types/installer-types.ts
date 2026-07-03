@@ -13,6 +13,8 @@ export interface UnitSkillEntry {
   hasCustom?: boolean;
   /** If set, the component is optional. */
   condition?: string;
+  /** If true, this component is copied into the project even without hasCustom (e.g. must run per-project). */
+  localCopy?: true;
 }
 
 /** A rule entry as declared in unit.json components.rules[]. */
@@ -33,6 +35,8 @@ export interface UnitScriptEntry {
   hook?: string;
   /** lefthook template variables to append as CLI args, e.g. ["staged_files"] → {staged_files} */
   params?: string[];
+  /** If true, bundle this script into the project instead of pointing hooks at the global symlink copy. */
+  localCopy?: true;
 }
 
 /** A resource entry as declared in unit.json components.resources[]. */
@@ -41,6 +45,8 @@ export interface UnitResourceEntry {
   file: string;
   hasCustom?: boolean;
   condition?: string;
+  /** If true, this component is copied into the project even without hasCustom. */
+  localCopy?: true;
 }
 
 /** Parsed structure of units/{unit}/unit.json. */
@@ -151,9 +157,12 @@ export interface ShowComponentResult {
   name: string;
   optional: boolean;
   condition?: string;
-  /** Present only for installed components. */
+  /** "global": served by the sync-global symlink; "local": copied into the project (hasCustom/localCopy). */
+  scope: "global" | "local";
+  /** Present only for local, hasCustom components. */
   customStatus?: "todo" | "done";
   hook?: string;
+  /** For scope "global": whether the sync-global symlink exists on disk. For "local": whether the project file exists. */
   installed: boolean;
 }
 
@@ -163,6 +172,9 @@ export interface ShowResult {
   description: string;
   dependencies: string[];
   installed: boolean;
+  /** True if the unit is temporarily disabled (declares rules components). */
+  disabled: boolean;
+  disabledReason?: string;
   components: ShowComponentResult[];
 }
 
@@ -173,6 +185,26 @@ export interface ListUnit {
   installed: boolean;
   /** True if any installed component has customStatus "todo". */
   hasTodo?: boolean;
+}
+
+// ─── sync-global command output ───────────────────────────────────────────────
+
+/** A single global skill directory that was created/verified by sync-global. */
+export interface SyncGlobalLinkResult {
+  unit: string;
+  skill: string;
+  /** Absolute path of the skill directory under ~/.claude/skills. */
+  path: string;
+}
+
+/** Output of the sync-global command. */
+export interface SyncGlobalResult {
+  /** Skill directories linked (created or already up to date), including aisk-setup. */
+  linked: SyncGlobalLinkResult[];
+  /** Stale managed (aisk-*) entries removed because their unit/skill is gone or disabled. */
+  removedStale: string[];
+  /** Unit names skipped because they are disabled (declare rules components). */
+  skippedDisabled: string[];
 }
 
 /** Output of the list command. */

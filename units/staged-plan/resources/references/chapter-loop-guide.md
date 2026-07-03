@@ -6,7 +6,7 @@
 
 1. 读 `PROGRESS.md`，确认当前章节和它的 `depends_on`。
 2. 完整读取：`00-brief.md`、`DECISIONS.md`，以及 `depends_on` 列出的每个章节文件的**全文**。不要转述成摘要——转述本身就是信息丢失的高发环节。
-3. 如果章节文件还不存在，用 `.aisk/staged-plan/resources/assets/chapter-template.md` 创建，填好 `depends_on` 和 `status: draft`。
+3. 如果章节文件还不存在，用 `~/.claude/skills/aisk-staged-plan-staged-plan/resources/assets/chapter-template.md` 创建，填好 `depends_on` 和 `status: draft`。
 4. 跟用户确认这一轮的边界："这一章只讨论 XX 范围，对吗？"——防止不知不觉漂移到其他章节。
 
 ## 讨论过程中

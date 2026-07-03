@@ -53,5 +53,9 @@ cli
     installer(!!options.human).refresh(options.silent ?? false),
   );
 
+cli
+  .command("sync-global", "Symlink aisk-setup and all enabled units' skills into ~/.claude/skills")
+  .action((options: { human?: boolean }) => installer(!!options.human).syncGlobal());
+
 cli.help();
 cli.parse();
