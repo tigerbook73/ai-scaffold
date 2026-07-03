@@ -1,25 +1,24 @@
 /**
  * Runtime installer for aisk units.
  *
- * Invoked via the `ai-skills` CLI (bin/cli.ts), which passes the package root
- * (wherever this repo is `bun link`ed or installed from) as aiskHome — there is
- * no separate global publish step. Units are split into two mutually exclusive
+ * Invoked via the `aisk-setup` CLI (bin/aisk-setup.ts), which passes the package
+ * root (wherever this repo is `bun link`ed or installed from) as aiskHome — there
+ * is no separate global publish step. Units are split into two mutually exclusive
  * scopes: "global" units (no rules, no hook script, no hasCustom component) are
- * managed once per machine via register/unregister and symlinked into
- * ~/.claude/skills; "local" units need project-local files (rules, a lefthook
- * hook, or AISK:CUSTOM content) and are managed per-project via init/update/remove.
+ * managed once per machine via the `aisk-register` command (bin/aisk-register.ts)
+ * and symlinked into ~/.claude/skills; "local" units need project-local files
+ * (rules, a lefthook hook, or AISK:CUSTOM content) and are managed per-project
+ * via this class's init/update/remove. list/show read the registration record
+ * (but never write it) to report global unit status alongside local units.
  */
 import {
   cpSync,
   existsSync,
-  lstatSync,
   mkdirSync,
   rmdirSync,
   readFileSync,
   readdirSync,
-  readlinkSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "fs";
 import { dirname, join, relative } from "path";
@@ -27,6 +26,7 @@ import { homedir } from "os";
 import { execFileSync } from "child_process";
 import { mergeCustomContent, parseCustomBlocks } from "./libs/custom-blocks";
 import { addPreCommitHook, removePreCommitHook } from "./libs/precommit-lefthook";
+import { globalDirName, isLocalUnit, readRegistry, readUnitJson } from "./libs/global-units";
 import type {
   UnitJson,
   InstalledComponent,
@@ -41,33 +41,16 @@ import type {
   ShowResult,
   ListResult,
   ComponentOpResult,
-  RegistryEntry,
-  RegistryJson,
-  RegisterResult,
-  UnregisterResult,
 } from "./types/installer-types";
 
-export type {
-  InitResult,
-  RemoveResult,
-  UpdateResult,
-  RefreshResult,
-  ShowResult,
-  RegisterResult,
-  UnregisterResult,
-};
-
-/** Fixed symlink name for the global setup skill. */
-const SETUP_SKILL_NAME = "aisk-setup";
-/** Registration record filename, stored directly under globalSkillsDir. */
-const REGISTRY_FILENAME = ".aisk-registry.json";
+export type { InitResult, RemoveResult, UpdateResult, RefreshResult, ShowResult };
 
 // ─── Installer ───────────────────────────────────────────────────────────────
 
 /**
- * Core installer that manages unit lifecycle for a given project directory
- * (local units: list/init/update/remove/refresh/show) and for the machine as
- * a whole (global units: register/unregister).
+ * Core installer that manages local unit lifecycle for a given project
+ * directory (list/init/update/remove/refresh/show). Global unit registration
+ * lives in bin/aisk-register.ts — it's machine-wide and doesn't need a `cwd`.
  */
 export class Installer {
   /** Absolute path to the package root that units/ is read from (the ai-skills package itself). */
@@ -98,7 +81,7 @@ export class Installer {
   list(scope: "global" | "local" | "all" = "all"): void {
     this.refresh(true);
     const installed = this.readInstalled();
-    const registeredUnits = new Set(this.readRegistry().entries.map((e) => e.unit));
+    const registeredUnits = new Set(readRegistry(this.globalSkillsDir).entries.map((e) => e.unit));
     const unitList = this.getUnitList().filter((u) => scope === "all" || u.scope === scope);
 
     const units: ListResult["units"] = unitList.map((u) => {
@@ -143,7 +126,7 @@ export class Installer {
       process.exit(1);
     }
 
-    const local = this.isLocalUnit(unitJson);
+    const local = isLocalUnit(unitJson);
     const components: ShowResult["components"] = [];
     let installed: boolean;
 
@@ -195,11 +178,11 @@ export class Installer {
         });
       }
     } else {
-      const registry = this.readRegistry();
+      const registry = readRegistry(this.globalSkillsDir);
       installed = registry.entries.some((e) => e.unit === unitName);
       const firstSkillName = (unitJson.components.skills ?? [])[0]?.name;
       const globalDir = (skillName: string) =>
-        join(this.globalSkillsDir, this.globalDirName(unitName, skillName));
+        join(this.globalSkillsDir, globalDirName(unitName, skillName));
 
       for (const comp of unitJson.components.skills ?? []) {
         components.push({
@@ -247,39 +230,6 @@ export class Installer {
     }
   }
 
-  // ─── Public API — global units (machine-wide, no project scoping) ─────────
-
-  /**
-   * Rebuild everything under `~/.claude/skills`: unregister whatever the previous
-   * registration record listed, then symlink `aisk-setup` and every global unit's
-   * skill (+ resources/scripts when declared) fresh, and persist the new record.
-   * Local units are skipped entirely. Cleanup is driven only by the registry file —
-   * there is no naming-prefix fallback scan.
-   */
-  register(): void {
-    const result = this.registerInternal();
-    if (this.json) {
-      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
-    } else {
-      this.printRegisterHuman(result);
-    }
-  }
-
-  /** Remove everything the registry record lists and delete the record itself. Whole-registry only. */
-  unregister(): void {
-    const prev = this.readRegistry();
-    const removed = this.unregisterInternal(prev.entries);
-    const registryPath = join(this.globalSkillsDir, REGISTRY_FILENAME);
-    if (existsSync(registryPath)) rmSync(registryPath);
-
-    const result: UnregisterResult = { removed };
-    if (this.json) {
-      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
-    } else {
-      this.printUnregisterHuman(result);
-    }
-  }
-
   // ─── Public API — local units (project-scoped) ─────────────────────────────
 
   /**
@@ -312,7 +262,7 @@ export class Installer {
       if (!localSet.has(name)) {
         result.failed.push({
           name,
-          reason: "unit 为全局 unit,已通过 ai-skills register 在所有项目可用,无需 init",
+          reason: "unit 为全局 unit,已通过 aisk-register 在所有项目可用,无需 init",
         });
         continue;
       }
@@ -811,150 +761,6 @@ export class Installer {
     return { name: spec.name, path: relPath };
   }
 
-  // ─── Global units — register/unregister ────────────────────────────────────
-
-  private registerInternal(): RegisterResult {
-    const skillsDir = this.globalSkillsDir;
-    mkdirSync(skillsDir, { recursive: true });
-
-    const prev = this.readRegistry();
-    const unregisteredPrevious = this.unregisterInternal(prev.entries);
-
-    const registered: RegistryEntry[] = [];
-    const skippedLocal: string[] = [];
-
-    const setupDir = join(skillsDir, SETUP_SKILL_NAME);
-    this.ensureSymlink(join(this.aiskHome, "global", "setup"), setupDir);
-    registered.push({ unit: "setup", dir: setupDir });
-
-    const unitsDir = join(this.aiskHome, "units");
-    const unitNames = existsSync(unitsDir)
-      ? readdirSync(unitsDir).filter((n) => existsSync(join(unitsDir, n, "unit.json")))
-      : [];
-
-    for (const unitName of unitNames) {
-      const unitJson = this.readUnitJson(unitName);
-      if (!unitJson) continue;
-      if (this.isLocalUnit(unitJson)) {
-        skippedLocal.push(unitName);
-        continue;
-      }
-
-      for (const skill of unitJson.components.skills ?? []) {
-        const dirName = this.globalDirName(unitName, skill.name);
-        const dest = join(skillsDir, dirName);
-        mkdirSync(dest, { recursive: true });
-
-        this.ensureSymlink(
-          join(this.aiskHome, "units", unitName, skill.file),
-          join(dest, "SKILL.md"),
-        );
-
-        const resourcesDest = join(dest, "resources");
-        if ((unitJson.components.resources ?? []).length > 0) {
-          this.ensureSymlink(join(this.aiskHome, "units", unitName, "resources"), resourcesDest);
-        } else {
-          this.removeIfSymlink(resourcesDest);
-        }
-
-        const scriptsDest = join(dest, "scripts");
-        if ((unitJson.components.scripts ?? []).length > 0) {
-          this.ensureSymlink(join(this.aiskHome, "units", unitName, "scripts"), scriptsDest);
-        } else {
-          this.removeIfSymlink(scriptsDest);
-        }
-
-        registered.push({ unit: unitName, skill: skill.name, dir: dest });
-      }
-    }
-
-    this.writeRegistry({ registeredAt: new Date().toISOString(), entries: registered });
-
-    return { registered, unregisteredPrevious, skippedLocal };
-  }
-
-  /** Remove every directory the given registry entries point at. Idempotent (missing dirs are a no-op). */
-  private unregisterInternal(entries: RegistryEntry[]): RegistryEntry[] {
-    for (const e of entries) {
-      rmSync(e.dir, { recursive: true, force: true });
-    }
-    return entries;
-  }
-
-  /** Create/replace a symlink at dest pointing to src. No-op if already correct. */
-  private ensureSymlink(src: string, dest: string): void {
-    let existingType: "symlink" | "other" | "none" = "none";
-    try {
-      existingType = lstatSync(dest).isSymbolicLink() ? "symlink" : "other";
-    } catch {
-      existingType = "none";
-    }
-
-    if (existingType === "symlink") {
-      if (readlinkSync(dest) === src) return;
-      rmSync(dest);
-    } else if (existingType === "other") {
-      // Everything under a registered aisk-* directory is owned by register().
-      rmSync(dest, { recursive: true, force: true });
-    }
-
-    mkdirSync(dirname(dest), { recursive: true });
-    symlinkSync(src, dest);
-  }
-
-  /** Remove dest if it is a symlink (used to prune components a unit no longer declares). */
-  private removeIfSymlink(dest: string): void {
-    try {
-      if (lstatSync(dest).isSymbolicLink()) rmSync(dest);
-    } catch {
-      /* doesn't exist */
-    }
-  }
-
-  /** Read the registration record, or an empty one if register() has never run. */
-  private readRegistry(): RegistryJson {
-    const path = join(this.globalSkillsDir, REGISTRY_FILENAME);
-    if (!existsSync(path)) return { registeredAt: "", entries: [] };
-    return JSON.parse(readFileSync(path, "utf8")) as RegistryJson;
-  }
-
-  /** Persist the registration record. */
-  private writeRegistry(registry: RegistryJson): void {
-    mkdirSync(this.globalSkillsDir, { recursive: true });
-    writeFileSync(
-      join(this.globalSkillsDir, REGISTRY_FILENAME),
-      JSON.stringify(registry, null, 2) + "\n",
-    );
-  }
-
-  // ─── Classification & naming ────────────────────────────────────────────────
-
-  /**
-   * A unit is local iff it needs any project-local file: a rules component, a
-   * script with a lefthook hook, or a hasCustom skill/resource (AISK:CUSTOM
-   * content is inherently per-project). Otherwise it's global. A unit is wholly
-   * one or the other — never a mix of local and global components.
-   */
-  private isLocalUnit(unitJson: UnitJson): boolean {
-    return (
-      (unitJson.components.rules ?? []).length > 0 ||
-      (unitJson.components.scripts ?? []).some((s) => s.hook) ||
-      (unitJson.components.skills ?? []).some((s) => s.hasCustom) ||
-      (unitJson.components.resources ?? []).some((r) => r.hasCustom)
-    );
-  }
-
-  /**
-   * Global directory name under globalSkillsDir. When the skill's name equals
-   * the unit's name the segment isn't repeated (e.g. staged-plan → aisk-staged-plan);
-   * otherwise both names appear (e.g. walkthrough/create-walkthrough →
-   * aisk-walkthrough-create-walkthrough). Does not apply to aisk-setup or to any
-   * project-local path.
-   */
-  private globalDirName(unitName: string, skillName: string): string {
-    return unitName === skillName ? `aisk-${unitName}` : `aisk-${unitName}-${skillName}`;
-  }
-
   // ─── Dependency resolution (init only — local-to-local, no separate command) ──
 
   /**
@@ -976,7 +782,7 @@ export class Installer {
       if (!unitJson) return;
       for (const dep of unitJson.dependencies) {
         const depJson = this.readUnitJson(dep);
-        if (!depJson || !this.isLocalUnit(depJson)) continue;
+        if (!depJson || !isLocalUnit(depJson)) continue;
         if (!installedSet.has(dep) && !toInstall.has(dep)) {
           toInstall.add(dep);
           autoDeps.add(dep);
@@ -1167,9 +973,7 @@ export class Installer {
 
   /** Read one unit definition from aiskHome/units. */
   private readUnitJson(unitName: string): UnitJson | null {
-    const path = join(this.aiskHome, "units", unitName, "unit.json");
-    if (!existsSync(path)) return null;
-    return JSON.parse(readFileSync(path, "utf8")) as UnitJson;
+    return readUnitJson(this.aiskHome, unitName);
   }
 
   /** List every published unit in registry order, tagged with its global/local scope. */
@@ -1192,7 +996,7 @@ export class Installer {
         return {
           name: dir,
           description: unitJson.description ?? "",
-          scope: (this.isLocalUnit(unitJson) ? "local" : "global") as "global" | "local",
+          scope: (isLocalUnit(unitJson) ? "local" : "global") as "global" | "local",
         };
       })
       .filter((u): u is NonNullable<typeof u> => u !== null);
@@ -1321,34 +1125,6 @@ export class Installer {
       const todo = c.customStatus === "todo" ? "  [待定制]" : "";
       const notInstalled = !c.installed && c.optional ? "  (可选,未安装)" : "";
       process.stdout.write(`  ${mark} ${typePad} ${c.name}${todo}${notInstalled}\n`);
-    }
-  }
-
-  private printRegisterHuman({
-    registered,
-    unregisteredPrevious,
-    skippedLocal,
-  }: RegisterResult): void {
-    process.stdout.write(`已注册 ${registered.length} 个:\n`);
-    for (const r of registered) {
-      process.stdout.write(`  ${r.unit}${r.skill ? "/" + r.skill : ""} -> ${r.dir}\n`);
-    }
-    if (unregisteredPrevious.length > 0) {
-      process.stdout.write(`\n清理了上次注册的 ${unregisteredPrevious.length} 个条目\n`);
-    }
-    if (skippedLocal.length > 0) {
-      process.stdout.write(`\n跳过的本地 unit:${skippedLocal.join(", ")}\n`);
-    }
-  }
-
-  private printUnregisterHuman({ removed }: UnregisterResult): void {
-    if (removed.length === 0) {
-      process.stdout.write("没有已注册的内容。\n");
-      return;
-    }
-    process.stdout.write(`已清空 ${removed.length} 个已注册条目:\n`);
-    for (const r of removed) {
-      process.stdout.write(`  ${r.unit}${r.skill ? "/" + r.skill : ""} -> ${r.dir}\n`);
     }
   }
 }

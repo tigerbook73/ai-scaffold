@@ -10,47 +10,37 @@ Requires [Bun](https://bun.sh) on PATH.
 git clone .../ai-scaffold ~/code/ai-scaffold
 cd ~/code/ai-scaffold && bun install && bun link
 
-ai-skills register
+aisk-register
 ```
 
-- `bun link` registers this repo as the global `ai-skills` command (`~/.bun/bin/ai-skills`) — it runs `bin/cli.ts` directly out of the repo, so editing `units/` takes effect immediately, no rebuild/republish step.
-- `ai-skills register` symlinks the global `/setup` command and every **global unit**'s skill into `~/.claude/skills`, available in every project on this machine right away. Re-run it after adding/renaming/removing a unit or skill, or after editing a global unit's content — there's no automatic change detection.
+- `bun link` registers this repo's two bins as global commands (`~/.bun/bin/aisk-setup`, `~/.bun/bin/aisk-register`) — they run `bin/aisk-setup.ts`/`bin/aisk-register.ts` directly out of the repo, so editing `units/` takes effect immediately, no rebuild/republish step.
+- `aisk-register` symlinks every **global unit**'s skill into `~/.claude/skills`, available in every project on this machine right away. Re-run it after adding/renaming/removing a unit or skill, or after editing a global unit's content — there's no automatic change detection.
 
 ## global unit vs. local unit
 
 Each unit is wholly one or the other:
 
-- **global unit** — no `rules` component, no script with a lefthook `hook`, no `hasCustom` skill/resource. Managed once per machine via `ai-skills register`/`unregister`; has no per-project commands at all.
-- **local unit** — needs a `rules` component, a hook script, or `hasCustom` content, all of which are inherently project-local. Managed per project via `ai-skills init`/`update`/`remove` (or the equivalent `/setup` commands). `init` auto-installs local-to-local dependencies; a dependency that's a global unit needs no action.
+- **global unit** — no `rules` component, no script with a lefthook `hook`, no `hasCustom` skill/resource. Managed once per machine via the `aisk-register` command (`register`/`unregister` subcommands); has no per-project commands at all, and isn't managed by `aisk-setup`.
+- **local unit** — needs a `rules` component, a hook script, or `hasCustom` content, all of which are inherently project-local. Managed per project via the `aisk-setup` command (`init`/`update`/`remove` subcommands). `init` auto-installs local-to-local dependencies; a dependency that's a global unit needs no action.
 
 ```
-ai-skills register              # global units: symlink into ~/.claude/skills (idempotent)
-ai-skills unregister            # global units: remove everything ever registered
+aisk-register register           # global units: symlink into ~/.claude/skills (idempotent)
+aisk-register unregister         # global units: remove everything ever registered
 
-ai-skills init <unit> [unit...] # local units: install into the current project
-ai-skills init all              # install every not-yet-installed local unit
-ai-skills update [unit|all]     # update installed local units (all if none specified)
-ai-skills remove <unit|all>     # uninstall local units
+aisk-setup init <unit> [unit...] # local units: install into the current project
+aisk-setup init all              # install every not-yet-installed local unit
+aisk-setup update [unit|all]     # update installed local units (all if none specified)
+aisk-setup remove <unit|all>     # uninstall local units
 
-ai-skills list [--scope global|local|all]  # show all units and their status (human-readable by default)
-ai-skills show <unit>                       # show unit details and component status
+aisk-setup list [--scope global|local|all]  # show all units and their status (human-readable by default)
+aisk-setup show <unit>                       # show unit details and component status
 ```
 
-Add `--json` to any command for structured output instead of the default human-readable text.
+Add `--json` to any `aisk-setup` command for structured output instead of the default human-readable text (`aisk-register` always prints human-readable text).
 
-Or use the global `/setup` command in any Claude Code project — it only manages local units (`register`/`unregister` are CLI-only):
+`aisk-setup init`/`update` bundle each local unit's scripts on the spot (via `bun build`) and copy the result into the target project's `.aisk/{unit}/scripts/`. Global unit scripts are never bundled — `bun` executes the symlinked `.ts` source directly.
 
-```
-/setup list                # local units and install status in the current project
-/setup init <unit|all>     # install a local unit (or several, space-separated, or "all")
-/setup update <unit|all>   # update installed local units
-/setup remove <unit|all>   # uninstall local units
-/setup show <unit>         # show unit details and component status
-```
-
-`ai-skills init`/`update` bundle each local unit's scripts on the spot (via `bun build`) and copy the result into the target project's `.aisk/{unit}/scripts/`. Global unit scripts are never bundled — `bun` executes the symlinked `.ts` source directly.
-
-> A real `npm install -g ai-skills` (installing a published package instead of this checkout) is scaffolded via `publishConfig` in `package.json` but not yet wired up to an actual npm publish — not part of the day-to-day workflow above.
+> A real `npm install -g ai-skills` (installing a published package instead of this checkout, exposing the same `aisk-setup`/`aisk-register` bins) is scaffolded via `publishConfig` in `package.json` but not yet wired up to an actual npm publish — not part of the day-to-day workflow above.
 
 ## Available units
 
@@ -73,33 +63,32 @@ Or use the global `/setup` command in any Claude Code project — it only manage
 2. Add skill files to `units/<name>/skills/`, rules to `rules/`, scripts to `scripts/`
 3. Run `pnpm build` to refresh `unit.json`/`units/units.json` (structural changes like new/renamed files need this; content edits to existing files don't)
 4. Run `pnpm verify` then `git commit`
-5. If the unit is global (no rules, no hook script, no hasCustom), run `ai-skills register` to make it available
+5. If the unit is global (no rules, no hook script, no hasCustom), run `aisk-register` to make it available
 
-Since `ai-skills`/`/setup` read straight from this checkout (via `bun link`), no publish step is needed — changes are visible immediately (global units still need a `register` re-run to refresh their symlinks after structural changes).
+Since `aisk-setup`/`aisk-register` read straight from this checkout (via `bun link`), no publish step is needed — changes are visible immediately (global units still need an `aisk-register` re-run to refresh their symlinks after structural changes).
 
 ## Repository structure
 
 ```
 bin/
-  cli.ts            # ai-skills CLI entry point (bun-linked as the global `ai-skills` command)
+  aisk-setup.ts     # local unit CLI entry point (bun-linked as the global `aisk-setup` command)
+  aisk-register.ts  # global unit register/unregister entry point (bun-linked as `aisk-register`)
 units/              # ai-unit source files
   <unit>/
     unit.json       # unit metadata (auto-refreshed by pnpm build)
     skills/         # Claude Code skill commands
     rules/          # Claude Code rules (presence alone makes a unit "local")
-    scripts/        # runtime scripts (bundled on demand at `ai-skills init/update` time for local units;
+    scripts/        # runtime scripts (bundled on demand at `aisk-setup init/update` time for local units;
                      # symlinked as-is for global units, bun executes .ts directly)
     resources/      # markdown resources
 global/
-  setup/SKILL.md    # global /setup management command (symlinked into ~/.claude/skills/aisk-setup);
-                     # manages local units only
-  scripts/
-    installer.ts    # target-project + machine-wide installer core (also the ai-skills CLI backend)
-    libs/           # shared utilities (custom-blocks, lefthook, types)
+  installer.ts      # local unit installer core (the aisk-setup CLI backend)
+  libs/             # shared utilities (custom-blocks, lefthook, global-units, types)
 scripts/
   build.ts          # scan units/, refresh unit.json and units/units.json
-  build-dist.ts     # compile dist/cli.js for a future real npm publish (not part of normal usage)
-tests/              # build, installer baseline tests
+  build-dist.ts     # compile dist/aisk-setup.js + dist/aisk-register.js for a future real npm publish
+tests/              # build, installer, register baseline tests
+  helpers/          # fixtures shared by installer.test.ts and register.test.ts
 docs/
   OVERVIEW.md       # full design documentation
 ```

@@ -190,9 +190,7 @@ export interface ListResult {
 
 /** One symlinked directory under ~/.claude/skills, tracked so unregister can wipe it deterministically. */
 export interface RegistryEntry {
-  /** "setup" for the fixed aisk-setup entry. */
   unit: string;
-  /** Absent for the aisk-setup entry. */
   skill?: string;
   /** Absolute path of the aisk-* directory under globalSkillsDir. */
   dir: string;

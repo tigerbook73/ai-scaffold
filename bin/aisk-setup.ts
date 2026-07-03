@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { resolve } from "path";
 import { cac } from "cac";
-import { Installer } from "../global/scripts/installer";
+import { Installer } from "../global/installer";
 
 /** Package root — used as aiskHome so Installer reads units directly from the linked/installed package. */
 const pkgRoot = resolve(__dirname, "..");
@@ -10,42 +10,32 @@ function installer(json: boolean): Installer {
   return new Installer(process.cwd(), pkgRoot, json);
 }
 
-const cli = cac("ai-skills");
+const cli = cac("aisk-setup");
 
 cli.option("--json", "Output JSON instead of the default human-readable text");
 
-// ─── Global units (machine-wide, no project scoping) ──────────────────────────
-
-cli
-  .command("register", "Symlink aisk-setup and all global units' skills into ~/.claude/skills")
-  .example("  ai-skills register")
-  .action((options: { json?: boolean }) => installer(!!options.json).register());
-
-cli
-  .command("unregister", "Remove everything ever registered under ~/.claude/skills")
-  .example("  ai-skills unregister")
-  .action((options: { json?: boolean }) => installer(!!options.json).unregister());
-
 // ─── Local units (project-scoped) ──────────────────────────────────────────────
+// Global units (machine-wide, no project scoping) are managed separately via
+// the `aisk-register` command (bin/aisk-register.ts), not this CLI.
 
 cli
   .command("init [...units]", "Install local units into the current project")
-  .example("  ai-skills init test-review-gate")
-  .example("  ai-skills init test-review-gate ui-coverage")
-  .example("  ai-skills init all")
+  .example("  aisk-setup init test-review-gate")
+  .example("  aisk-setup init test-review-gate ui-coverage")
+  .example("  aisk-setup init all")
   .action((units: string[], options: { json?: boolean }) => installer(!!options.json).init(units));
 
 cli
   .command("remove [...units]", "Remove installed local units from the current project")
-  .example("  ai-skills remove test-review-gate")
+  .example("  aisk-setup remove test-review-gate")
   .action((units: string[], options: { json?: boolean }) =>
     installer(!!options.json).remove(units),
   );
 
 cli
   .command("update [...units]", "Update installed local units (all if none specified)")
-  .example("  ai-skills update")
-  .example("  ai-skills update test-review-gate")
+  .example("  aisk-setup update")
+  .example("  aisk-setup update test-review-gate")
   .action((units: string[], options: { json?: boolean }) =>
     installer(!!options.json).update(units.length ? units : ["all"]),
   );
@@ -61,7 +51,7 @@ cli
 
 cli
   .command("show <unit>", "Show details for a unit")
-  .example("  ai-skills show staged-plan")
+  .example("  aisk-setup show staged-plan")
   .action((unit: string, options: { json?: boolean }) => installer(!!options.json).show(unit));
 
 cli
