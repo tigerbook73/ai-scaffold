@@ -93,7 +93,7 @@ state read --key {stateKey}
 1. 从 index.json 中读取 `groups[N-1].files`。
 2. 运行 `git diff {baseline} -U15 -- {files...}` 获取仅针对本组文件的 diff。
 3. 对每个包含变更文件的目录，检查是否存在 `README.md`、`types.ts` 或 `index.ts`；读取存在且与理解模块边界相关的文件。
-4. 若尚未加载，读取 `.aisk/walkthrough/resources/strategy.md`。
+4. 若尚未加载，读取 `~/.claude/skills/aisk-walkthrough-create-walkthrough/resources/strategy.md`。
 5. 按照 `strategy.md` 中的展示格式，生成 G{N} 的完整走读内容。
 6. 通过 Write 工具将结果写入 `{cwd}/.aisk/walkthrough/state/{stateKey}/g{N}.md` —— **静默写入，不作解说**。
 

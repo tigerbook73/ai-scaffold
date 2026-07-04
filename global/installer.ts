@@ -1,11 +1,15 @@
 /**
  * Runtime installer for aisk units.
  *
- * Invoked via the `ai-skills` CLI (bin/cli.ts), which passes the package root
- * (wherever this repo is `bun link`ed or installed from) as aiskHome — there is
- * no separate global publish step. It manages project-local generated files,
- * hook registration, dependency resolution, and preservation of AISK:CUSTOM
- * blocks during updates.
+ * Invoked via the `aisk-setup` CLI (bin/aisk-setup.ts), which passes the package
+ * root (wherever this repo is `bun link`ed or installed from) as aiskHome — there
+ * is no separate global publish step. Units are split into two mutually exclusive
+ * scopes: "global" units (no rules, no hook script, no hasCustom component) are
+ * managed once per machine via the `aisk-register` command (bin/aisk-register.ts)
+ * and symlinked into ~/.claude/skills; "local" units need project-local files
+ * (rules, a lefthook hook, or AISK:CUSTOM content) and are managed per-project
+ * via this class's init/update/remove. list/show read the registration record
+ * (but never write it) to report global unit status alongside local units.
  */
 import {
   cpSync,
@@ -18,9 +22,11 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join, relative } from "path";
+import { homedir } from "os";
 import { execFileSync } from "child_process";
 import { mergeCustomContent, parseCustomBlocks } from "./libs/custom-blocks";
 import { addPreCommitHook, removePreCommitHook } from "./libs/precommit-lefthook";
+import { globalDirName, isLocalUnit, readRegistry, readUnitJson } from "./libs/global-units";
 import type {
   UnitJson,
   InstalledComponent,
@@ -28,52 +34,65 @@ import type {
   InstalledJson,
   ScriptSpec,
   ComponentSpec,
-  AddResult,
+  InitResult,
   RemoveResult,
   UpdateResult,
   RefreshResult,
   ShowResult,
   ListResult,
   ComponentOpResult,
-  ResolveResult,
 } from "./types/installer-types";
 
-export type { ResolveResult, AddResult, RemoveResult, UpdateResult, RefreshResult, ShowResult };
+export type { InitResult, RemoveResult, UpdateResult, RefreshResult, ShowResult };
 
 // ─── Installer ───────────────────────────────────────────────────────────────
 
 /**
- * Core installer that manages unit lifecycle (list, add, remove, update, refresh, show)
- * for a given project directory.
+ * Core installer that manages local unit lifecycle for a given project
+ * directory (list/init/update/remove/refresh/show). Global unit registration
+ * lives in bin/aisk-register.ts — it's machine-wide and doesn't need a `cwd`.
  */
 export class Installer {
   /** Absolute path to the package root that units/ is read from (the ai-skills package itself). */
   readonly aiskHome: string;
   /** Absolute path to the target project directory. */
   readonly cwd: string;
-  /** When true, output is human-readable text instead of JSON. */
-  readonly human: boolean;
+  /** When true, output is JSON instead of human-readable text (human is the default). */
+  readonly json: boolean;
+  /** Absolute path to `~/.claude/skills` (injectable so tests never touch the real home dir). */
+  readonly globalSkillsDir: string;
 
   /**
-   * @param cwd      Project root to install units into (defaults to process.cwd()).
-   * @param aiskHome Package root to read units/ from (the ai-skills package's own directory).
-   * @param human    When true, output human-readable text instead of JSON.
+   * @param cwd            Project root to install local units into (defaults to process.cwd()).
+   * @param aiskHome       Package root to read units/ from (the ai-skills package's own directory).
+   * @param json           When true, output JSON instead of human-readable text.
+   * @param globalSkillsDir Override for `~/.claude/skills` (defaults to the real home dir; tests inject a temp dir).
    */
-  constructor(cwd: string, aiskHome: string, human = false) {
+  constructor(cwd: string, aiskHome: string, json = false, globalSkillsDir?: string) {
     this.cwd = cwd;
     this.aiskHome = aiskHome;
-    this.human = human;
+    this.json = json;
+    this.globalSkillsDir = globalSkillsDir ?? join(homedir(), ".claude", "skills");
   }
 
-  // ─── Public API ────────────────────────────────────────────────────────────
+  // ─── Public API — read-only, dual scope ────────────────────────────────────
 
-  /** List all available units with their install and customization status. */
-  list(): void {
+  /** List units (global + local by default) with their registration/install status. */
+  list(scope: "global" | "local" | "all" = "all"): void {
     this.refresh(true);
     const installed = this.readInstalled();
-    const unitList = this.getUnitList();
+    const registeredUnits = new Set(readRegistry(this.globalSkillsDir).entries.map((e) => e.unit));
+    const unitList = this.getUnitList().filter((u) => scope === "all" || u.scope === scope);
 
     const units: ListResult["units"] = unitList.map((u) => {
+      if (u.scope === "global") {
+        return {
+          name: u.name,
+          description: u.description,
+          scope: u.scope,
+          installed: registeredUnits.has(u.name),
+        };
+      }
       const entry = installed.units[u.name];
       const hasTodo = entry
         ? [
@@ -82,47 +101,169 @@ export class Installer {
             ...entry.components.resources,
           ].some((c) => c.customStatus === "todo")
         : undefined;
-
       return {
         name: u.name,
         description: u.description,
-        installed: u.installed,
+        scope: u.scope,
+        installed: !!entry,
         ...(hasTodo ? { hasTodo: true } : {}),
       };
     });
 
     const result: ListResult = { units };
-    if (this.human) {
-      this.printListHuman(result);
-    } else {
+    if (this.json) {
       process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    } else {
+      this.printListHuman(result);
     }
   }
 
+  /** Show details for a single unit, dispatching to global or local presentation by its scope. */
+  show(unitName: string): void {
+    const unitJson = this.readUnitJson(unitName);
+    if (!unitJson) {
+      console.error(`Error: unit "${unitName}" not found in units/`);
+      process.exit(1);
+    }
+
+    const local = isLocalUnit(unitJson);
+    const components: ShowResult["components"] = [];
+    let installed: boolean;
+
+    if (local) {
+      const entry = this.readInstalled().units[unitName];
+      installed = !!entry;
+
+      for (const comp of unitJson.components.skills ?? []) {
+        const ic = entry?.components.skills.find((c) => c.name === comp.name);
+        components.push({
+          type: "skill",
+          name: comp.name,
+          optional: !!comp.condition,
+          condition: comp.condition,
+          customStatus: ic?.customStatus,
+          installed: !!ic,
+        });
+      }
+      for (const comp of unitJson.components.rules ?? []) {
+        const ic = entry?.components.rules.find((c) => c.name === comp.name);
+        components.push({
+          type: "rule",
+          name: comp.name,
+          optional: !!comp.condition,
+          condition: comp.condition,
+          customStatus: ic?.customStatus,
+          installed: !!ic,
+        });
+      }
+      for (const comp of unitJson.components.scripts ?? []) {
+        const ic = entry?.components.scripts.find((c) => c.name === comp.name);
+        components.push({
+          type: "script",
+          name: comp.name,
+          optional: false,
+          hook: comp.hook,
+          installed: !!ic,
+        });
+      }
+      for (const comp of unitJson.components.resources ?? []) {
+        const ic = entry?.components.resources.find((c) => c.name === comp.name);
+        components.push({
+          type: "resource",
+          name: comp.name,
+          optional: !!comp.condition,
+          condition: comp.condition,
+          customStatus: ic?.customStatus,
+          installed: !!ic,
+        });
+      }
+    } else {
+      const registry = readRegistry(this.globalSkillsDir);
+      installed = registry.entries.some((e) => e.unit === unitName);
+      const firstSkillName = (unitJson.components.skills ?? [])[0]?.name;
+      const globalDir = (skillName: string) =>
+        join(this.globalSkillsDir, globalDirName(unitName, skillName));
+
+      for (const comp of unitJson.components.skills ?? []) {
+        components.push({
+          type: "skill",
+          name: comp.name,
+          optional: !!comp.condition,
+          condition: comp.condition,
+          installed: existsSync(join(globalDir(comp.name), "SKILL.md")),
+        });
+      }
+      for (const comp of unitJson.components.scripts ?? []) {
+        components.push({
+          type: "script",
+          name: comp.name,
+          optional: false,
+          hook: comp.hook,
+          installed: !!firstSkillName && existsSync(join(globalDir(firstSkillName), comp.file)),
+        });
+      }
+      for (const comp of unitJson.components.resources ?? []) {
+        components.push({
+          type: "resource",
+          name: comp.name,
+          optional: !!comp.condition,
+          condition: comp.condition,
+          installed: !!firstSkillName && existsSync(join(globalDir(firstSkillName), comp.file)),
+        });
+      }
+      // A global unit has no rules component by construction (rules ⇒ local).
+    }
+
+    const result: ShowResult = {
+      name: unitName,
+      description: unitJson.description ?? "",
+      dependencies: unitJson.dependencies,
+      scope: local ? "local" : "global",
+      installed,
+      components,
+    };
+
+    if (this.json) {
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    } else {
+      this.printShowHuman(result);
+    }
+  }
+
+  // ─── Public API — local units (project-scoped) ─────────────────────────────
+
   /**
-   * Add one or more units. "all" installs all available units.
-   * If a unit is already installed, it is updated instead.
-   * Transitive dependencies that are not installed are auto-installed.
+   * Install one or more local units into the current project. "all" installs every
+   * not-yet-installed local unit. Already-installed units convert to an update.
+   * Local-to-local dependencies are auto-installed (autoDep); a dependency that is
+   * a global unit needs no action since it's always available once registered.
    */
-  add(names: string[]): void {
+  init(names: string[]): void {
     this.refresh(true);
     const installed = this.readInstalled();
-    const available = this.getUnitList().map((u) => u.name);
-    const availableSet = new Set(available);
+    const allUnits = this.getUnitList();
+    const availableSet = new Set(allUnits.map((u) => u.name));
+    const localSet = new Set(allUnits.filter((u) => u.scope === "local").map((u) => u.name));
 
     const requestedNames = names.includes("all")
-      ? available.filter((n) => !installed.units[n])
+      ? [...localSet].filter((n) => !installed.units[n])
       : names;
 
-    const result: AddResult = { added: [], updated: [], failed: [] };
+    const result: InitResult = { added: [], updated: [], failed: [] };
 
-    // Validate and split
     const toInstall: string[] = [];
     const toUpdate: string[] = [];
 
     for (const name of requestedNames) {
       if (!availableSet.has(name)) {
         result.failed.push({ name, reason: "unit 不在注册表中" });
+        continue;
+      }
+      if (!localSet.has(name)) {
+        result.failed.push({
+          name,
+          reason: "unit 为全局 unit,已通过 aisk-register 在所有项目可用,无需 init",
+        });
         continue;
       }
       if (installed.units[name]) {
@@ -132,14 +273,11 @@ export class Installer {
       }
     }
 
-    // Resolve transitive deps for fresh installs (only install uninstalled deps)
     const { order, autoDeps } = this.resolveFreshDeps(
       toInstall,
       new Set(Object.keys(installed.units)),
-      result,
     );
 
-    // Process fresh installs in dep order
     for (const name of order) {
       try {
         const comps = this.installUnitAllComponents(name);
@@ -149,7 +287,6 @@ export class Installer {
       }
     }
 
-    // Process converts-to-update
     for (const name of toUpdate) {
       try {
         const comps = this.updateUnitComponents(name);
@@ -159,15 +296,15 @@ export class Installer {
       }
     }
 
-    if (this.human) {
-      this.printAddHuman(result);
-    } else {
+    if (this.json) {
       process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    } else {
+      this.printInitHuman(result);
     }
   }
 
   /**
-   * Remove one or more installed units. "all" removes all installed units.
+   * Remove one or more installed local units. "all" removes all installed units.
    * Fails per-unit if not installed.
    */
   remove(names: string[]): void {
@@ -191,15 +328,15 @@ export class Installer {
       }
     }
 
-    if (this.human) {
-      this.printRemoveHuman(result);
-    } else {
+    if (this.json) {
       process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    } else {
+      this.printRemoveHuman(result);
     }
   }
 
   /**
-   * Update one or more installed units. "all" updates all installed units.
+   * Update one or more installed local units. "all" updates all installed units.
    * Fails per-unit if not installed. Optional components that are not on disk are skipped.
    * AISK:CUSTOM done blocks are merged into the new template.
    */
@@ -229,15 +366,15 @@ export class Installer {
       }
     }
 
-    if (this.human) {
-      this.printUpdateHuman(result);
-    } else {
+    if (this.json) {
       process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    } else {
+      this.printUpdateHuman(result);
     }
   }
 
   /**
-   * Scan all installed component files for AISK:CUSTOM block status,
+   * Scan all installed local component files for AISK:CUSTOM block status,
    * sync customStatus back to installed.json, and clean up orphaned hooks.
    * In silent mode (internal calls), produces no output.
    */
@@ -278,7 +415,7 @@ export class Installer {
         }
       }
 
-      // Clean up hooks for scripts whose files no longer exist
+      // Clean up hooks for scripts whose files no longer exist.
       for (const comp of entry.components.scripts) {
         const absPath = join(this.cwd, comp.path);
         if (!existsSync(absPath)) {
@@ -300,96 +437,11 @@ export class Installer {
 
     if (!silent) {
       const refreshResult: RefreshResult = { todo: todoUnits };
-      if (this.human) {
-        this.printRefreshHuman(refreshResult);
-      } else {
+      if (this.json) {
         process.stdout.write(JSON.stringify(refreshResult, null, 2) + "\n");
+      } else {
+        this.printRefreshHuman(refreshResult);
       }
-    }
-  }
-
-  /** Show details for a single unit including component status. */
-  show(unitName: string): void {
-    const unitJson = this.readUnitJson(unitName);
-    if (!unitJson) {
-      console.error(`Error: unit "${unitName}" not found in units/`);
-      process.exit(1);
-    }
-
-    const installed = this.readInstalled();
-    const entry = installed.units[unitName];
-
-    const components: ShowResult["components"] = [];
-
-    for (const comp of unitJson.components.skills ?? []) {
-      const ic = entry?.components.skills.find((c) => c.name === comp.name);
-      components.push({
-        type: "skill",
-        name: comp.name,
-        optional: !!comp.condition,
-        condition: comp.condition,
-        customStatus: ic?.customStatus,
-        installed: !!ic,
-      });
-    }
-    for (const comp of unitJson.components.rules ?? []) {
-      const ic = entry?.components.rules.find((c) => c.name === comp.name);
-      components.push({
-        type: "rule",
-        name: comp.name,
-        optional: !!comp.condition,
-        condition: comp.condition,
-        customStatus: ic?.customStatus,
-        installed: !!ic,
-      });
-    }
-    for (const comp of unitJson.components.scripts ?? []) {
-      const ic = entry?.components.scripts.find((c) => c.name === comp.name);
-      components.push({
-        type: "script",
-        name: comp.name,
-        optional: false,
-        hook: comp.hook,
-        installed: !!ic,
-      });
-    }
-    for (const comp of unitJson.components.resources ?? []) {
-      const ic = entry?.components.resources.find((c) => c.name === comp.name);
-      components.push({
-        type: "resource",
-        name: comp.name,
-        optional: !!comp.condition,
-        condition: comp.condition,
-        customStatus: ic?.customStatus,
-        installed: !!ic,
-      });
-    }
-
-    const result: ShowResult = {
-      name: unitName,
-      description: unitJson.description ?? "",
-      dependencies: unitJson.dependencies,
-      installed: !!entry,
-      components,
-    };
-
-    if (this.human) {
-      this.printShowHuman(result);
-    } else {
-      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
-    }
-  }
-
-  /**
-   * Computes the full changeset for the given desired state and outputs it as JSON.
-   * The desired state is the complete list of unit names the user wants installed.
-   */
-  resolve(selectedNames: string[]): void {
-    const result = this.resolveDeps(selectedNames);
-    if (this.human) {
-      this.printResolveHuman(result);
-    } else {
-      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
     }
   }
 
@@ -400,11 +452,12 @@ export class Installer {
     return JSON.parse(readFileSync(installedPath, "utf8")) as InstalledJson;
   }
 
-  // ─── Unit-level operations ─────────────────────────────────────────────────
+  // ─── Local unit — unit-level operations ────────────────────────────────────
 
   /**
-   * Install a unit with ALL components (required + optional).
-   * Copies files directly from templates; scans AISK:CUSTOM blocks for customStatus.
+   * Install a local unit with ALL components (required + optional). Every
+   * component is copied unconditionally — a local unit is wholly local, there
+   * is no per-component global/local mixing.
    */
   private installUnitAllComponents(unitName: string): ComponentOpResult[] {
     const unitJson = this.readUnitJson(unitName)!;
@@ -454,7 +507,7 @@ export class Installer {
           break;
         }
         case "script": {
-          const ic = this.installScript(unitName, spec);
+          const ic = this.installScriptLocal(unitName, spec);
           comps.scripts.push(ic);
           results.push({ type: "script", name: spec.name, path: ic.path, hook: spec.hook });
           break;
@@ -485,7 +538,7 @@ export class Installer {
   }
 
   /**
-   * Update an installed unit.
+   * Update an installed local unit.
    * Optional components: checked by file existence; skipped if not on disk.
    * hasCustom components: done blocks merged from existing file into new template.
    */
@@ -561,7 +614,7 @@ export class Installer {
           break;
         }
         case "script": {
-          const ic = this.installScript(unitName, spec);
+          const ic = this.installScriptLocal(unitName, spec);
           comps.scripts.push(ic);
           results.push({ type: "script", name: spec.name, path: ic.path, hook: spec.hook });
           break;
@@ -594,7 +647,7 @@ export class Installer {
     return results;
   }
 
-  /** Remove all components of an installed unit and clean up hooks. */
+  /** Remove all components of an installed local unit and clean up hooks. */
   private removeUnitComponents(unitName: string): ComponentOpResult[] {
     const installed = this.readInstalled();
     const entry = installed.units[unitName];
@@ -683,17 +736,13 @@ export class Installer {
   }
 
   /**
-   * Bundle a unit script (source .ts, plus any local imports/deps such as
+   * Bundle a local unit's script (source .ts, plus any local imports/deps such as
    * ./libs or npm packages) into a single file at .aisk/{unit}/scripts/{name}.js
-   * and register its hook.
-   *
-   * Bundling happens here rather than at a separate publish step — there is no
-   * global publish step anymore, units are read directly from aiskHome (the
-   * linked/installed ai-skills package). Bundling is still required (not a
-   * plain copy) because scripts may import npm dependencies (e.g. `cac`) or
-   * sibling source files that would not resolve once copied out of the package.
+   * and register its hook if declared. Every local unit script is bundled
+   * unconditionally — global units never reach this path (a hook script makes
+   * a unit local by definition).
    */
-  private installScript(unitName: string, spec: ScriptSpec): InstalledComponent {
+  private installScriptLocal(unitName: string, spec: ScriptSpec): InstalledComponent {
     const entry = join(this.aiskHome, "units", unitName, spec.file);
     if (!existsSync(entry)) throw new Error(`script source not found: ${entry}`);
 
@@ -712,31 +761,28 @@ export class Installer {
     return { name: spec.name, path: relPath };
   }
 
-  // ─── Dependency resolution ─────────────────────────────────────────────────
+  // ─── Dependency resolution (init only — local-to-local, no separate command) ──
 
   /**
-   * Resolve transitive deps for a fresh-install list.
-   * Only adds uninstalled deps; already-installed deps are silently skipped.
-   * Failed lookups are pushed to result.failed and excluded from order.
+   * Resolve transitive local-to-local dependencies for a fresh-install list.
+   * A dependency that is itself a global unit needs no action (always available)
+   * and is skipped; a dangling dependency name (not in the registry) is also
+   * skipped — that's a unit.json data issue, not something init can act on.
+   * Already-installed deps are silently skipped.
    */
   private resolveFreshDeps(
     names: string[],
     installedSet: Set<string>,
-    result: AddResult,
   ): { order: string[]; autoDeps: Set<string> } {
     const toInstall = new Set<string>(names);
     const autoDeps = new Set<string>();
 
-    // Depth-first expansion is only used to collect the closure; final ordering
-    // is delegated to the precomputed global order shared by build/publish.
     const expand = (name: string) => {
       const unitJson = this.readUnitJson(name);
-      if (!unitJson) {
-        result.failed.push({ name, reason: "unit 不在注册表中" });
-        toInstall.delete(name);
-        return;
-      }
+      if (!unitJson) return;
       for (const dep of unitJson.dependencies) {
+        const depJson = this.readUnitJson(dep);
+        if (!depJson || !isLocalUnit(depJson)) continue;
         if (!installedSet.has(dep) && !toInstall.has(dep)) {
           toInstall.add(dep);
           autoDeps.add(dep);
@@ -749,48 +795,6 @@ export class Installer {
 
     const order = this.sortByGlobalOrder([...toInstall]);
     return { order, autoDeps };
-  }
-
-  /**
-   * Full dep resolution for resolve command using a desired-state model.
-   *
-   * The selected names represent the complete target state. Any currently
-   * installed unit outside the transitive closure becomes a removal candidate.
-   */
-  private resolveDeps(selectedNames: string[]): ResolveResult {
-    const installed = this.readInstalled();
-    const installedNames = new Set(Object.keys(installed.units));
-    const selectedSet = new Set(selectedNames);
-    const fullRequired = new Set<string>(selectedNames);
-    const auto = new Set<string>();
-
-    const resolveTransitive = (names: string[]) => {
-      for (const name of names) {
-        const unitJson = this.readUnitJson(name);
-        if (!unitJson) {
-          console.error(`Error: unit "${name}" not found in units/`);
-          process.exit(1);
-        }
-        for (const dep of unitJson.dependencies) {
-          if (!fullRequired.has(dep)) {
-            fullRequired.add(dep);
-            if (!selectedSet.has(dep)) auto.add(dep);
-            resolveTransitive([dep]);
-          }
-        }
-      }
-    };
-
-    resolveTransitive(selectedNames);
-
-    const globalOrder = this.readGlobalOrder();
-    const sort = (ns: string[]) => this.sortByGlobalOrder(ns, globalOrder);
-    const to_remove = sort([...installedNames].filter((n) => !fullRequired.has(n)));
-    const to_install = sort([...fullRequired].filter((n) => !installedNames.has(n)));
-    const to_update = sort(selectedNames.filter((n) => installedNames.has(n)));
-    const order = sort([...to_install, ...to_update]);
-
-    return { to_remove, to_install, to_update, order, auto: sort([...auto]) };
   }
 
   // ─── Optional component helpers ────────────────────────────────────────────
@@ -958,7 +962,7 @@ export class Installer {
 
   // ─── Data access ───────────────────────────────────────────────────────────
 
-  /** Persist the latest component paths and customStatus for a unit. */
+  /** Persist the latest component paths and customStatus for a local unit. */
   private updateInstalled(unitName: string, components: InstalledEntry["components"]): void {
     const installedPath = join(this.cwd, ".aisk", "installed.json");
     mkdirSync(join(this.cwd, ".aisk"), { recursive: true });
@@ -969,17 +973,14 @@ export class Installer {
 
   /** Read one unit definition from aiskHome/units. */
   private readUnitJson(unitName: string): UnitJson | null {
-    const path = join(this.aiskHome, "units", unitName, "unit.json");
-    if (!existsSync(path)) return null;
-    return JSON.parse(readFileSync(path, "utf8")) as UnitJson;
+    return readUnitJson(this.aiskHome, unitName);
   }
 
-  /** List published units in registry order with their current project install state. */
-  private getUnitList(): Array<{ name: string; description: string; installed: boolean }> {
+  /** List every published unit in registry order, tagged with its global/local scope. */
+  private getUnitList(): Array<{ name: string; description: string; scope: "global" | "local" }> {
     const unitsDir = join(this.aiskHome, "units");
     if (!existsSync(unitsDir)) return [];
 
-    const installed = this.readInstalled();
     const globalOrder = this.readGlobalOrder();
     const names =
       globalOrder.length > 0
@@ -995,7 +996,7 @@ export class Installer {
         return {
           name: dir,
           description: unitJson.description ?? "",
-          installed: dir in installed.units,
+          scope: (isLocalUnit(unitJson) ? "local" : "global") as "global" | "local",
         };
       })
       .filter((u): u is NonNullable<typeof u> => u !== null);
@@ -1019,76 +1020,88 @@ export class Installer {
     });
   }
 
-  // ─── Human-readable output ─────────────────────────────────────────────────
+  // ─── Human-readable output (Chinese; default output format) ───────────────
 
   private printListHuman({ units }: ListResult): void {
-    const installedCount = units.filter((u) => u.installed).length;
-    process.stdout.write(
-      `${units.length} unit${units.length !== 1 ? "s" : ""} available, ${installedCount} installed\n`,
-    );
-    if (units.length === 0) return;
-    process.stdout.write("\n");
-    const maxLen = Math.max(...units.map((u) => u.name.length));
-    for (const u of units) {
-      const mark = u.installed ? "✓" : "·";
-      const todo = u.hasTodo ? "  [!]" : "";
-      process.stdout.write(`  ${mark} ${u.name.padEnd(maxLen + 2)}${u.description}${todo}\n`);
+    if (units.length === 0) {
+      process.stdout.write("没有可用的 unit。\n");
+      return;
+    }
+
+    const globalUnits = units.filter((u) => u.scope === "global");
+    const localUnits = units.filter((u) => u.scope === "local");
+
+    if (globalUnits.length > 0) {
+      process.stdout.write("全局 unit(register 管理,所有项目自动可用):\n");
+      const maxLen = Math.max(...globalUnits.map((u) => u.name.length));
+      for (const u of globalUnits) {
+        const mark = u.installed ? "✓" : "·";
+        process.stdout.write(`  ${mark} ${u.name.padEnd(maxLen + 2)}${u.description}\n`);
+      }
+    }
+    if (localUnits.length > 0) {
+      if (globalUnits.length > 0) process.stdout.write("\n");
+      process.stdout.write("本地 unit(init/update/remove 管理,按项目安装):\n");
+      const maxLen = Math.max(...localUnits.map((u) => u.name.length));
+      for (const u of localUnits) {
+        const mark = u.installed ? "✓" : "·";
+        const todo = u.hasTodo ? "  [有待定制]" : "";
+        process.stdout.write(`  ${mark} ${u.name.padEnd(maxLen + 2)}${u.description}${todo}\n`);
+      }
     }
   }
 
-  private printAddHuman({ added, updated, failed }: AddResult): void {
+  private printInitHuman({ added, updated, failed }: InitResult): void {
     const regular = added.filter((a) => !a.autoDep);
     const auto = added.filter((a) => a.autoDep);
     if (regular.length > 0) {
-      process.stdout.write(`Added: ${regular.map((a) => a.name).join(", ")}\n`);
+      process.stdout.write(`已添加:${regular.map((a) => a.name).join(", ")}\n`);
     }
     if (auto.length > 0) {
-      process.stdout.write(`  auto: ${auto.map((a) => a.name).join(", ")}\n`);
+      process.stdout.write(`  自动依赖:${auto.map((a) => a.name).join(", ")}\n`);
     }
     if (updated.length > 0) {
-      process.stdout.write(`Updated: ${updated.map((u) => u.name).join(", ")}\n`);
+      process.stdout.write(`已更新:${updated.map((u) => u.name).join(", ")}\n`);
     }
     for (const f of failed) {
-      process.stdout.write(`Failed: ${f.name} — ${f.reason}\n`);
+      process.stdout.write(`失败:${f.name} — ${f.reason}\n`);
     }
     if (added.length === 0 && updated.length === 0 && failed.length === 0) {
-      process.stdout.write("Nothing to do.\n");
+      process.stdout.write("没有需要处理的内容。\n");
     }
   }
 
   private printRemoveHuman({ removed, failed }: RemoveResult): void {
     if (removed.length > 0) {
-      process.stdout.write(`Removed: ${removed.map((r) => r.name).join(", ")}\n`);
+      process.stdout.write(`已删除:${removed.map((r) => r.name).join(", ")}\n`);
     }
     for (const f of failed) {
-      process.stdout.write(`Failed: ${f.name} — ${f.reason}\n`);
+      process.stdout.write(`失败:${f.name} — ${f.reason}\n`);
     }
     if (removed.length === 0 && failed.length === 0) {
-      process.stdout.write("Nothing to remove.\n");
+      process.stdout.write("没有需要删除的内容。\n");
     }
   }
 
   private printUpdateHuman({ updated, failed }: UpdateResult): void {
     if (updated.length > 0) {
-      process.stdout.write(`Updated: ${updated.map((u) => u.name).join(", ")}\n`);
+      process.stdout.write(`已更新:${updated.map((u) => u.name).join(", ")}\n`);
     }
     for (const f of failed) {
-      process.stdout.write(`Failed: ${f.name} — ${f.reason}\n`);
+      process.stdout.write(`失败:${f.name} — ${f.reason}\n`);
     }
     if (updated.length === 0 && failed.length === 0) {
-      process.stdout.write("Nothing to update.\n");
+      process.stdout.write("没有需要更新的内容。\n");
     }
   }
 
   private printRefreshHuman({ todo }: RefreshResult): void {
     if (todo.length === 0) {
-      process.stdout.write("All custom blocks up to date.\n");
+      process.stdout.write("所有定制项已完成。\n");
       return;
     }
     const totalFiles = todo.reduce((n, u) => n + u.files.length, 0);
-    process.stdout.write(
-      `${totalFiles} file${totalFiles !== 1 ? "s" : ""} with pending todos in ${todo.length} unit${todo.length !== 1 ? "s" : ""}:\n`,
-    );
+    process.stdout.write(`${totalFiles} 个文件在 ${todo.length} 个 unit 中待定制:\n`);
     for (const { unit, files } of todo) {
       for (const f of files) {
         process.stdout.write(`  ${unit}: ${f}\n`);
@@ -1098,44 +1111,20 @@ export class Installer {
 
   private printShowHuman(result: ShowResult): void {
     process.stdout.write(`${result.name} — ${result.description}\n`);
+    process.stdout.write(
+      `范围:${result.scope === "global" ? "全局(register 管理)" : "本地(init 管理)"}\n`,
+    );
     if (result.dependencies.length > 0) {
-      process.stdout.write(`Dependencies: ${result.dependencies.join(", ")}\n`);
+      process.stdout.write(`依赖:${result.dependencies.join(", ")}\n`);
     }
-    process.stdout.write(`Status: ${result.installed ? "installed" : "not installed"}\n\n`);
-    process.stdout.write("Components:\n");
+    process.stdout.write(`状态:${result.installed ? "已安装" : "未安装"}\n\n`);
+    process.stdout.write("组件:\n");
     for (const c of result.components) {
       const mark = !c.installed ? "·" : c.customStatus === "todo" ? "!" : "✓";
       const typePad = c.type.padEnd(8);
-      const todo = c.customStatus === "todo" ? "  [todo]" : "";
-      const notInstalled = !c.installed && c.optional ? "  (optional, not installed)" : "";
+      const todo = c.customStatus === "todo" ? "  [待定制]" : "";
+      const notInstalled = !c.installed && c.optional ? "  (可选,未安装)" : "";
       process.stdout.write(`  ${mark} ${typePad} ${c.name}${todo}${notInstalled}\n`);
-    }
-  }
-
-  private printResolveHuman(result: ResolveResult): void {
-    const autoSet = new Set(result.auto);
-    if (result.to_install.length > 0) {
-      const regular = result.to_install.filter((n) => !autoSet.has(n));
-      const auto = result.to_install.filter((n) => autoSet.has(n));
-      if (regular.length > 0) {
-        process.stdout.write(`Install (${regular.length}): ${regular.join(", ")}\n`);
-      }
-      if (auto.length > 0) {
-        process.stdout.write(`  auto (${auto.length}): ${auto.join(", ")}\n`);
-      }
-    }
-    if (result.to_update.length > 0) {
-      process.stdout.write(`Update (${result.to_update.length}): ${result.to_update.join(", ")}\n`);
-    }
-    if (result.to_remove.length > 0) {
-      process.stdout.write(`Remove (${result.to_remove.length}): ${result.to_remove.join(", ")}\n`);
-    }
-    if (
-      result.to_install.length === 0 &&
-      result.to_update.length === 0 &&
-      result.to_remove.length === 0
-    ) {
-      process.stdout.write("Nothing to change.\n");
     }
   }
 }

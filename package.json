@@ -1,13 +1,15 @@
 {
   "name": "ai-skills",
   "version": "3.0.0",
-  "description": "Local AI skill library — bun link this repo, then use the ai-skills CLI",
+  "description": "Local AI skill library — bun link this repo, then use the aisk-setup/aisk-register commands",
   "bin": {
-    "ai-skills": "./bin/cli.ts"
+    "aisk-setup": "./bin/aisk-setup.ts",
+    "aisk-register": "./bin/aisk-register.ts"
   },
   "publishConfig": {
     "bin": {
-      "ai-skills": "./dist/cli.js"
+      "aisk-setup": "./dist/aisk-setup.js",
+      "aisk-register": "./dist/aisk-register.js"
     },
     "engines": {
       "node": ">=22.0.0"
@@ -19,12 +21,13 @@
   "files": [
     "dist/",
     "units/",
-    "global/setup/",
     "README.md"
   ],
   "scripts": {
     "build": "bun scripts/build.ts && pnpm format",
     "build:dist": "bun scripts/build-dist.ts",
+    "register": "bun bin/aisk-register.ts register",
+    "unregister": "bun bin/aisk-register.ts unregister",
     "lint": "pnpm lint:fix",
     "lint:check": "eslint bin/**/*.ts scripts/**/*.ts global/**/*.ts tests/**/*.ts",
     "lint:fix": "eslint bin/**/*.ts scripts/**/*.ts global/**/*.ts tests/**/*.ts --fix",

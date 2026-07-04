@@ -13,9 +13,9 @@
 - 签出前工作树必须干净
 - **静默准备**：不作解说地完成所有设置步骤；仅在提问或展示内容时输出文本
 - **状态脚本**：Index 操作通过以下方式执行：
-  `bun .aisk/walkthrough/scripts/walkthrough-state.js <cmd> [--options]`
+  `bun ~/.claude/skills/aisk-walkthrough-create-walkthrough/scripts/walkthrough-state.ts <cmd> [--options]`
 - **组文件**：通过 Write 工具直接写入 `g{N}.md`；通过 Read 工具读取。路径：`{cwd}/.aisk/walkthrough/state/{stateKey}/g{N}.md`
-- **策略**：分组和展示规则见 `.aisk/walkthrough/resources/strategy.md`；在第五步时读取
+- **策略**：分组和展示规则见 `~/.claude/skills/aisk-walkthrough-create-walkthrough/resources/strategy.md`；在第五步时读取
 
 ## 输入
 
@@ -155,11 +155,11 @@ git ls-files --others --exclude-standard    # 未跟踪文件；通过 Read 工�
 git diff -U15                               # 未暂存变更（staged vs unstaged 细分）
 ```
 
-**上下文文档**：立即读取 `.aisk/walkthrough/resources/strategy.md`，然后按其"分析策略"章节确定要读取哪些上下文文档及读取顺序。
+**上下文文档**：立即读取 `~/.claude/skills/aisk-walkthrough-create-walkthrough/resources/strategy.md`，然后按其"分析策略"章节确定要读取哪些上下文文档及读取顺序。
 
 ### 第六步 — 完整分析
 
-若尚未加载，读取 `.aisk/walkthrough/resources/strategy.md`。
+若尚未加载，读取 `~/.claude/skills/aisk-walkthrough-create-walkthrough/resources/strategy.md`。
 
 利用 diff、上下文文档、`{walkIntent}` 和 `{references}`，生成：
 
@@ -247,12 +247,12 @@ Progress: G{index.currentGroup} / {index.totalGroups}, {done count} group(s) don
 
 #### 进入走读循环
 
-读取 `.aisk/walkthrough/resources/walkthrough-loop.md`。
+读取 `~/.claude/skills/aisk-walkthrough-create-walkthrough/resources/walkthrough-loop.md`。
 从"显示当前组"处开始执行其中的指令。
 （walkthrough-loop 会自行读取并输出 g{currentGroup}.md —— 此处无需重复）
 
 ### 第十步 — 进入新建走读循环
 
-读取 `.aisk/walkthrough/resources/walkthrough-loop.md`。
+读取 `~/.claude/skills/aisk-walkthrough-create-walkthrough/resources/walkthrough-loop.md`。
 从"显示当前组"处开始执行其中的指令。
 （walkthrough-loop 按需生成并输出 g1.md —— 此处无需重复）
