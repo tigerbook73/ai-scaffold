@@ -1,10 +1,14 @@
 #!/usr/bin/env bun
 /**
- * Registers/unregisters global units' skills into ~/.claude/skills.
+ * Registers/unregisters global units' skills into each supported agent's global
+ * skills directory: Claude Code (~/.claude/skills) and OpenAI Codex CLI
+ * (~/.agents/skills) — both read the same SKILL.md (+ resources/scripts)
+ * structure this repo already produces.
  *
- * Global command (bun-linked/installed as `aisk-register`): `aisk-register register|unregister`.
+ * Global command (bun-linked/installed as `aisk-register`):
+ * `aisk-register register|unregister [claude|codex|all]` (target defaults to "all").
  * Global units are machine-wide and don't belong to any target project — there's
- * no `cwd` here, only aiskHome (this repo) and globalSkillsDir (~/.claude/skills).
+ * no `cwd` here, only aiskHome (this repo) and globalSkillsDir (per-target).
  * Local units (init/update/remove) stay in global/installer.ts, behind `aisk-setup`.
  */
 import {
@@ -18,14 +22,16 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join, resolve } from "path";
-import { homedir } from "os";
 import {
+  AGENT_TARGETS,
+  defaultGlobalSkillsDir,
   globalDirName,
   isLocalUnit,
   readRegistry,
   readUnitJson,
   REGISTRY_FILENAME,
 } from "../global/libs/global-units";
+import type { AgentTarget } from "../global/libs/global-units";
 import type {
   RegisterResult,
   RegistryEntry,
@@ -175,15 +181,32 @@ function printUnregisterResult({ removed }: UnregisterResult): void {
   }
 }
 
+/** Parse the target CLI arg ("claude" | "codex" | "all", default "all") into a target list. */
+function resolveTargets(targetArg: string): AgentTarget[] {
+  if (targetArg === "all") return AGENT_TARGETS;
+  if (targetArg === "claude" || targetArg === "codex") return [targetArg];
+  return [];
+}
+
 if (require.main === module) {
   const aiskHome = resolve(__dirname, "..");
-  const globalSkillsDir = join(homedir(), ".claude", "skills");
   const action = process.argv[2] ?? "register";
+  const targetArg = process.argv[3] ?? "all";
+  const targets = resolveTargets(targetArg);
 
-  if (action === "register") {
-    printRegisterResult(register(aiskHome, globalSkillsDir));
+  if (targets.length === 0) {
+    console.error(`Unknown target: "${targetArg}". Use "claude", "codex", or "all".`);
+    process.exit(1);
+  } else if (action === "register") {
+    for (const target of targets) {
+      console.log(`── ${target} ──`);
+      printRegisterResult(register(aiskHome, defaultGlobalSkillsDir(target)));
+    }
   } else if (action === "unregister") {
-    printUnregisterResult(unregister(globalSkillsDir));
+    for (const target of targets) {
+      console.log(`── ${target} ──`);
+      printUnregisterResult(unregister(defaultGlobalSkillsDir(target)));
+    }
   } else {
     console.error(`Unknown action: "${action}". Use "register" or "unregister".`);
     process.exit(1);

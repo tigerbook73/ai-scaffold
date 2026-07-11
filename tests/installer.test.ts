@@ -18,18 +18,19 @@ import {
   addLocalUnit,
   captureStdout,
   globalSkillsDirFor,
+  globalSkillsDirsFor,
   makeFakeAiskHome,
   makeTempDir,
 } from "./helpers/fixtures";
 
-/** Builds an Installer wired to an isolated globalSkillsDir. json defaults true (structured assertions). */
+/** Builds an Installer wired to isolated globalSkillsDirs (claude + codex). json defaults true (structured assertions). */
 function newInstaller(
   tmpDir: string,
   projectDir: string,
   aiskHome: string,
   json = true,
 ): Installer {
-  return new Installer(projectDir, aiskHome, json, globalSkillsDirFor(tmpDir));
+  return new Installer(projectDir, aiskHome, json, globalSkillsDirsFor(tmpDir));
 }
 
 /**
@@ -41,6 +42,7 @@ function newInstaller(
  *   - [PASS] --scope filters to only global or only local
  *   - [PASS] global unit installed reflects the registry record, not the project
  *   - [PASS] local unit installed reflects .aisk/installed.json, hasTodo when customStatus=todo
+ *   - [PASS] global unit registeredTargets reflects which agent targets (claude/codex) are registered
  */
 describe("list", () => {
   test("lists global and local units together by default, tagged with scope", () => {
@@ -133,6 +135,39 @@ describe("list", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  test("global unit registeredTargets reflects which agent targets (claude/codex) are registered", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      const dirs = globalSkillsDirsFor(dir);
+      const installer = newInstaller(dir, projectDir, aiskHome);
+
+      const before = JSON.parse(captureStdout(() => installer.list("global"))) as {
+        units: Array<{ name: string; registeredTargets?: string[] }>;
+      };
+      expect(before.units.find((u) => u.name === "poc")?.registeredTargets).toBeUndefined();
+
+      register(aiskHome, dirs.claude);
+      const claudeOnly = JSON.parse(captureStdout(() => installer.list("global"))) as {
+        units: Array<{ name: string; registeredTargets?: string[] }>;
+      };
+      expect(claudeOnly.units.find((u) => u.name === "poc")?.registeredTargets).toEqual(["claude"]);
+
+      register(aiskHome, dirs.codex);
+      const both = JSON.parse(captureStdout(() => installer.list("global"))) as {
+        units: Array<{ name: string; registeredTargets?: string[] }>;
+      };
+      expect(both.units.find((u) => u.name === "poc")?.registeredTargets).toEqual([
+        "claude",
+        "codex",
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 /**
@@ -142,6 +177,7 @@ describe("list", () => {
  * @cases
  *   - [PASS] global unit: scope "global", installed from registry, component installed from disk symlink
  *   - [PASS] local unit: scope "local", installed from .aisk/installed.json, component customStatus
+ *   - [PASS] global unit: registeredTargets on both the unit and its skill component reflect claude-only registration
  */
 describe("show", () => {
   test("global unit: scope global, installed from registry, component installed from disk symlink", () => {
@@ -193,6 +229,30 @@ describe("show", () => {
       expect(result.scope).toBe("local");
       expect(result.installed).toBe(true);
       expect(result.components.find((c) => c.name === "readme")?.customStatus).toBe("todo");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("global unit: registeredTargets on both the unit and its skill component reflect claude-only registration", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const projectDir = join(dir, "project");
+      mkdirSync(projectDir);
+      const dirs = globalSkillsDirsFor(dir);
+      const installer = newInstaller(dir, projectDir, aiskHome);
+
+      register(aiskHome, dirs.claude);
+
+      const result = JSON.parse(captureStdout(() => installer.show("poc"))) as {
+        registeredTargets?: string[];
+        components: Array<{ name: string; registeredTargets?: string[] }>;
+      };
+      expect(result.registeredTargets).toEqual(["claude"]);
+      expect(result.components.find((c) => c.name === "poc")?.registeredTargets).toEqual([
+        "claude",
+      ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

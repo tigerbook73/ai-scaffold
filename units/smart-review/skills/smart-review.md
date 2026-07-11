@@ -1,3 +1,8 @@
+---
+name: aisk-smart-review
+description: 对指定文件、模块或目录进行迭代式审查和修复。
+---
+
 # smart-review
 
 对指定文件、模块或目录进行迭代式审查和修复。

@@ -1,6 +1,6 @@
 # AI Skills
 
-A local AI skill library for Claude Code, meant to be used from your own checkout via `bun link` — no separate publish step. Organize reusable AI capabilities as ai-units under `units/`.
+A local AI skill library for Claude Code (and OpenAI's Codex CLI), meant to be used from your own checkout via `bun link` — no separate publish step. Organize reusable AI capabilities as ai-units under `units/`.
 
 ## Setup (one-time per machine)
 
@@ -14,7 +14,7 @@ aisk-register
 ```
 
 - `bun link` registers this repo's two bins as global commands (`~/.bun/bin/aisk-setup`, `~/.bun/bin/aisk-register`) — they run `bin/aisk-setup.ts`/`bin/aisk-register.ts` directly out of the repo, so editing `units/` takes effect immediately, no rebuild/republish step.
-- `aisk-register` symlinks every **global unit**'s skill into `~/.claude/skills`, available in every project on this machine right away. Re-run it after adding/renaming/removing a unit or skill, or after editing a global unit's content — there's no automatic change detection.
+- `aisk-register` symlinks every **global unit**'s skill into each supported agent's global skills directory — `~/.claude/skills` for Claude Code and `~/.agents/skills` for Codex CLI — available in every project on this machine right away. Bare `aisk-register register`/`unregister` targets both (`all`); pass `claude` or `codex` to target just one. Re-run it after adding/renaming/removing a unit or skill, or after editing a global unit's content — there's no automatic change detection.
 
 ## global unit vs. local unit
 
@@ -23,9 +23,13 @@ Each unit is wholly one or the other:
 - **global unit** — no `rules` component, no script with a lefthook `hook`, no `hasCustom` skill/resource. Managed once per machine via the `aisk-register` command (`register`/`unregister` subcommands); has no per-project commands at all, and isn't managed by `aisk-setup`.
 - **local unit** — needs a `rules` component, a hook script, or `hasCustom` content, all of which are inherently project-local. Managed per project via the `aisk-setup` command (`init`/`update`/`remove` subcommands). `init` auto-installs local-to-local dependencies; a dependency that's a global unit needs no action.
 
+Note: `rules` has no Codex CLI equivalent, so local units stay Claude-only for now.
+
 ```
-aisk-register register           # global units: symlink into ~/.claude/skills (idempotent)
-aisk-register unregister         # global units: remove everything ever registered
+aisk-register register           # global units: symlink into ~/.claude/skills AND ~/.agents/skills (idempotent)
+aisk-register register claude    # only ~/.claude/skills
+aisk-register register codex     # only ~/.agents/skills
+aisk-register unregister         # global units: remove everything ever registered (both targets by default)
 
 aisk-setup init <unit> [unit...] # local units: install into the current project
 aisk-setup init all              # install every not-yet-installed local unit
@@ -62,8 +66,9 @@ Add `--json` to any `aisk-setup` command for structured output instead of the de
 1. Create `units/<name>/unit.json` with `name` and `description` fields
 2. Add skill files to `units/<name>/skills/`, rules to `rules/`, scripts to `scripts/`
 3. Run `pnpm build` to refresh `unit.json`/`units/units.json` (structural changes like new/renamed files need this; content edits to existing files don't)
-4. Run `pnpm verify` then `git commit`
-5. If the unit is global (no rules, no hook script, no hasCustom), run `aisk-register` to make it available
+4. If it has a skill component, give the skill file's frontmatter a `name`/`description` (see `.claude/rules/ai-scaffold/skill-gate.md`) — Codex CLI requires it for implicit trigger matching, Claude Code ignores it
+5. Run `pnpm verify` then `git commit`
+6. If the unit is global (no rules, no hook script, no hasCustom), run `aisk-register` to make it available to both Claude Code and Codex CLI
 
 Since `aisk-setup`/`aisk-register` read straight from this checkout (via `bun link`), no publish step is needed — changes are visible immediately (global units still need an `aisk-register` re-run to refresh their symlinks after structural changes).
 
@@ -72,7 +77,7 @@ Since `aisk-setup`/`aisk-register` read straight from this checkout (via `bun li
 ```
 bin/
   aisk-setup.ts     # local unit CLI entry point (bun-linked as the global `aisk-setup` command)
-  aisk-register.ts  # global unit register/unregister entry point (bun-linked as `aisk-register`)
+  aisk-register.ts  # global unit register/unregister entry point (bun-linked as `aisk-register`; targets Claude Code + Codex CLI)
 units/              # ai-unit source files
   <unit>/
     unit.json       # unit metadata (auto-refreshed by pnpm build)

@@ -1,3 +1,8 @@
+---
+name: aisk-quick-ship
+description: 判断当前分支和变更状态，自动完成提交、PR 和 squash 合并。
+---
+
 # quick-ship
 
 判断当前分支和变更状态，自动完成提交、PR 和 squash 合并。

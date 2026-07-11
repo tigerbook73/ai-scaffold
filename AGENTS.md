@@ -6,7 +6,7 @@
 
 ## 项目目的
 
-本代码库是一个本地 AI skill 库，以 ai-unit 形式组织在 `units/` 目录下。仅供本人在本机使用：通过 `bun link` 把本仓库注册为全局的 `aisk-setup`/`aisk-register` 命令，不存在单独的发布步骤——两者都直接读取本仓库的 `units/`，改完 skill/rule/resource 立刻生效。unit 分两种：无需项目本地文件的 global unit（`aisk-register` 注册一次后所有项目自动可用），和需要项目本地文件的 local unit（`aisk-setup init` 按项目显式安装）。
+本代码库是一个本地 AI skill 库，以 ai-unit 形式组织在 `units/` 目录下。仅供本人在本机使用：通过 `bun link` 把本仓库注册为全局的 `aisk-setup`/`aisk-register` 命令，不存在单独的发布步骤——两者都直接读取本仓库的 `units/`，改完 skill/rule/resource 立刻生效。unit 分两种：无需项目本地文件的 global unit（`aisk-register` 注册一次后所有项目自动可用，同时对 Claude Code 和 Codex CLI 生效），和需要项目本地文件的 local unit（`aisk-setup init` 按项目显式安装，目前仅 Claude Code，因为 `rules` 组件没有 Codex 对应物）。
 
 ## 常用命令
 
@@ -16,7 +16,7 @@ pnpm build       # 扫描 units/，刷新 unit.json 和 units/units.json（新�
 pnpm lint:check  # ESLint 检查
 pnpm lint:fix    # ESLint 自动修复
 pnpm typecheck   # TypeScript 检查
-pnpm test        # Vitest 测试
+pnpm test        # bun test 测试
 pnpm verify      # lint:check + typecheck + test + build
 pnpm format      # Prettier 格式化
 ```
@@ -24,7 +24,7 @@ pnpm format      # Prettier 格式化
 单独运行测试文件：
 
 ```bash
-pnpm exec vitest run tests/<file>.test.ts
+bun test tests/<file>.test.ts
 ```
 
 修改 unit 文件或脚本后，提交前请运行 `pnpm verify`。
@@ -33,7 +33,7 @@ pnpm exec vitest run tests/<file>.test.ts
 
 unit 按是否需要项目本地文件分成两类，**整体二选一**（不做同一 unit 内部分组件本地、部分组件全局的混合）：
 
-- **global unit**：无 `rules` 组件、无声明 lefthook `hook` 的 script、无 `hasCustom` 的 skill/resource。通过 `aisk-register`（`bin/aisk-register.ts`）一次性以 symlink 形式装进 `~/.claude/skills`，对本机所有项目立即生效，**没有任何项目级命令，也不由 `aisk-setup` 管理**。
+- **global unit**：无 `rules` 组件、无声明 lefthook `hook` 的 script、无 `hasCustom` 的 skill/resource。通过 `aisk-register`（`bin/aisk-register.ts`）一次性以 symlink 形式装进每个支持的 agent 的全局 skill 目录（Claude Code 的 `~/.claude/skills`、Codex CLI 的 `~/.agents/skills`，默认 `all` 同时装两个,也可以传 `claude`/`codex` 只装一个），对本机所有项目立即生效，**没有任何项目级命令，也不由 `aisk-setup` 管理**。
 - **local unit**：命中上述三个触发条件之一。通过 `aisk-setup init`/`update`/`remove` 按项目显式安装；`init` 会自动展开 local-to-local 依赖（依赖若是 global unit 则不需要任何动作）。
 
 ```text
@@ -43,7 +43,7 @@ unit 按是否需要项目本地文件分成两类，**整体二选一**（不�
 ├── units/{unit}/                   unit 源码（unit.json + 组件内容）
 └── units/units.json                unit 拓扑顺序（pnpm build 生成，含 global 和 local）
 
-~/.claude/skills/                        由 `aisk-register`（register/unregister 子命令）管理（symlink，幂等，靠注册记录文件清理）
+~/.claude/skills/ 和 ~/.agents/skills/    分别由 `aisk-register`（register/unregister 子命令）管理，结构完全相同、各自独立（symlink，幂等，各自靠自己目录下的注册记录文件清理，互不干扰）
 ├── .aisk-registry.json                  注册记录，register 靠它清理上一次的内容，不做命名前缀扫描
 ├── aisk-{unit}/                         skill 名与 unit 名相同时合并（如 aisk-staged-plan）
 │   └── SKILL.md -> units/{unit}/{skill.file}
@@ -64,10 +64,18 @@ Target project（只有 local unit 才会出现在这里，由 aisk-setup 管理
 - `scripts/build.ts`：扫描 `units/`，刷新各 `unit.json` 和 `units/units.json`，维护拓扑顺序（global/local 分类在运行时由 installer/register 计算，不体现在 unit.json 里）。
 - `scripts/build-dist.ts`：编译 `dist/aisk-setup.js` + `dist/aisk-register.js`，为将来真正 `npm publish` 准备（`package.json` 的 `publishConfig` 占位），日常工作流不涉及。
 - `bin/aisk-setup.ts`：`aisk-setup` CLI 入口，`aiskHome` 固定为本仓库自身（`bun link` 后 `__dirname` 解析到真实仓库路径）；只管理 local unit，不含 register/unregister。
-- `bin/aisk-register.ts`：`aisk-register` 命令实现，导出 `register()`/`unregister()`（`register`/`unregister` 子命令调用）；不依赖 `cwd`，只需要 `aiskHome` 和 `globalSkillsDir`。
-- `global/installer.ts`：local unit 安装逻辑（`aisk-setup` 的后端），含 `init()`/`update()`/`remove()`/`list()`/`show()`；`isLocalUnit()`/`globalDirName()`/`readRegistry()` 等分类与注册读取共享逻辑在 `global/libs/global-units.ts`，供 installer.ts 和 aisk-register.ts 共用。
+- `bin/aisk-register.ts`：`aisk-register` 命令实现，导出 `register()`/`unregister()`（`register`/`unregister` 子命令调用，CLI 层再套一层 `[claude|codex|all]` target 参数,默认 `all`）；`register()`/`unregister()` 本体不依赖 `cwd`，只需要 `aiskHome` 和 `globalSkillsDir`（对每个 target 各调一次）。
+- `global/installer.ts`：local unit 安装逻辑（`aisk-setup` 的后端），含 `init()`/`update()`/`remove()`/`list()`/`show()`；`list()`/`show()` 会分别读 Claude/Codex 两个 target 的注册记录,在输出里标出 global unit 分别在哪些 target 已注册（`registeredTargets`）。`isLocalUnit()`/`globalDirName()`/`readRegistry()`/`AGENT_TARGETS`/`defaultGlobalSkillsDir()` 等分类、路径与注册读取共享逻辑在 `global/libs/global-units.ts`，供 installer.ts 和 aisk-register.ts 共用。
 - `tests/`：build、installer、register 基线验证测试；`tests/helpers/fixtures.ts` 是两者共用的 fake aiskHome 构造工具。
 
 ## 首次使用 / 更新全局 unit
 
-`bun link` 之后，运行一次 `aisk-register` 建立 `~/.claude/skills` 下的 symlink 和注册记录；global unit 内容改了要**手动**重新执行 `aisk-register`（无自动检测），新增/删除 unit 或 skill 也需要重新执行一次以创建/清理对应目录。想完全清空本机已注册的内容，运行 `aisk-register unregister`（整体清空，不支持按 unit 粒度）。
+`bun link` 之后，运行一次 `aisk-register`（默认 `all`）建立 `~/.claude/skills` 和 `~/.agents/skills` 下的 symlink 和各自的注册记录；global unit 内容改了要**手动**重新执行 `aisk-register`（无自动检测），新增/删除 unit 或 skill 也需要重新执行一次以创建/清理对应目录。只想刷新其中一个 target 用 `aisk-register register claude` / `codex`。想完全清空本机已注册的内容，运行 `aisk-register unregister`（默认两个 target 一起清空，整体清空不支持按 unit 粒度）。
+
+## Codex CLI 支持
+
+Global unit 的 skill（`SKILL.md` + `resources/`/`scripts/`）结构和 Codex CLI 的 skill 机制几乎一致，因此 `aisk-register` 把同一份内容 symlink 到两个 agent 的全局目录。两个关键差异：
+
+- Codex 要求 `SKILL.md` 有 YAML frontmatter（`name`/`description`）做隐式触发匹配；skill-gate 规则（`.claude/rules/ai-scaffold/skill-gate.md`）已把这个 frontmatter 定为强制项。
+- Codex 没有 `.claude/rules/` 的对应物，所以带 `rules` 组件的 local unit（`playwright`/`test-review-gate`/`ui-coverage`/`ui-testability`）仍然只对 Claude Code 生效。
+- lefthook 的 pre-commit hook 本身与触发它的 agent 无关，两边都自动生效，不需要额外处理。

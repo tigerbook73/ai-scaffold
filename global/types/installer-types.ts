@@ -3,6 +3,12 @@
  * repo (aiskHome) by the installer — there is no separate publish step.
  */
 
+/**
+ * Agent CLIs that global units can be registered into. "claude" is Claude Code
+ * (`~/.claude/skills`); "codex" is OpenAI's Codex CLI (`~/.agents/skills`).
+ */
+export type AgentTarget = "claude" | "codex";
+
 // ─── unit.json ────────────────────────────────────────────────────────────────
 
 /** A skill entry as declared in unit.json components.skills[]. */
@@ -154,8 +160,10 @@ export interface ShowComponentResult {
   /** Present only for local units' hasCustom components. */
   customStatus?: "todo" | "done";
   hook?: string;
-  /** Global unit: whether the registered symlink exists on disk. Local unit: whether the project file exists. */
+  /** Global unit: whether the registered symlink exists on disk for at least one agent target. Local unit: whether the project file exists. */
   installed: boolean;
+  /** Global unit only: which agent targets (claude/codex) this component is currently registered under. */
+  registeredTargets?: AgentTarget[];
 }
 
 /** Output of the show command. */
@@ -165,8 +173,10 @@ export interface ShowResult {
   dependencies: string[];
   /** "global": managed only via register/unregister. "local": managed via init/update/remove per project. */
   scope: "global" | "local";
-  /** Global unit: whether it's in the registry record. Local unit: whether it's installed in this project. */
+  /** Global unit: whether it's registered for at least one agent target. Local unit: whether it's installed in this project. */
   installed: boolean;
+  /** Global unit only: which agent targets (claude/codex) this unit is currently registered under. */
+  registeredTargets?: AgentTarget[];
   components: ShowComponentResult[];
 }
 
@@ -175,8 +185,10 @@ export interface ListUnit {
   name: string;
   description: string;
   scope: "global" | "local";
-  /** Global unit: whether it's in the registry record. Local unit: whether it's installed in this project. */
+  /** Global unit: whether it's registered for at least one agent target. Local unit: whether it's installed in this project. */
   installed: boolean;
+  /** Global unit only: which agent targets (claude/codex) this unit is currently registered under. */
+  registeredTargets?: AgentTarget[];
   /** True if any installed component has customStatus "todo" (local units only). */
   hasTodo?: boolean;
 }

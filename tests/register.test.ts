@@ -193,6 +193,45 @@ describe("register", () => {
 });
 
 /**
+ * @test-suite  register — multiple targets
+ * @target      register()/unregister() called against two independent globalSkillsDirs
+ *              (e.g. Claude Code's ~/.claude/skills and Codex CLI's ~/.agents/skills)
+ * @strategy    unit; fake aiskHome tree; two isolated globalSkillsDirs from the same aiskHome
+ * @cases
+ *   - [PASS] registering the same aiskHome into two different globalSkillsDirs keeps them independent
+ */
+describe("register — multiple targets", () => {
+  test("registering the same aiskHome into two different globalSkillsDirs keeps them independent", () => {
+    const dir = makeTempDir();
+    try {
+      const aiskHome = makeFakeAiskHome(dir);
+      const dirA = globalSkillsDirFor(dir);
+      const dirB = join(dir, "global-skills-b");
+
+      register(aiskHome, dirA);
+      register(aiskHome, dirB);
+
+      const skillLinkA = join(dirA, "aisk-poc", "SKILL.md");
+      const skillLinkB = join(dirB, "aisk-poc", "SKILL.md");
+      expect(lstatSync(skillLinkA).isSymbolicLink()).toBe(true);
+      expect(lstatSync(skillLinkB).isSymbolicLink()).toBe(true);
+      expect(existsSync(join(dirA, ".aisk-registry.json"))).toBe(true);
+      expect(existsSync(join(dirB, ".aisk-registry.json"))).toBe(true);
+
+      unregister(dirA);
+
+      expect(existsSync(join(dirA, "aisk-poc")), "target A torn down").toBe(false);
+      expect(existsSync(skillLinkB), "target B untouched by target A's unregister").toBe(true);
+      expect(existsSync(join(dirB, ".aisk-registry.json")), "target B's registry untouched").toBe(
+        true,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
  * @test-suite  unregister
  * @target      unregister()
  * @strategy    unit; fake aiskHome tree

@@ -1,3 +1,8 @@
+---
+name: aisk-commit
+description: 提交前运行检查清单，确保代码质量和流程规范，再执行 git commit。
+---
+
 # commit
 
 提交前运行检查清单，确保代码质量和流程规范，再执行 git commit。

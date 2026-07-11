@@ -4,11 +4,28 @@
  * what's registered) and bin/aisk-register.ts (which owns the write side).
  */
 import { existsSync, readFileSync } from "fs";
+import { homedir } from "os";
 import { join } from "path";
-import type { RegistryJson, UnitJson } from "../types/installer-types";
+import type { AgentTarget, RegistryJson, UnitJson } from "../types/installer-types";
+
+export type { AgentTarget };
 
 /** Registration record filename, stored directly under globalSkillsDir. */
 export const REGISTRY_FILENAME = ".aisk-registry.json";
+
+/**
+ * Codex CLI (`~/.agents/skills`) reads SKILL.md with the same structure this
+ * repo already produces (+ scripts/references/assets), but requires YAML
+ * frontmatter (name/description) for implicit trigger matching.
+ */
+export const AGENT_TARGETS: AgentTarget[] = ["claude", "codex"];
+
+/** Default globalSkillsDir for a given agent target, used unless overridden (e.g. in tests). */
+export function defaultGlobalSkillsDir(target: AgentTarget): string {
+  return target === "claude"
+    ? join(homedir(), ".claude", "skills")
+    : join(homedir(), ".agents", "skills");
+}
 
 /** Read one unit definition from aiskHome/units. */
 export function readUnitJson(aiskHome: string, unitName: string): UnitJson | null {

@@ -15,6 +15,11 @@ export function globalSkillsDirFor(tmpDir: string): string {
   return join(tmpDir, "global-skills");
 }
 
+/** Isolated stand-ins for both agent targets' globalSkillsDir, for constructing an Installer. */
+export function globalSkillsDirsFor(tmpDir: string): { claude: string; codex: string } {
+  return { claude: globalSkillsDirFor(tmpDir), codex: join(tmpDir, "global-skills-codex") };
+}
+
 /**
  * Creates a minimal fake aiskHome (package root) tree for testing: a global unit "poc"
  * (skill name equals unit name, so it collapses to aisk-poc under the naming rule; a plain

@@ -22,12 +22,19 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join, relative } from "path";
-import { homedir } from "os";
 import { execFileSync } from "child_process";
 import { mergeCustomContent, parseCustomBlocks } from "./libs/custom-blocks";
 import { addPreCommitHook, removePreCommitHook } from "./libs/precommit-lefthook";
-import { globalDirName, isLocalUnit, readRegistry, readUnitJson } from "./libs/global-units";
+import {
+  AGENT_TARGETS,
+  defaultGlobalSkillsDir,
+  globalDirName,
+  isLocalUnit,
+  readRegistry,
+  readUnitJson,
+} from "./libs/global-units";
 import type {
+  AgentTarget,
   UnitJson,
   InstalledComponent,
   InstalledEntry,
@@ -41,6 +48,7 @@ import type {
   ShowResult,
   ListResult,
   ComponentOpResult,
+  RegistryJson,
 } from "./types/installer-types";
 
 export type { InitResult, RemoveResult, UpdateResult, RefreshResult, ShowResult };
@@ -59,20 +67,36 @@ export class Installer {
   readonly cwd: string;
   /** When true, output is JSON instead of human-readable text (human is the default). */
   readonly json: boolean;
-  /** Absolute path to `~/.claude/skills` (injectable so tests never touch the real home dir). */
-  readonly globalSkillsDir: string;
+  /** Absolute path per agent target (`~/.claude/skills`, `~/.agents/skills`); injectable so tests never touch the real home dir. */
+  readonly globalSkillsDirs: Record<AgentTarget, string>;
 
   /**
-   * @param cwd            Project root to install local units into (defaults to process.cwd()).
-   * @param aiskHome       Package root to read units/ from (the ai-skills package's own directory).
-   * @param json           When true, output JSON instead of human-readable text.
-   * @param globalSkillsDir Override for `~/.claude/skills` (defaults to the real home dir; tests inject a temp dir).
+   * @param cwd              Project root to install local units into (defaults to process.cwd()).
+   * @param aiskHome         Package root to read units/ from (the ai-skills package's own directory).
+   * @param json             When true, output JSON instead of human-readable text.
+   * @param globalSkillsDirs Per-target overrides (defaults to the real home dir per target; tests inject temp dirs).
    */
-  constructor(cwd: string, aiskHome: string, json = false, globalSkillsDir?: string) {
+  constructor(
+    cwd: string,
+    aiskHome: string,
+    json = false,
+    globalSkillsDirs?: Partial<Record<AgentTarget, string>>,
+  ) {
     this.cwd = cwd;
     this.aiskHome = aiskHome;
     this.json = json;
-    this.globalSkillsDir = globalSkillsDir ?? join(homedir(), ".claude", "skills");
+    this.globalSkillsDirs = {
+      claude: globalSkillsDirs?.claude ?? defaultGlobalSkillsDir("claude"),
+      codex: globalSkillsDirs?.codex ?? defaultGlobalSkillsDir("codex"),
+    };
+  }
+
+  /** Read the registration record for every agent target. */
+  private readGlobalRegistries(): Record<AgentTarget, RegistryJson> {
+    return {
+      claude: readRegistry(this.globalSkillsDirs.claude),
+      codex: readRegistry(this.globalSkillsDirs.codex),
+    };
   }
 
   // ─── Public API — read-only, dual scope ────────────────────────────────────
@@ -81,16 +105,20 @@ export class Installer {
   list(scope: "global" | "local" | "all" = "all"): void {
     this.refresh(true);
     const installed = this.readInstalled();
-    const registeredUnits = new Set(readRegistry(this.globalSkillsDir).entries.map((e) => e.unit));
+    const registries = this.readGlobalRegistries();
     const unitList = this.getUnitList().filter((u) => scope === "all" || u.scope === scope);
 
     const units: ListResult["units"] = unitList.map((u) => {
       if (u.scope === "global") {
+        const registeredTargets = AGENT_TARGETS.filter((t) =>
+          registries[t].entries.some((e) => e.unit === u.name),
+        );
         return {
           name: u.name,
           description: u.description,
           scope: u.scope,
-          installed: registeredUnits.has(u.name),
+          installed: registeredTargets.length > 0,
+          ...(registeredTargets.length > 0 ? { registeredTargets } : {}),
         };
       }
       const entry = installed.units[u.name];
@@ -129,6 +157,7 @@ export class Installer {
     const local = isLocalUnit(unitJson);
     const components: ShowResult["components"] = [];
     let installed: boolean;
+    let registeredTargets: AgentTarget[] | undefined;
 
     if (local) {
       const entry = this.readInstalled().units[unitName];
@@ -178,37 +207,57 @@ export class Installer {
         });
       }
     } else {
-      const registry = readRegistry(this.globalSkillsDir);
-      installed = registry.entries.some((e) => e.unit === unitName);
+      const registries = this.readGlobalRegistries();
+      registeredTargets = AGENT_TARGETS.filter((t) =>
+        registries[t].entries.some((e) => e.unit === unitName),
+      );
+      installed = registeredTargets.length > 0;
       const firstSkillName = (unitJson.components.skills ?? [])[0]?.name;
-      const globalDir = (skillName: string) =>
-        join(this.globalSkillsDir, globalDirName(unitName, skillName));
+      const globalDirs = (skillName: string): Record<AgentTarget, string> => {
+        const dirName = globalDirName(unitName, skillName);
+        return {
+          claude: join(this.globalSkillsDirs.claude, dirName),
+          codex: join(this.globalSkillsDirs.codex, dirName),
+        };
+      };
+      const targetsWhere = (dirs: Record<AgentTarget, string>, relPath: string): AgentTarget[] =>
+        AGENT_TARGETS.filter((t) => existsSync(join(dirs[t], relPath)));
 
       for (const comp of unitJson.components.skills ?? []) {
+        const compTargets = targetsWhere(globalDirs(comp.name), "SKILL.md");
         components.push({
           type: "skill",
           name: comp.name,
           optional: !!comp.condition,
           condition: comp.condition,
-          installed: existsSync(join(globalDir(comp.name), "SKILL.md")),
+          installed: compTargets.length > 0,
+          ...(compTargets.length > 0 ? { registeredTargets: compTargets } : {}),
         });
       }
       for (const comp of unitJson.components.scripts ?? []) {
+        const compTargets = firstSkillName
+          ? targetsWhere(globalDirs(firstSkillName), comp.file)
+          : [];
         components.push({
           type: "script",
           name: comp.name,
           optional: false,
           hook: comp.hook,
-          installed: !!firstSkillName && existsSync(join(globalDir(firstSkillName), comp.file)),
+          installed: compTargets.length > 0,
+          ...(compTargets.length > 0 ? { registeredTargets: compTargets } : {}),
         });
       }
       for (const comp of unitJson.components.resources ?? []) {
+        const compTargets = firstSkillName
+          ? targetsWhere(globalDirs(firstSkillName), comp.file)
+          : [];
         components.push({
           type: "resource",
           name: comp.name,
           optional: !!comp.condition,
           condition: comp.condition,
-          installed: !!firstSkillName && existsSync(join(globalDir(firstSkillName), comp.file)),
+          installed: compTargets.length > 0,
+          ...(compTargets.length > 0 ? { registeredTargets: compTargets } : {}),
         });
       }
       // A global unit has no rules component by construction (rules ⇒ local).
@@ -220,6 +269,7 @@ export class Installer {
       dependencies: unitJson.dependencies,
       scope: local ? "local" : "global",
       installed,
+      ...(registeredTargets && registeredTargets.length > 0 ? { registeredTargets } : {}),
       components,
     };
 
@@ -1036,7 +1086,8 @@ export class Installer {
       const maxLen = Math.max(...globalUnits.map((u) => u.name.length));
       for (const u of globalUnits) {
         const mark = u.installed ? "✓" : "·";
-        process.stdout.write(`  ${mark} ${u.name.padEnd(maxLen + 2)}${u.description}\n`);
+        const targets = u.registeredTargets ? `  (${u.registeredTargets.join("+")})` : "";
+        process.stdout.write(`  ${mark} ${u.name.padEnd(maxLen + 2)}${u.description}${targets}\n`);
       }
     }
     if (localUnits.length > 0) {
@@ -1117,14 +1168,16 @@ export class Installer {
     if (result.dependencies.length > 0) {
       process.stdout.write(`依赖:${result.dependencies.join(", ")}\n`);
     }
-    process.stdout.write(`状态:${result.installed ? "已安装" : "未安装"}\n\n`);
+    const targetsSuffix = result.registeredTargets ? `(${result.registeredTargets.join("+")})` : "";
+    process.stdout.write(`状态:${result.installed ? "已安装" : "未安装"}${targetsSuffix}\n\n`);
     process.stdout.write("组件:\n");
     for (const c of result.components) {
       const mark = !c.installed ? "·" : c.customStatus === "todo" ? "!" : "✓";
       const typePad = c.type.padEnd(8);
       const todo = c.customStatus === "todo" ? "  [待定制]" : "";
       const notInstalled = !c.installed && c.optional ? "  (可选,未安装)" : "";
-      process.stdout.write(`  ${mark} ${typePad} ${c.name}${todo}${notInstalled}\n`);
+      const targets = c.registeredTargets ? `  (${c.registeredTargets.join("+")})` : "";
+      process.stdout.write(`  ${mark} ${typePad} ${c.name}${todo}${notInstalled}${targets}\n`);
     }
   }
 }

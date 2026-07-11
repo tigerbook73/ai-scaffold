@@ -12,6 +12,7 @@ Skill files must be placed directly under `units/*/skills/` (one level deep). Th
 ## 强制规则
 
 - **Language**: 文件内容必须和本模板使用的语言一致
+- **Frontmatter**：文件最开头必须有 YAML frontmatter（`---` 包裹），含 `name`（kebab-case，与文件名去掉 `.md` 扩展名后一致）和 `description`；`description` 直接复用 H1 下方的一句话摘要，不需要额外扩写（Codex CLI 的 skill 发现机制依赖这个字段做隐式触发匹配，Claude Code 读取时会忽略）
 - **H1 标题**：`# command-name`，kebab-case —— 与文件名去掉 `.md` 扩展名后一致
 - **描述**：H1 后空一行，然后写一句话摘要。若需要额外描述，再空一行后继续。
 - **输入**：skill 接受参数时必须包含；Compact 格式使用加粗 `**Input**` 标题，Structured 格式使用 `## Input` 节标题；输入结构明确时优先使用描述性参数名（`$skill-name`、`$file-path` 等）；开放式或模糊输入可使用 `$ARGUMENTS`；否则省略
@@ -28,6 +29,11 @@ Skill files must be placed directly under `units/*/skills/` (one level deep). Th
 ## Compact 模板
 
 ```markdown
+---
+name: command-name
+description: One-sentence description (same text as the paragraph below).
+---
+
 # command-name
 
 One-sentence description.
@@ -50,6 +56,11 @@ One-sentence description.
 ## Structured 模板
 
 ```markdown
+---
+name: command-name
+description: One-sentence description (same text as the paragraph below).
+---
+
 # command-name
 
 One-sentence description.
