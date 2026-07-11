@@ -16,6 +16,7 @@ description: 提交前运行检查清单，确保代码质量和流程规范，�
 ## 约束
 
 - **必须使用 agent/subagent 模式执行检查**：读取 diff、运行 verify、自动化检查、Claude 评估都放到独立 agent 中完成，避免把大量 diff、测试输出、lint 输出污染主上下文
+- **检查 agent 一律使用轻量模型**：若当前环境支持为 agent 指定模型，第一步到第五步（含第四步的 Claude 评估）全部用轻量/低成本模型执行（Claude Code 为 haiku；Codex CLI 为其配置中的轻量模型，如 gpt-5-codex-mini 一类）；环境不支持模型选择时忽略此项，使用默认模型
 - 主上下文只保留：最终检查摘要、阻塞项/警告项、建议提交消息、commit hash
 - 除非用户明确要求查看细节，不要把完整 diff、完整 verify 输出或长日志粘贴回主上下文
 - **阻塞项**（verify 失败、commit message 格式错误）→ 停止执行，等待修复
@@ -33,7 +34,7 @@ description: 提交前运行检查清单，确保代码质量和流程规范，�
 
 ### 第零步 — 启动检查 agent
 
-除非用户明确说 "不要用 agent" 或当前运行环境没有 agent/subagent 能力，否则必须先启动一个独立 agent 执行第一步到第五步。
+除非用户明确说 "不要用 agent" 或当前运行环境没有 agent/subagent 能力，否则必须先启动一个独立 agent（按上方约束选用轻量模型）执行第一步到第五步。
 
 给检查 agent 的任务：
 
